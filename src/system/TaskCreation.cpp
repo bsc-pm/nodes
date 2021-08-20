@@ -39,6 +39,9 @@ void nanos6_create_task(
 		taskSize += argsBlockSize + correction + sizeof(TaskMetadata);
 	}
 
+	// NOTE: For now assert, later on fix
+	assert(taskSize <= NOSV_MAX_METADATA_SIZE);
+
 	nosv_task_type_t tasktype = (nosv_task_type_t) taskInfo->task_type_data;
 	assert(tasktype != nullptr);
 
