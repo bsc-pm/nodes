@@ -30,6 +30,7 @@ include_HEADERS = \
 	api/taskwait.h
 
 noinst_HEADERS = \
+	src/common/ErrorHandler.hpp \
 	src/common/SpinLock.hpp \
 	src/common/SpinWait.hpp \
 	src/system/SpawnFunction.hpp \
@@ -38,6 +39,7 @@ noinst_HEADERS = \
 	src/tasks/TaskInfo.hpp
 
 common_sources = \
+	src/common/ErrorHandler.cpp \
 	src/common/SpinLock.cpp \
 	src/system/Bootstrap.cpp \
 	src/system/SpawnFunction.cpp \
