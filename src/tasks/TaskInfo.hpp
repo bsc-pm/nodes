@@ -8,6 +8,7 @@
 #define TASK_INFO_HPP
 
 #include <cassert>
+#include <sched.h>
 #include <string>
 #include <vector>
 
@@ -16,6 +17,9 @@
 #include <api/task-instantiation.h>
 
 #include "common/SpinLock.hpp"
+#include "dependencies/SymbolTranslation.hpp"
+#include "dependencies/discrete/DataAccessRegistration.hpp"
+#include "memory/MemoryAllocator.hpp"
 #include "system/TaskCreation.hpp"
 #include "system/TaskFinalization.hpp"
 
@@ -51,14 +55,26 @@ private:
 		assert(taskInfo->implementation_count == 1);
 		assert(taskInfo->implementations != nullptr);
 
+		int cpuId = sched_getcpu();
+		size_t tableSize = 0;
+		nanos6_address_translation_entry_t stackTranslationTable[SymbolTranslation::MAX_STACK_SYMBOLS];
+		nanos6_address_translation_entry_t *translationTable = SymbolTranslation::generateTranslationTable(
+			task, cpuId, stackTranslationTable, tableSize
+		);
+
 		TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
 		assert(taskMetadata != nullptr);
 
 		taskInfo->implementations->run(
 			taskMetadata->_argsBlock,
 			nullptr, /* deviceEnvironment */
-			nullptr /* TODO: translationTable */
+			translationTable
 		);
+
+		// Free up all symbol translation
+		if (tableSize > 0) {
+			MemoryAllocator::free(translationTable, tableSize);
+		}
 	}
 
 public:
@@ -76,12 +92,12 @@ public:
 			// Create the task type
 			nosv_task_type_t type;
 			int ret = nosv_type_init(
-				&type,                                 /* Out: The pointer to the type */
-				&(TaskInfo::runWrapper),               /* Run callback wrapper for the tasks */
-				nullptr,                               /* End callback cleanup function for when a task finishes */
-				&(TaskFinalization::taskFinished),     /* Completed callback */
-				taskInfo->implementations->task_label, /* Task label */
-				(void *) taskInfo,                     /* Metadata: Link to nanos6lite taskinfo */
+				&type,                                      /* Out: The pointer to the type */
+				&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
+				&(TaskFinalization::taskCompletedCallback), /* End callback cleanup function for when a task finishes */
+				&(TaskFinalization::taskEndedCallback),     /* Completed callback */
+				taskInfo->implementations->task_label,      /* Task label */
+				(void *) taskInfo,                          /* Metadata: Link to nanos6lite taskinfo */
 				NOSV_TYPE_INIT_NONE
 			);
 			assert(!ret);

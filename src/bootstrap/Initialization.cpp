@@ -9,21 +9,30 @@
 #include <api/bootstrap.h>
 #include <api/taskwait.h>
 
-#include "SpawnFunction.hpp"
+#include "dependencies/discrete/DependencySystem.hpp"
+#include "hardware/HardwareInfo.hpp"
+#include "system/SpawnFunction.hpp"
 #include "tasks/TaskInfo.hpp"
 
 
 void nanos6_init(void)
 {
+	// Gather hardware info
+	HardwareInfo::initialize();
+
 	// Initialize nOS-V backend
 	nosv_init();
 
 	// Initialize the TaskInfo manager after nOS-V has been initialized
 	TaskInfo::initialize();
+
+	// Initialize the dependency system
+	DependencySystem::initialize();
 }
 
 void nanos6_shutdown(void)
 {
+	// TODO: nosv_sleep
 	while (SpawnFunction::_pendingSpawnedFunctions > 0) {
 		// Wait for spawned functions to fully end
 	}
@@ -33,4 +42,7 @@ void nanos6_shutdown(void)
 
 	// Shutdown nOS-V backend
 	nosv_shutdown();
+
+	// Shutdown hardware info
+	HardwareInfo::shutdown();
 }

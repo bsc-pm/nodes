@@ -137,7 +137,7 @@ void SpawnFunction::spawnFunction(
 	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata((nosv_task_t) task);
 	assert(taskMetadata != nullptr);
 
-	taskMetadata->_isSpawned = true;
+	taskMetadata->setSpawned(true);
 
 	// Submit the task
 	nanos6_submit_task(task);

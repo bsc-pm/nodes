@@ -4,8 +4,8 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = $(BOOST_CPPFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS} -I$(top_srcdir)/src -I$(top_srcdir)/src/common
-AM_CXXFLAGS = $(BOOST_CXXFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS}
+AM_CPPFLAGS = $(BOOST_CPPFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS} -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_CXXFLAGS = $(BOOST_CXXFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS} -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
 AM_LDFLAGS  = $(BOOST_LDFLAGS)  $(PTHREAD_CFLAGS) $(PTHREAD_LIBS) ${nosv_LIBS}
 AM_LIBS     = -lrt -lpthread -lnosv
 
@@ -18,30 +18,80 @@ lib_age = 0
 lib_major = $(shell expr $(lib_current) - $(lib_age))
 lib_suffix = $(lib_major).$(lib_age).$(lib_revision)
 
+nanos6includedir = $(includedir)/nanos6
+
 include_HEADERS = \
 	api/bootstrap.h \
 	api/constants.h \
+	api/dependencies.h \
 	api/final.h \
 	api/library-mode.h \
+	api/loop.h \
 	api/major.h \
 	api/nanos6.h \
+	api/reductions.h \
 	api/task-info-registration.h \
 	api/task-instantiation.h \
 	api/taskwait.h
 
+nodist_nanos6include_HEADERS = \
+	nanos6/multidimensional-dependencies.h \
+	nanos6/multidimensional-release.h
+
 noinst_HEADERS = \
+	src/common/AtomicBitset.hpp \
+	src/common/Containers.hpp \
 	src/common/ErrorHandler.hpp \
+	src/common/MathSupport.hpp \
+	src/common/PaddedSpinLock.hpp \
+	src/common/PaddedTicketSpinLock.hpp \
+	src/common/Padding.hpp \
 	src/common/SpinLock.hpp \
 	src/common/SpinWait.hpp \
+	src/common/TicketSpinLock.hpp \
+	src/dependencies/DataAccessBase.hpp \
+	src/dependencies/DataAccessRegion.hpp \
+	src/dependencies/DataAccessType.hpp \
+	src/dependencies/DataTrackingSupport.hpp \
+	src/dependencies/MultidimensionalAPITraversal.hpp \
+	src/dependencies/SymbolTranslation.hpp \
+	src/dependencies/discrete/BottomMapEntry.hpp \
+	src/dependencies/discrete/CPUDependencyData.hpp \
+	src/dependencies/discrete/CommutativeSemaphore.hpp \
+	src/dependencies/discrete/DataAccess.hpp \
+	src/dependencies/discrete/DataAccessFlags.hpp \
+	src/dependencies/discrete/DataAccessRegistration.hpp \
+	src/dependencies/discrete/DataAccessRegistrationImplementation.hpp \
+	src/dependencies/discrete/DependencySystem.hpp \
+	src/dependencies/discrete/DeviceReductionStorage.hpp \
+	src/dependencies/discrete/MultidimensionalAPI.hpp \
+	src/dependencies/discrete/ReductionInfo.hpp \
+	src/dependencies/discrete/ReductionSpecific.hpp \
+	src/dependencies/discrete/TaskDataAccesses.hpp \
+	src/dependencies/discrete/TaskDataAccessesInfo.hpp \
+	src/dependencies/discrete/devices/HostReductionStorage.hpp \
+	src/hardware/HardwareInfo.hpp \
+	src/memory/MemoryAllocator.hpp \
+	src/memory/ObjectAllocator.hpp \
 	src/system/SpawnFunction.hpp \
 	src/system/TaskCreation.hpp \
 	src/system/TaskFinalization.hpp \
 	src/tasks/TaskInfo.hpp
 
 common_sources = \
+	src/bootstrap/Initialization.cpp \
 	src/common/ErrorHandler.cpp \
 	src/common/SpinLock.cpp \
-	src/system/Bootstrap.cpp \
+	src/dependencies/DataTrackingSupport.cpp \
+	src/dependencies/discrete/CPUDependencyData.cpp \
+	src/dependencies/discrete/CommutativeSemaphore.cpp \
+	src/dependencies/discrete/DataAccess.cpp \
+	src/dependencies/discrete/DataAccessRegistration.cpp \
+	src/dependencies/discrete/ReductionInfo.cpp \
+	src/dependencies/discrete/RegisterDependencies.cpp \
+	src/dependencies/discrete/ReleaseDirective.cpp \
+	src/dependencies/discrete/devices/HostReductionStorage.cpp \
+	src/hardware/HardwareInfo.cpp \
 	src/system/SpawnFunction.cpp \
 	src/system/TaskCreation.cpp \
 	src/system/TaskFinalization.cpp \
@@ -50,11 +100,14 @@ common_sources = \
 	src/tasks/TaskInfo.cpp \
 	src/tasks/TaskInfoAPI.cpp
 
+dependency_flags = -I$(srcdir)/src/dependencies -I$(srcdir)/src/dependencies/discrete
+
 lib_LTLIBRARIES = libnanos6.la
 
 libnanos6_la_CPPFLAGS = $(AM_CPPFLAGS)
+libnanos6_la_LDFLAGS  = $(AM_LDFLAGS)
 libnanos6_la_SOURCES  = $(common_sources)
-
+libnanos6_la_CXXFLAGS = $(AM_CXXFLAGS) $(dependency_flags)
 
 #
 # Taskification of the "main" function
@@ -64,15 +117,59 @@ noinst_LIBRARIES = libnanos6-main-wrapper.a
 lib_OBJECTS = nanos6-main-wrapper.o
 
 libnanos6_main_wrapper_a_SOURCES = \
-	src/main/intercept-main-common.c \
-	src/main/intercept-main-glibc.c \
-	src/main/main-wrapper.c \
-	src/main/main-wrapper.h
+	src/bootstrap/intercept-main-common.c \
+	src/bootstrap/intercept-main-common.h \
+	src/bootstrap/intercept-main-glibc.c \
+	src/bootstrap/main-wrapper.c \
+	src/bootstrap/main-wrapper.h
 
 libnanos6_main_wrapper_a_CPPFLAGS = $(MCMODEL_FLAGS)
 
 nanos6-main-wrapper.o: libnanos6-main-wrapper.a
 	$(AM_V_LD)$(LD) -r --whole-archive libnanos6-main-wrapper.a -o nanos6-main-wrapper.o
+
+
+#
+# Multidimensional API
+#
+
+nanos6_generated_headers = \
+	nanos6/multidimensional-dependencies.h \
+	nanos6/multidimensional-release.h
+
+multidimensional_adaptor_sources = MultidimensionalAPIToLinear.cpp
+
+nodist_common_sources = $(nanos6_generated_headers) $(multidimensional_adaptor_sources)
+nodist_libnanos6_la_SOURCES = $(nodist_common_sources)
+
+BUILT_SOURCES = $(nanos6_generated_headers) $(multidimensional_adaptor_sources)
+CLEANFILES = $(nodist_libnanos6_la_SOURCES) $(multidimensional_adaptor_sources)
+
+#
+# Automatically generated API headers
+#
+
+MAX_REGION_DIMENSIONS = 8
+MULTIDIMENSIONAL_REGION_API_TYPES = read write readwrite weak_read weak_write weak_readwrite concurrent commutative weak_commutative reduction weak_reduction
+SUPPORTED_MULTIDIMENSIONAL_REGION_API_TYPES = read write readwrite weak_read weak_write weak_readwrite concurrent commutative weak_commutative reduction weak_reduction
+
+
+EXTRA_DIST = \
+	scripts/common.sh \
+	scripts/generate_multidim_functions_for_linear_regions.sh \
+	scripts/generate_regions_prototypes.sh \
+	scripts/generate_release_prototypes.sh
+
+nanos6/multidimensional-dependencies.h: $(top_srcdir)/scripts/common.sh $(top_srcdir)/scripts/generate_regions_prototypes.sh Makefile
+	$(AM_V_GEN)mkdir -p nanos6 ; \
+	$(top_srcdir)/scripts/generate_regions_prototypes.sh $(MAX_REGION_DIMENSIONS) $(MULTIDIMENSIONAL_REGION_API_TYPES) > $@
+
+nanos6/multidimensional-release.h: $(top_srcdir)/scripts/common.sh $(top_srcdir)/scripts/generate_release_prototypes.sh Makefile
+	$(AM_V_GEN)mkdir -p nanos6 ; \
+	$(top_srcdir)/scripts/generate_release_prototypes.sh $(MAX_REGION_DIMENSIONS) $(MULTIDIMENSIONAL_REGION_API_TYPES) > $@
+
+MultidimensionalAPIToLinear.cpp: $(top_srcdir)/scripts/common.sh $(top_srcdir)/scripts/generate_multidim_functions_for_linear_regions.sh Makefile
+	$(AM_V_GEN)$(top_srcdir)/scripts/generate_multidim_functions_for_linear_regions.sh $(MAX_REGION_DIMENSIONS) $(SUPPORTED_MULTIDIMENSIONAL_REGION_API_TYPES) > $@
 
 
 all-local: $(lib_OBJECTS)
@@ -98,3 +195,8 @@ uninstall-hook:
 			$(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f "$(DESTDIR)$(libdir)/$$l" ; \
 		fi ; \
 	done
+
+# All potential files in this list will be distributed
+# regardless of the Makefile conditionals
+noinst_HEADERS += \
+	$(common_sources)
