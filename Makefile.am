@@ -32,7 +32,8 @@ include_HEADERS = \
 	api/reductions.h \
 	api/task-info-registration.h \
 	api/task-instantiation.h \
-	api/taskwait.h
+	api/taskwait.h \
+	api/user-mutex.h
 
 nodist_nanos6include_HEADERS = \
 	nanos6/multidimensional-dependencies.h \
@@ -49,6 +50,7 @@ noinst_HEADERS = \
 	src/common/SpinLock.hpp \
 	src/common/SpinWait.hpp \
 	src/common/TicketSpinLock.hpp \
+	src/common/UserMutex.hpp \
 	src/dependencies/DataAccessBase.hpp \
 	src/dependencies/DataAccessRegion.hpp \
 	src/dependencies/DataAccessType.hpp \
@@ -93,6 +95,7 @@ common_sources = \
 	src/dependencies/discrete/devices/HostReductionStorage.cpp \
 	src/hardware/HardwareInfo.cpp \
 	src/system/SpawnFunction.cpp \
+	src/system/TaskBlocking.cpp \
 	src/system/TaskCreation.cpp \
 	src/system/TaskFinalization.cpp \
 	src/system/TaskWait.cpp \

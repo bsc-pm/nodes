@@ -27,6 +27,7 @@
 #include "task-info-registration.h"
 #include "task-instantiation.h"
 #include "taskwait.h"
+#include "user-mutex.h"
 
 
 #endif /* NANOS6_H */
