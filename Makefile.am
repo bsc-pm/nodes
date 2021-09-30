@@ -21,6 +21,7 @@ lib_suffix = $(lib_major).$(lib_age).$(lib_revision)
 nanos6includedir = $(includedir)/nanos6
 
 include_HEADERS = \
+	api/blocking.h \
 	api/bootstrap.h \
 	api/constants.h \
 	api/dependencies.h \

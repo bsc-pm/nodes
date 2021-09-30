@@ -9,15 +9,44 @@
 
 #include <nosv.h>
 
+#include <api/blocking.h>
 #include <api/user-mutex.h>
 
-#include "TaskBlocking.hpp"
 #include "common/UserMutex.hpp"
 
 
+/*    BLOCKING API    */
+
+extern "C" void *nanos6_get_current_blocking_context(void)
+{
+	nosv_task_t currentTask = nosv_self();
+	assert(currentTask != nullptr);
+
+	return (void *) currentTask;
+}
+
+extern "C" void nanos6_block_current_task(void *)
+{
+	__attribute__((unused)) nosv_task_t currentTask = nosv_self();
+	assert(currentTask != nullptr);
+
+	nosv_pause(NOSV_SUBMIT_NONE);
+}
+
+extern "C" void nanos6_unblock_task(void *blocking_context)
+{
+	nosv_task_t task = static_cast<nosv_task_t>(blocking_context);
+	assert(task != nullptr);
+
+	nosv_submit(task, NOSV_SUBMIT_UNLOCKED);
+}
+
+
+/*    USER MUTEX API    */
+
 typedef std::atomic<UserMutex *> mutex_t;
 
-void nanos6_user_lock(void **handlerPointer, char const *)
+extern "C" void nanos6_user_lock(void **handlerPointer, char const *)
 {
 	assert(handlerPointer != nullptr);
 
@@ -63,7 +92,7 @@ void nanos6_user_lock(void **handlerPointer, char const *)
 	std::atomic_thread_fence(std::memory_order_acquire);
 }
 
-void nanos6_user_unlock(void **handlerPointer)
+extern "C" void nanos6_user_unlock(void **handlerPointer)
 {
 	assert(handlerPointer != nullptr);
 	assert(*handlerPointer != nullptr);
@@ -73,7 +102,7 @@ void nanos6_user_unlock(void **handlerPointer)
 
 	mutex_t &userMutexReference = (mutex_t &) *handlerPointer;
 	UserMutex &userMutex = *(userMutexReference.load());
-	Task *releasedTask = userMutex.dequeueOrUnlock();
+	nosv_task_t releasedTask = userMutex.dequeueOrUnlock();
 	if (releasedTask != nullptr) {
 		nosv_submit(releasedTask, NOSV_SUBMIT_UNLOCKED);
 	}

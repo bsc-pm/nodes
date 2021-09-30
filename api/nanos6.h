@@ -14,6 +14,7 @@
 #define __NANOS6__
 
 
+#include "blocking.h"
 #include "bootstrap.h"
 #include "constants.h"
 #include "dependencies.h"
