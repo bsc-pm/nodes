@@ -6,8 +6,31 @@
 
 #include <api/final.h>
 
+#include <nosv.h>
+
+#include <cassert>
+
+#include "system/TaskCreation.hpp"
+
 
 extern "C" signed int nanos6_in_final(void)
 {
-	return 0;
+	nosv_task_t currentTask = nosv_self();
+	assert(currentTask != nullptr);
+
+	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(currentTask);
+	assert(taskMetadata != nullptr);
+
+	return taskMetadata->isFinal();
+}
+
+extern "C" signed int nanos6_in_serial_context(void)
+{
+	nosv_task_t currentTask = nosv_self();
+	assert(currentTask != nullptr);
+
+	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(currentTask);
+	assert(taskMetadata != nullptr);
+
+	return taskMetadata->isFinal() || taskMetadata->isIf0();
 }

@@ -228,6 +228,11 @@ struct TaskMetadata {
 		_flags[spawned_flag] = value;
 	}
 
+	inline bool isFinal() const
+	{
+		return _flags[final_flag];
+	}
+
 	//! \brief Reset the counter of events
 	inline void resetReleaseCount()
 	{
