@@ -15,6 +15,7 @@
 #include "DataAccessRegistration.hpp"
 #include "ReductionSpecific.hpp"
 #include "dependencies/DataAccessType.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 template <DataAccessType ACCESS_TYPE, bool WEAK>
@@ -29,8 +30,11 @@ void register_access(void *handler, void *start, size_t length, int symbolIndex,
 		return;
 	}
 
+	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
+	assert(taskMetadata != nullptr);
+
 	//bool weak = (WEAK && !task->isFinal() && !task->isTaskfor()) || task->isTaskloopSource();
-	bool weak = WEAK;
+	bool weak = (WEAK && !taskMetadata->isFinal()) || taskMetadata->isTaskloopSource();
 	DataAccessRegistration::registerTaskDataAccess(task, ACCESS_TYPE, weak, start,
 		length, reductionTypeAndOperatorIndex, reductionIndex, symbolIndex);
 }

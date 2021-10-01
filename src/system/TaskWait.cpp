@@ -8,9 +8,9 @@
 
 #include <api/taskwait.h>
 
-#include "TaskCreation.hpp"
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "hardware/HardwareInfo.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 //! \brief Block the control flow of the current task until all of its children have finished

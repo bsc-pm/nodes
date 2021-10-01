@@ -77,9 +77,10 @@ noinst_HEADERS = \
 	src/memory/MemoryAllocator.hpp \
 	src/memory/ObjectAllocator.hpp \
 	src/system/SpawnFunction.hpp \
-	src/system/TaskCreation.hpp \
 	src/system/TaskFinalization.hpp \
-	src/tasks/TaskInfo.hpp
+	src/tasks/TaskInfo.hpp \
+	src/tasks/TaskMetadata.hpp \
+	src/tasks/TaskloopMetadata.hpp
 
 common_sources = \
 	src/bootstrap/Initialization.cpp \
@@ -102,7 +103,8 @@ common_sources = \
 	src/system/TaskWait.cpp \
 	src/tasks/Task.cpp \
 	src/tasks/TaskInfo.cpp \
-	src/tasks/TaskInfoAPI.cpp
+	src/tasks/TaskInfoAPI.cpp \
+	src/tasks/TaskloopMetadata.cpp
 
 dependency_flags = -I$(srcdir)/src/dependencies -I$(srcdir)/src/dependencies/discrete
 

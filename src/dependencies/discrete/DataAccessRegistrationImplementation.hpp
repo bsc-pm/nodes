@@ -26,7 +26,7 @@ namespace DataAccessRegistration {
 		TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
 		assert(taskMetadata != nullptr);
 
-		TaskDataAccesses &accessStruct = taskMetadata->_dataAccesses;
+		TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 
 		return accessStruct.forAll(

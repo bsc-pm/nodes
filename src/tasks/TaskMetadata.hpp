@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef TASK_CREATION_HPP
-#define TASK_CREATION_HPP
+#ifndef TASK_METADATA_HPP
+#define TASK_METADATA_HPP
 
 #include <atomic>
 #include <bitset>
@@ -20,7 +20,9 @@
 
 //! \brief Contains metadata of the task such as the args blocks
 //! and other flags/attributes
-struct TaskMetadata {
+class TaskMetadata {
+
+public:
 
 	enum {
 		//! Flags added by the Mercurium compiler
@@ -43,13 +45,15 @@ struct TaskMetadata {
 		total_flags
 	};
 
+private:
+
 	typedef std::bitset<total_flags> flags_t;
 
 	//! Args blocks of the task
 	void *_argsBlock;
 
-	//! Dependencies of the task
-	TaskDataAccesses _dataAccesses;
+	//! The original size of args block
+	size_t _argsBlockSize;
 
 	//! Number of pending predecessors
 	std::atomic<int> _predecessorCount;
@@ -69,20 +73,52 @@ struct TaskMetadata {
 	//! Whether the task has finished user code execution
 	std::atomic<bool> _finished;
 
+protected:
+
+	//! Dependencies of the task
+	TaskDataAccesses _dataAccesses;
+
 	//! Task flags
 	flags_t _flags;
 
+public:
 
-	//    METHODS    //
+	inline TaskMetadata(
+		void *argsBlock,
+		size_t argsBlockSize,
+		size_t flags,
+		const TaskDataAccessesInfo &taskAccessInfo
+	) :
+		_argsBlock(argsBlock),
+		_argsBlockSize(argsBlockSize),
+		_predecessorCount(0),
+		_removalCount(1),
+		_countdownToBeWokenUp(1),
+		_countdownToRelease(1),
+		_parent(nullptr),
+		_finished(false),
+		_dataAccesses(taskAccessInfo),
+		_flags(flags)
+	{
+	}
 
-	//! \brief Increase the number of predecessors
+	inline void *getArgsBlock() const
+	{
+		return _argsBlock;
+	}
+
+	inline size_t getArgsBlockSize() const
+	{
+		return _argsBlockSize;
+	}
+
 	inline void increasePredecessors(int amount = 1)
 	{
 		_predecessorCount += amount;
 	}
 
 	//! \brief Decrease the number of predecessors
-	//! \returns true if the task becomes ready
+	//! \returns Whether the task becomes ready
 	inline bool decreasePredecessors(int amount = 1)
 	{
 		int res = (_predecessorCount -= amount);
@@ -91,15 +127,12 @@ struct TaskMetadata {
 		return (res == 0);
 	}
 
-	//! \brief Increase an internal counter to prevent the removal of the task
 	inline void increaseRemovalBlockingCount()
 	{
 		_removalCount.fetch_add(1, std::memory_order_relaxed);
 	}
 
-	//! \brief Decrease an internal counter that prevents the removal of the task
-	//!
-	//! \returns True if the change makes this task become ready or disposable
+	//! \returns Whether the change makes this task become ready or disposable
 	inline bool decreaseRemovalBlockingCount()
 	{
 		int countdown = (_removalCount.fetch_sub(1, std::memory_order_relaxed) - 1);
@@ -114,26 +147,16 @@ struct TaskMetadata {
 		return (_removalCount == 1);
 	}
 
-	//! \brief Set the parent
-	//! \param parent The actual parent of the task
-	inline void setParent(nosv_task_t parent)
-	{
-		assert(parent != nullptr);
-
-		_parent = parent;
-
-		// Retreive the task's metadata
-		TaskMetadata *parentMetadata = (TaskMetadata *) nosv_get_task_metadata(parent);
-		assert(parentMetadata != nullptr);
-
-		parentMetadata->addChild();
-	}
-
 	//! \brief Add a nested task
 	inline void addChild()
 	{
 		_countdownToBeWokenUp.fetch_add(1, std::memory_order_relaxed);
 		_removalCount.fetch_add(1, std::memory_order_relaxed);
+	}
+
+	inline int getRemovalCount()
+	{
+		return _removalCount.fetch();
 	}
 
 	//! \brief Remove a nested task (because it has finished)
@@ -169,6 +192,58 @@ struct TaskMetadata {
 		return (_countdownToBeWokenUp.fetch_add(1, std::memory_order_relaxed) == 0);
 	}
 
+	//! \brief Reset the counter of events
+	inline void resetReleaseCount()
+	{
+		assert(_countdownToRelease == 0);
+
+		_countdownToRelease = 1;
+	}
+
+	//! \brief Increase the counter of events
+	inline void increaseReleaseCount(int amount = 1)
+	{
+		assert(_countdownToRelease > 0);
+
+		_countdownToRelease += amount;
+	}
+
+	//! \brief Decrease the counter of events
+	//!
+	//! This function returns whether the decreased events were
+	//! the last ones. This may mean that the task can start
+	//! running if they were onready events or the task can release
+	//! its dependencies if they were normal events
+	//!
+	//! \returns true iff were the last events
+	inline bool decreaseReleaseCount(int amount = 1)
+	{
+		int count = (_countdownToRelease -= amount);
+		assert(count >= 0);
+
+		return (count == 0);
+	}
+
+	//! \brief Set the parent
+	//! \param parent The actual parent of the task
+	inline void setParent(nosv_task_t parent)
+	{
+		assert(parent != nullptr);
+
+		_parent = parent;
+
+		// Retreive the task's metadata
+		TaskMetadata *parentMetadata = (TaskMetadata *) nosv_get_task_metadata(parent);
+		assert(parentMetadata != nullptr);
+
+		parentMetadata->addChild();
+	}
+
+	inline nosv_task_t getParent() const
+	{
+		return _parent;
+	}
+
 	//! \brief Mark that the task has finished executing
 	inline void markAsFinished()
 	{
@@ -179,6 +254,16 @@ struct TaskMetadata {
 	inline bool hasFinished() const
 	{
 		return _finished;
+	}
+
+	inline TaskDataAccesses &getTaskDataAccesses()
+	{
+		return _dataAccesses;
+	}
+
+	inline size_t getFlags() const
+	{
+		return _flags.to_ulong();
 	}
 
 	//! \brief Set or unset the if0 flag
@@ -233,38 +318,37 @@ struct TaskMetadata {
 		return _flags[final_flag];
 	}
 
-	//! \brief Reset the counter of events
-	inline void resetReleaseCount()
+	//! \brief Set or unset the taskloop flag
+	inline void setTaskloop(bool taskloopValue)
 	{
-		assert(_countdownToRelease == 0);
-
-		_countdownToRelease = 1;
+		_flags[taskloop_flag] = taskloopValue;
 	}
 
-	//! \brief Increase the counter of events
-	inline void increaseReleaseCount(int amount = 1)
+	//! \brief Check if the task is a taskloop
+	inline bool isTaskloop() const
 	{
-		assert(_countdownToRelease > 0);
-
-		_countdownToRelease += amount;
+		return _flags[taskloop_flag];
 	}
 
-	//! \brief Decrease the counter of events
-	//!
-	//! This function returns whether the decreased events were
-	//! the last ones. This may mean that the task can start
-	//! running if they were onready events or the task can release
-	//! its dependencies if they were normal events
-	//!
-	//! \returns true iff were the last events
-	inline bool decreaseReleaseCount(int amount = 1)
+	virtual inline void increaseMaxChildDependencies()
 	{
-		int count = (_countdownToRelease -= amount);
-		assert(count >= 0);
+	}
 
-		return (count == 0);
+	virtual inline bool isTaskloopSource() const
+	{
+		return false;
+	}
+
+	virtual inline void registerDependencies(nosv_task_t task)
+	{
+		// Retreive the args block and taskinfo of the task
+		nosv_task_type_t type = nosv_get_task_type(task);
+		nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		assert(taskInfo != nullptr);
+
+		taskInfo->register_depinfo(_argsBlock, nullptr, task);
 	}
 
 };
 
-#endif // TASK_CREATION_HPP
+#endif // TASK_METADATA_HPP

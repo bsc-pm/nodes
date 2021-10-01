@@ -19,8 +19,9 @@
 #include "dependencies/SymbolTranslation.hpp"
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "memory/MemoryAllocator.hpp"
-#include "system/TaskCreation.hpp"
 #include "system/TaskFinalization.hpp"
+#include "tasks/TaskMetadata.hpp"
+#include "tasks/TaskloopMetadata.hpp"
 
 
 class TaskInfo {
@@ -64,11 +65,26 @@ private:
 		TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
 		assert(taskMetadata != nullptr);
 
-		taskInfo->implementations->run(
-			taskMetadata->_argsBlock,
-			nullptr, /* deviceEnvironment */
-			translationTable
-		);
+		if (taskMetadata->isTaskloop()) {
+			TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) taskMetadata;
+			if (!taskloopMetadata->isTaskloopSource()) {
+				taskInfo->implementations->run(
+					taskloopMetadata->getArgsBlock(),
+					&(taskloopMetadata->getBounds()),
+					translationTable
+				);
+			} else {
+				while (taskloopMetadata->getIterationCount() > 0) {
+					Taskloop::createTaskloopExecutor(task, taskloopMetadata, taskloopMetadata->getBounds());
+				}
+			}
+		} else {
+			taskInfo->implementations->run(
+				taskMetadata->getArgsBlock(),
+				nullptr, /* deviceEnvironment */
+				translationTable
+			);
+		}
 
 		// Free up all symbol translation
 		if (tableSize > 0) {

@@ -10,7 +10,7 @@
 
 #include <api/final.h>
 
-#include "system/TaskCreation.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 extern "C" signed int nanos6_in_final(void)

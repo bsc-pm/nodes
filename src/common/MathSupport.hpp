@@ -12,6 +12,11 @@
 
 namespace MathSupport {
 
+	static inline size_t ceil(size_t x, size_t y)
+	{
+		return (x + (y - 1)) / y;
+	}
+
 	constexpr uint64_t roundup(const uint64_t x, const uint64_t y)
 	{
 		return (((x + (y - 1ULL)) / y) * y);

@@ -12,7 +12,7 @@
 #include "CPUDependencyData.hpp"
 #include "DataAccessRegistration.hpp"
 #include "TaskDataAccesses.hpp"
-#include "system/TaskCreation.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 CommutativeSemaphore::lock_t CommutativeSemaphore::_lock;
@@ -25,7 +25,7 @@ bool CommutativeSemaphore::registerTask(nosv_task_t task)
 	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
 	assert(taskMetadata != nullptr);
 
-	TaskDataAccesses &accessStruct = taskMetadata->_dataAccesses;
+	TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
 	const commutative_mask_t &mask = accessStruct._commutativeMask;
 	assert(mask.any());
 
@@ -45,7 +45,7 @@ void CommutativeSemaphore::releaseTask(nosv_task_t task, CPUDependencyData &hpDe
 	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
 	assert(taskMetadata != nullptr);
 
-	TaskDataAccesses &accessStruct = taskMetadata->_dataAccesses;
+	TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
 	const commutative_mask_t &mask = accessStruct._commutativeMask;
 	assert(mask.any());
 
@@ -63,7 +63,7 @@ void CommutativeSemaphore::releaseTask(nosv_task_t task, CPUDependencyData &hpDe
 		TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(candidate);
 		assert(taskMetadata != nullptr);
 
-		TaskDataAccesses &candidateStruct = taskMetadata->_dataAccesses;
+		TaskDataAccesses &candidateStruct = taskMetadata->getTaskDataAccesses();
 		const commutative_mask_t &candidateMask = candidateStruct._commutativeMask;
 
 		if (maskIsCompatible(candidateMask)) {

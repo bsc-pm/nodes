@@ -16,7 +16,7 @@
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "hardware/HardwareInfo.hpp"
 #include "system/SpawnFunction.hpp"
-#include "system/TaskCreation.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 void TaskFinalization::taskCompletedCallback(nosv_task_t task)
@@ -55,17 +55,15 @@ void TaskFinalization::taskEndedCallback(nosv_task_t task)
 
 	// Check whether all external events have been also fulfilled, so the dependencies can be released
 	if (dependenciesReleaseable) {
-		// We always use a local CPUDependencyData struct here to avoid re-using issues
-		CPUDependencyData *localHpDependencyData = new CPUDependencyData();
-		DataAccessRegistration::unregisterTaskDataAccesses(task, *localHpDependencyData);
+		int cpuId = nosv_get_current_system_cpu();
+		CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
+		DataAccessRegistration::unregisterTaskDataAccesses(task, *cpuDepData);
 
 		TaskFinalization::taskFinished(task);
 
 		if (taskMetadata->decreaseRemovalBlockingCount()) {
 			TaskFinalization::disposeTask(task);
 		}
-
-		delete localHpDependencyData;
 	}
 }
 
@@ -83,8 +81,9 @@ void TaskFinalization::taskFinished(nosv_task_t task)
 	// with re-using an already used CPUDependencyData
 	CPUDependencyData *localHpDependencyData = nullptr;
 	nosv_task_t parent = nullptr;
+	TaskMetadata *parentMetadata = nullptr;
 	while ((task != nullptr) && ready) {
-		parent = taskMetadata->_parent;
+		parent = taskMetadata->getParent();
 
 		// If this is the first iteration of the loop, the task will test true
 		// to hasFinished and false to mustDelayRelease, which does nothing
@@ -125,13 +124,14 @@ void TaskFinalization::taskFinished(nosv_task_t task)
 
 		// Using 'task' here is forbidden, as it may have been disposed
 		if (ready && parent != nullptr) {
-			taskMetadata = (TaskMetadata *) nosv_get_task_metadata(parent);
-			assert(taskMetadata != nullptr);
+			parentMetadata = (TaskMetadata *) nosv_get_task_metadata(parent);
+			assert(parentMetadata != nullptr);
 
-			ready = taskMetadata->finishChild();
+			ready = parentMetadata->finishChild();
 		}
 
 		task = parent;
+		taskMetadata = parentMetadata;
 	}
 
 	if (localHpDependencyData != nullptr) {
@@ -150,13 +150,15 @@ void TaskFinalization::disposeTask(nosv_task_t task)
 	nosv_task_t parent = nullptr;
 	TaskMetadata *parentMetadata = nullptr;
 	while ((task != nullptr) && disposable) {
-		parent = taskMetadata->_parent;
+		parent = taskMetadata->getParent();
 		if (parent != nullptr) {
 			parentMetadata = (TaskMetadata *) nosv_get_task_metadata(parent);
 			assert(taskMetadata->hasFinished());
 
 			// Check if we continue the chain with the parent
 			disposable = parentMetadata->decreaseRemovalBlockingCount();
+		} else {
+			disposable = (taskMetadata->getRemovalCount() == 0);
 		}
 
 		// Call the taskinfo destructor if not null
@@ -165,7 +167,7 @@ void TaskFinalization::disposeTask(nosv_task_t task)
 		assert(taskInfo != nullptr);
 
 		if (taskInfo->destroy_args_block != nullptr) {
-			taskInfo->destroy_args_block(taskMetadata->_argsBlock);
+			taskInfo->destroy_args_block(taskMetadata->getArgsBlock());
 		}
 
 		if (taskMetadata->isSpawned()) {
