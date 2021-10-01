@@ -50,7 +50,19 @@ namespace DataAccessRegistration {
 			if (list.size() > 0) {
 				nosv_task_t *taskArray = list.getArray();
 				for (size_t j = 0; j < list.size(); ++j) {
-					nosv_submit(taskArray[j], NOSV_SUBMIT_UNLOCKED);
+					nosv_task_t task = taskArray[j];
+					TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
+					assert(taskMetadata != nullptr);
+
+					if (taskMetadata->isIf0()) {
+						// If the task is if0, it means the parent task was blocked.
+						// In that case, submit the if0 task for an inline execution
+						// and unblock the parent by submitting it again
+						nosv_submit(task, NOSV_SUBMIT_INLINE);
+						nosv_submit(taskMetadata->_parent, NOSV_SUBMIT_UNLOCKED);
+					} else {
+						nosv_submit(task, NOSV_SUBMIT_UNLOCKED);
+					}
 				}
 			}
 		}
@@ -58,7 +70,18 @@ namespace DataAccessRegistration {
 		hpDependencyData.clearSatisfiedOriginators();
 
 		for (nosv_task_t originator : hpDependencyData._satisfiedCommutativeOriginators) {
-			nosv_submit(originator, NOSV_SUBMIT_UNLOCKED);
+			TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(originator);
+			assert(taskMetadata != nullptr);
+
+			if (taskMetadata->isIf0()) {
+				// If the task is if0, it means the parent task was blocked.
+				// In that case, submit the if0 task for an inline execution
+				// and unblock the parent by submitting it again
+				nosv_submit(originator, NOSV_SUBMIT_INLINE);
+				nosv_submit(taskMetadata->_parent, NOSV_SUBMIT_UNLOCKED);
+			} else {
+				nosv_submit(originator, NOSV_SUBMIT_UNLOCKED);
+			}
 		}
 
 		hpDependencyData._satisfiedCommutativeOriginators.clear();

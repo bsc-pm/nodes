@@ -122,8 +122,25 @@ void nanos6_submit_task(void *taskHandle)
 		ready = DataAccessRegistration::registerTaskDataAccesses(task, *cpuDepData);
 	}
 
-	if (ready) {
+	bool isIf0 = taskMetadata->isIf0();
+	assert(parentTask != nullptr || ready);
+	assert(parentTask != nullptr || !isIf0);
+
+	if (ready && !isIf0) {
 		// Submit the task to nOS-V if ready and not if0
 		nosv_submit(task, NOSV_SUBMIT_UNLOCKED);
+	}
+
+	// Special handling for if0 tasks
+	if (isIf0) {
+		if (ready) {
+			// Ready if0 tasks are executed inline
+			nosv_submit(task, NOSV_SUBMIT_INLINE);
+		} else {
+			// Non-ready if0 tasks cause this task to get paused. Before the
+			// if0 task starts executing (after deps are satisfied), it will
+			// detect that it was a non-ready if0 task and re-submit the parent
+			nosv_pause(NOSV_SUBMIT_NONE);
+		}
 	}
 }
