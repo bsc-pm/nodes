@@ -6,7 +6,6 @@
 
 #include <cassert>
 #include <cstdlib>
-#include <sched.h>
 
 #include <nosv.h>
 
@@ -22,7 +21,7 @@
 
 void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 {
-	int cpuId = sched_getcpu();
+	int cpuId = nosv_get_current_system_cpu();
 	DataAccessRegistration::combineTaskReductions(task, cpuId);
 }
 

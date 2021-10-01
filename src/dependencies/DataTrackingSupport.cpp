@@ -6,6 +6,7 @@
 
 #include "DataTrackingSupport.hpp"
 
+
 const double DataTrackingSupport::_rwBonusFactor = 2.0;
 const uint64_t DataTrackingSupport::_distanceThreshold = 15;
 const uint64_t DataTrackingSupport::_loadThreshold = 20;

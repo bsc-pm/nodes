@@ -8,7 +8,6 @@
 #define TASK_INFO_HPP
 
 #include <cassert>
-#include <sched.h>
 #include <string>
 #include <vector>
 
@@ -55,8 +54,8 @@ private:
 		assert(taskInfo->implementation_count == 1);
 		assert(taskInfo->implementations != nullptr);
 
-		int cpuId = sched_getcpu();
 		size_t tableSize = 0;
+		int cpuId = nosv_get_current_system_cpu();
 		nanos6_address_translation_entry_t stackTranslationTable[SymbolTranslation::MAX_STACK_SYMBOLS];
 		nanos6_address_translation_entry_t *translationTable = SymbolTranslation::generateTranslationTable(
 			task, cpuId, stackTranslationTable, tableSize

@@ -4,11 +4,11 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#include <api/final.h>
+#include <cassert>
 
 #include <nosv.h>
 
-#include <cassert>
+#include <api/final.h>
 
 #include "system/TaskCreation.hpp"
 

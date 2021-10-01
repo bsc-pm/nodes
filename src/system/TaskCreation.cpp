@@ -6,7 +6,6 @@
 
 #include <cassert>
 #include <cstdlib>
-#include <sched.h>
 
 #include <nosv.h>
 
@@ -117,7 +116,7 @@ void nanos6_submit_task(void *taskHandle)
 	// Register the accesses of the task to check whether it is ready to be executed
 	bool ready = true;
 	if (taskInfo->register_depinfo != nullptr) {
-		int cpuId = sched_getcpu();
+		int cpuId = nosv_get_current_system_cpu();
 		CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 		ready = DataAccessRegistration::registerTaskDataAccesses(task, *cpuDepData);
 	}

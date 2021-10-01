@@ -9,6 +9,7 @@
 
 #include <limits.h>
 
+
 typedef int reduction_type_and_operator_index_t;
 typedef int reduction_index_t;
 

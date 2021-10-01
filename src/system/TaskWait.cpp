@@ -4,8 +4,6 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#include <sched.h>
-
 #include <nosv.h>
 
 #include <api/taskwait.h>

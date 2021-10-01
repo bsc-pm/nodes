@@ -7,8 +7,6 @@
 #ifndef RELEASE_DIRECTIVE_HPP
 #define RELEASE_DIRECTIVE_HPP
 
-#include <sched.h>
-
 #include <nosv.h>
 
 #include <nanos6/multidimensional-release.h>
@@ -23,7 +21,7 @@ void release_access(void *base_address, __attribute__((unused)) long dim1size, l
 	nosv_task_t task = nosv_self();
 	assert(task != nullptr);
 
-	int cpuId = sched_getcpu();
+	int cpuId = nosv_get_current_system_cpu();
 	CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 	void *effectiveAddress = static_cast<char *>(base_address) + dim1start;
 
