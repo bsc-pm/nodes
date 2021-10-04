@@ -157,7 +157,6 @@ namespace DataAccessRegistration {
 		assert(address != nullptr);
 		assert(length > 0);
 
-
 		TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
 		assert(taskMetadata != nullptr);
 

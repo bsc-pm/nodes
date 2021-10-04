@@ -56,7 +56,7 @@ private:
 		assert(taskInfo->implementations != nullptr);
 
 		size_t tableSize = 0;
-		int cpuId = nosv_get_current_system_cpu();
+		int cpuId = nosv_get_current_logical_cpu();
 		nanos6_address_translation_entry_t stackTranslationTable[SymbolTranslation::MAX_STACK_SYMBOLS];
 		nanos6_address_translation_entry_t *translationTable = SymbolTranslation::generateTranslationTable(
 			task, cpuId, stackTranslationTable, tableSize
@@ -109,8 +109,8 @@ public:
 			int ret = nosv_type_init(
 				&type,                                      /* Out: The pointer to the type */
 				&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
-				&(TaskFinalization::taskCompletedCallback), /* End callback cleanup function for when a task finishes */
-				&(TaskFinalization::taskEndedCallback),     /* Completed callback */
+				&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
+				&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
 				taskInfo->implementations->task_label,      /* Task label */
 				(void *) taskInfo,                          /* Metadata: Link to nanos6lite taskinfo */
 				NOSV_TYPE_INIT_NONE

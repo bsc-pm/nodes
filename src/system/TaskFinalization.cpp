@@ -19,13 +19,13 @@
 #include "tasks/TaskMetadata.hpp"
 
 
-void TaskFinalization::taskCompletedCallback(nosv_task_t task)
+void TaskFinalization::taskEndedCallback(nosv_task_t task)
 {
-	int cpuId = nosv_get_current_system_cpu();
+	int cpuId = nosv_get_current_logical_cpu();
 	DataAccessRegistration::combineTaskReductions(task, cpuId);
 }
 
-void TaskFinalization::taskEndedCallback(nosv_task_t task)
+void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 {
 	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
 	assert(taskMetadata != nullptr);
@@ -55,7 +55,7 @@ void TaskFinalization::taskEndedCallback(nosv_task_t task)
 
 	// Check whether all external events have been also fulfilled, so the dependencies can be released
 	if (dependenciesReleaseable) {
-		int cpuId = nosv_get_current_system_cpu();
+		int cpuId = nosv_get_current_logical_cpu();
 		CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 		DataAccessRegistration::unregisterTaskDataAccesses(task, *cpuDepData);
 

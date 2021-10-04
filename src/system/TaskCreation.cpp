@@ -156,7 +156,7 @@ void nanos6_submit_task(void *taskHandle)
 	// Register the accesses of the task to check whether it is ready to be executed
 	bool ready = true;
 	if (taskInfo->register_depinfo != nullptr) {
-		int cpuId = nosv_get_current_system_cpu();
+		int cpuId = nosv_get_current_logical_cpu();
 		CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 		ready = DataAccessRegistration::registerTaskDataAccesses(task, *cpuDepData);
 	}

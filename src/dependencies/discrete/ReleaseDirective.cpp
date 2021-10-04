@@ -21,7 +21,7 @@ void release_access(void *base_address, __attribute__((unused)) long dim1size, l
 	nosv_task_t task = nosv_self();
 	assert(task != nullptr);
 
-	int cpuId = nosv_get_current_system_cpu();
+	int cpuId = nosv_get_current_logical_cpu();
 	CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 	void *effectiveAddress = static_cast<char *>(base_address) + dim1start;
 

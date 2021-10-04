@@ -14,11 +14,11 @@ class TaskFinalization {
 
 public:
 
-	//! \brief Actions to take after a task completes user-code execution
-	static void taskCompletedCallback(nosv_task_t task);
-
 	//! \brief Actions to take after a task ends its user-code execution
 	static void taskEndedCallback(nosv_task_t task);
+
+	//! \brief Actions to take after a task completes user-code execution
+	static void taskCompletedCallback(nosv_task_t task);
 
 	//! \brief Further actions (wrapper) to take after a task has finished
 	static void taskFinished(nosv_task_t task);

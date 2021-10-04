@@ -17,9 +17,9 @@ HostReductionStorage::HostReductionStorage(void *address, size_t length, size_t 
 	std::function<void(void *, void *, size_t)> initializationFunction,
 	std::function<void(void *, void *, size_t)> combinationFunction) :
 	DeviceReductionStorage(address, length, paddedLength, initializationFunction, combinationFunction),
-	_freeSlotIndices(HardwareInfo::getTotalNumCpus())
+	_freeSlotIndices(HardwareInfo::getNumCpus())
 {
-	const long nCpus = HardwareInfo::getTotalNumCpus();
+	const long nCpus = HardwareInfo::getNumCpus();
 	assert(nCpus > 0);
 
 	// Create all slots

@@ -17,11 +17,11 @@
 
 void nanos6_init(void)
 {
-	// Gather hardware info
-	HardwareInfo::initialize();
-
 	// Initialize nOS-V backend
 	nosv_init();
+
+	// Gather hardware info
+	HardwareInfo::initialize();
 
 	// Initialize the TaskInfo manager after nOS-V has been initialized
 	TaskInfo::initialize();

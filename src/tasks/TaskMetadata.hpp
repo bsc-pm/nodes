@@ -156,7 +156,7 @@ public:
 
 	inline int getRemovalCount()
 	{
-		return _removalCount.fetch();
+		return _removalCount.load();
 	}
 
 	//! \brief Remove a nested task (because it has finished)
