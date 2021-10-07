@@ -42,6 +42,7 @@ nodist_nanos6include_HEADERS = \
 
 noinst_HEADERS = \
 	src/common/AtomicBitset.hpp \
+	src/common/Chrono.hpp \
 	src/common/Containers.hpp \
 	src/common/ErrorHandler.hpp \
 	src/common/MathSupport.hpp \

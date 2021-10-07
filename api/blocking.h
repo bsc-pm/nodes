@@ -59,6 +59,18 @@ void nanos6_block_current_task(void *blocking_context);
 //! \param[in] blocking_context the handler used to block the task
 void nanos6_unblock_task(void *blocking_context);
 
+//! \brief Pause the current task for an amount of microseconds
+//!
+//! The task is paused for approximately the amount of microseconds
+//! passed as a parameter. The runtime may choose to execute other
+//! tasks within the execution scope of this call
+//!
+//! \param[in] time_us the time that should be spent while paused
+//! in microseconds
+//!
+//! \returns the actual time spent during the pause
+uint64_t nanos6_wait_for(uint64_t time_us);
+
 #ifdef __cplusplus
 }
 #endif

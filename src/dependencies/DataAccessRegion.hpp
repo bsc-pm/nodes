@@ -1,7 +1,7 @@
 /*
 	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2015-2019 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef DATA_ACCESS_REGION_HPP

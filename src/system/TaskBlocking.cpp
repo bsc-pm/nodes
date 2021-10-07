@@ -41,6 +41,18 @@ extern "C" void nanos6_unblock_task(void *blocking_context)
 	nosv_submit(task, NOSV_SUBMIT_UNLOCKED);
 }
 
+extern "C" uint64_t nanos6_wait_for(uint64_t timeUs)
+{
+	if (timeUs == 0) {
+		return 0;
+	}
+
+	uint64_t actualWaitTime;
+	nosv_waitfor(timeUs * 1000, &(actualWaitTime));
+
+	return actualWaitTime / (uint64_t) 1000;
+}
+
 
 /*    USER MUTEX API    */
 
