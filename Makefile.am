@@ -9,6 +9,8 @@ AM_CXXFLAGS = $(BOOST_CXXFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS} -I$(srcdir)/a
 AM_LDFLAGS  = $(BOOST_LDFLAGS)  $(PTHREAD_CFLAGS) $(PTHREAD_LIBS) ${nosv_LIBS}
 AM_LIBS     = -lrt -lpthread -lnosv
 
+SUBDIRS = . tests
+
 # See info page of libtool "Updating version info"
 lib_current = 0
 lib_revision = 0
@@ -81,7 +83,11 @@ noinst_HEADERS = \
 	src/system/TaskFinalization.hpp \
 	src/tasks/TaskInfo.hpp \
 	src/tasks/TaskMetadata.hpp \
-	src/tasks/TaskloopMetadata.hpp
+	src/tasks/TaskloopMetadata.hpp \
+	tests/common/Atomic.hpp \
+	tests/common/Functors.hpp \
+	tests/common/TAPDriver.hpp \
+	tests/common/Timer.hpp
 
 common_sources = \
 	src/bootstrap/Initialization.cpp \
@@ -165,7 +171,8 @@ EXTRA_DIST = \
 	scripts/common.sh \
 	scripts/generate_multidim_functions_for_linear_regions.sh \
 	scripts/generate_regions_prototypes.sh \
-	scripts/generate_release_prototypes.sh
+	scripts/generate_release_prototypes.sh \
+	tests/tap-driver.sh
 
 nanos6/multidimensional-dependencies.h: $(top_srcdir)/scripts/common.sh $(top_srcdir)/scripts/generate_regions_prototypes.sh Makefile
 	$(AM_V_GEN)mkdir -p nanos6 ; \
@@ -207,3 +214,5 @@ uninstall-hook:
 # regardless of the Makefile conditionals
 noinst_HEADERS += \
 	$(common_sources)
+
+build-tests-local: $(check_PROGRAMS)

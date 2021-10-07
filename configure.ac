@@ -45,6 +45,17 @@ AX_BOOST_BASE([1.59], [], [ AC_MSG_ERROR([Boost library not found]) ])
 CHECK_PTHREAD
 AC_CHECK_NOSV
 
+# Check for mercurium
+SSS_CHECK_NANOS6_MERCURIUM
+SSS_PUSH_NANOS6_MERCURIUM
+SSS_CHECK_MERCURIUM_ACCEPTS_EXTERNAL_INSTALLATION
+SSS_POP_NANOS6_MERCURIUM
+
+if test x"${ac_have_nanos6_mercurium}" = x"yes" ; then
+	NANOS6_MCXX="${NANOS6_MCXX} -std=c++03"
+	NANOS6_MCC="${NANOS6_MCC}"
+fi
+
 # Checks for typedefs, structures, and compiler characteristics
 AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 AC_CHECK_HEADER_STDBOOL
@@ -58,8 +69,12 @@ AS_IF([test "$ARCH" = "x86_64"], [
 	AC_DEFINE([X86_64_ARCH], [1], [Compiling for x86_64 host])
 ])
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile tests/Makefile])
 AC_OUTPUT
+
+if test x"${ac_have_nanos6_mercurium}" = x"no" ; then
+	AC_MSG_WARN([the directive based tests will not be checked since there is no Mercurium compiler available])
+fi
 
 echo ""
 echo ""
