@@ -69,7 +69,7 @@ int _nanos6_loader_main(int argc, char **argv, char **envp)
 
 	// Spawn the main task
 	main_task_args_block_t argsBlock = { argc, argv, envp, 0 };
-	nanos6_spawn_function(main_task_wrapper, &argsBlock, main_completion_callback, &condVar, "main");
+	nanos6_spawn_function(main_task_wrapper, &argsBlock, main_completion_callback, &condVar, argv[0]);
 
 	// Wait for the completion callback
 	pthread_mutex_lock(&condVar._mutex);
