@@ -15,14 +15,14 @@ CC = $(NANOS6_MCC)
 correctness_tests = \
 	blocking.test \
 	critical.test \
-	deadline.test
-#	discrete-deps.test \
-#	discrete-deps-early-release.test \
-#	discrete-deps-er-and-weak.test \
-#	discrete-deps-nonest.test \
-#	discrete-deps-wait.test \
-#	discrete-deps-release.test \
-#	if0.test
+	deadline.test \
+	discrete-deps.test \
+	discrete-deps-early-release.test \
+	discrete-deps-er-and-weak.test \
+	discrete-deps-nonest.test \
+	discrete-deps-wait.test \
+	discrete-deps-release.test \
+	if0.test
 # 	taskloop-dep-multiaxpy.test \
 # 	taskloop-multiaxpy.test \
 # 	taskloop-nested-dep-multiaxpy.test \
