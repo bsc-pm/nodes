@@ -11,10 +11,10 @@ LDADD = -ldl
 CXX = $(NANOS6_MCXX)
 CC = $(NANOS6_MCC)
 
+#	commutative.test
 correctness_tests = \
-	blocking.test
-#	commutative.test \
-#	critical.test \
+	blocking.test \
+	critical.test
 #	deadline.test \
 #	discrete-deps.test \
 #	discrete-deps-early-release.test \
