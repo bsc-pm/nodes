@@ -348,6 +348,27 @@ public:
 		std::cout << "# " << v1 << v2 << v3 << v4 << v5 << v6 << v7 << std::endl;
 	}
 
+	template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8>
+	void emitDiagnostic(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8)
+	{
+		std::lock_guard<std::mutex> guard(_mutex);
+		std::cout << "# " << v1 << v2 << v3 << v4 << v5 << v6 << v7 << v8 << std::endl;
+	}
+
+	template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9>
+	void emitDiagnostic(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9)
+	{
+		std::lock_guard<std::mutex> guard(_mutex);
+		std::cout << "# " << v1 << v2 << v3 << v4 << v5 << v6 << v7 << v8 << v9 << std::endl;
+	}
+
+	template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9, typename T10>
+	void emitDiagnostic(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9, T10 v10)
+	{
+		std::lock_guard<std::mutex> guard(_mutex);
+		std::cout << "# " << v1 << v2 << v3 << v4 << v5 << v6 << v7 << v8 << v9 << v10 << std::endl;
+	}
+
 };
 
 #endif // TAP_DRIVER_HPP

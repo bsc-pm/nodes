@@ -14,8 +14,8 @@ CC = $(NANOS6_MCC)
 #	commutative.test
 correctness_tests = \
 	blocking.test \
-	critical.test
-#	deadline.test \
+	critical.test \
+	deadline.test
 #	discrete-deps.test \
 #	discrete-deps-early-release.test \
 #	discrete-deps-er-and-weak.test \
