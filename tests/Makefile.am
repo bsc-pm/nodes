@@ -22,13 +22,13 @@ correctness_tests = \
 	discrete-deps-nonest.test \
 	discrete-deps-wait.test \
 	discrete-deps-release.test \
-	if0.test
+	if0.test \
+	fibonacci.test
 # 	taskloop-dep-multiaxpy.test \
 # 	taskloop-multiaxpy.test \
 # 	taskloop-nested-dep-multiaxpy.test \
 # 	taskloop-nonpod.test \
 # 	taskloop-nqueens.test \
-# 	fibonacci.test \
 # 	red-firstprivate.test \
 # 	red-nest.test \
 # 	red-nest-other.test \
