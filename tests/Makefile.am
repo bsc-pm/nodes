@@ -20,21 +20,21 @@ correctness_tests = \
 	discrete-deps-early-release.test \
 	discrete-deps-er-and-weak.test \
 	discrete-deps-nonest.test \
-	discrete-deps-wait.test \
 	discrete-deps-release.test \
+	discrete-deps-wait.test \
+	fibonacci.test \
 	if0.test \
-	fibonacci.test
+ 	red-firstprivate.test \
+ 	red-nest.test \
+ 	red-nest-other.test \
+ 	red-nonest.test \
+ 	red-nqueens.test \
+ 	red-stress.test
 # 	taskloop-dep-multiaxpy.test \
 # 	taskloop-multiaxpy.test \
 # 	taskloop-nested-dep-multiaxpy.test \
 # 	taskloop-nonpod.test \
-# 	taskloop-nqueens.test \
-# 	red-firstprivate.test \
-# 	red-nest.test \
-# 	red-nest-other.test \
-# 	red-nonest.test \
-# 	red-nqueens.test \
-# 	red-stress.test
+# 	taskloop-nqueens.test
 
 check_PROGRAMS = $(correctness_tests)
 TESTS = $(correctness_tests)
@@ -71,41 +71,21 @@ discrete_deps_nonest_test_SOURCES  = correctness/dependencies/discrete-deps-none
 discrete_deps_nonest_test_CXXFLAGS = $(AM_CXXFLAGS)
 discrete_deps_nonest_test_LDFLAGS  = $(AM_LDFLAGS)
 
-discrete_deps_wait_test_SOURCES  = correctness/dependencies/discrete-deps-wait.cpp
-discrete_deps_wait_test_CXXFLAGS = $(AM_CXXFLAGS)
-discrete_deps_wait_test_LDFLAGS  = $(AM_LDFLAGS)
-
 discrete_deps_release_test_SOURCES  = correctness/dependencies/discrete-deps-release.cpp
 discrete_deps_release_test_CXXFLAGS = $(AM_CXXFLAGS)
 discrete_deps_release_test_LDFLAGS  = $(AM_LDFLAGS)
 
-if0_test_SOURCES  = correctness/dependencies/if0.cpp
-if0_test_CXXFLAGS = $(AM_CXXFLAGS)
-if0_test_LDFLAGS  = $(AM_LDFLAGS)
-
-taskloop_dep_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-dep-multiaxpy.cpp
-taskloop_dep_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
-taskloop_dep_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
-
-taskloop_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-multiaxpy.cpp
-taskloop_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
-taskloop_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
-
-taskloop_nested_dep_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-nested-dep-multiaxpy.cpp
-taskloop_nested_dep_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
-taskloop_nested_dep_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
-
-taskloop_nonpod_test_SOURCES  = correctness/taskloop/taskloop-nonpod.cpp
-taskloop_nonpod_test_CXXFLAGS = $(AM_CXXFLAGS)
-taskloop_nonpod_test_LDFLAGS  = $(AM_LDFLAGS)
-
-taskloop_nqueens_test_SOURCES  = correctness/taskloop/taskloop-nqueens.cpp
-taskloop_nqueens_test_CXXFLAGS = $(AM_CXXFLAGS)
-taskloop_nqueens_test_LDFLAGS  = $(AM_LDFLAGS)
+discrete_deps_wait_test_SOURCES  = correctness/dependencies/discrete-deps-wait.cpp
+discrete_deps_wait_test_CXXFLAGS = $(AM_CXXFLAGS)
+discrete_deps_wait_test_LDFLAGS  = $(AM_LDFLAGS)
 
 fibonacci_test_SOURCES  = correctness/fibonacci/fibonacci.cpp
 fibonacci_test_CXXFLAGS = $(AM_CXXFLAGS)
 fibonacci_test_LDFLAGS  = $(AM_LDFLAGS)
+
+if0_test_SOURCES  = correctness/dependencies/if0.cpp
+if0_test_CXXFLAGS = $(AM_CXXFLAGS)
+if0_test_LDFLAGS  = $(AM_LDFLAGS)
 
 red_firstprivate_test_SOURCES  = correctness/reductions/red-firstprivate.cpp
 red_firstprivate_test_CXXFLAGS = $(AM_CXXFLAGS)
@@ -130,6 +110,27 @@ red_nqueens_test_LDFLAGS  = $(AM_LDFLAGS)
 red_stress_test_SOURCES  = correctness/reductions/red-stress.cpp
 red_stress_test_CXXFLAGS = $(AM_CXXFLAGS)
 red_stress_test_LDFLAGS  = $(AM_LDFLAGS)
+
+taskloop_dep_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-dep-multiaxpy.cpp
+taskloop_dep_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskloop_dep_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
+
+taskloop_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-multiaxpy.cpp
+taskloop_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskloop_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
+
+taskloop_nested_dep_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-nested-dep-multiaxpy.cpp
+taskloop_nested_dep_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskloop_nested_dep_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
+
+taskloop_nonpod_test_SOURCES  = correctness/taskloop/taskloop-nonpod.cpp
+taskloop_nonpod_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskloop_nonpod_test_LDFLAGS  = $(AM_LDFLAGS)
+
+taskloop_nqueens_test_SOURCES  = correctness/taskloop/taskloop-nqueens.cpp
+taskloop_nqueens_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskloop_nqueens_test_LDFLAGS  = $(AM_LDFLAGS)
+
 
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tests/tap-driver.sh
 EXTRA_DIST = tap-driver.sh $(TESTS)
