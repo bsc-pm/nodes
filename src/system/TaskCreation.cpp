@@ -179,6 +179,7 @@ void nanos6_submit_task(void *taskHandle)
 			// Non-ready if0 tasks cause this task to get paused. Before the
 			// if0 task starts executing (after deps are satisfied), it will
 			// detect that it was a non-ready if0 task and re-submit the parent
+			taskMetadata->markIf0AsNotInlined();
 			nosv_pause(NOSV_SUBMIT_NONE);
 		}
 	}

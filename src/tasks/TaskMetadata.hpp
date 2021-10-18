@@ -73,6 +73,9 @@ private:
 	//! Whether the task has finished user code execution
 	std::atomic<bool> _finished;
 
+	//! Whether the task was executed inline if it is if0
+	bool _if0Inlined;
+
 protected:
 
 	//! Dependencies of the task
@@ -97,6 +100,7 @@ public:
 		_countdownToRelease(1),
 		_parent(nullptr),
 		_finished(false),
+		_if0Inlined(true),
 		_dataAccesses(taskAccessInfo),
 		_flags(flags)
 	{
@@ -254,6 +258,16 @@ public:
 	inline bool hasFinished() const
 	{
 		return _finished;
+	}
+
+	inline void markIf0AsNotInlined()
+	{
+		_if0Inlined = false;
+	}
+
+	inline bool isIf0Inlined() const
+	{
+		return _if0Inlined;
 	}
 
 	inline TaskDataAccesses &getTaskDataAccesses()

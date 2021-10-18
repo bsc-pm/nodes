@@ -86,6 +86,12 @@ private:
 			);
 		}
 
+		if (!taskMetadata->isIf0Inlined()) {
+			// If the task is if0, it means the parent task was blocked. In this
+			// case, unblock the parent at the end of the task's execution
+			nosv_submit(taskMetadata->getParent(), NOSV_SUBMIT_UNLOCKED);
+		}
+
 		// Free up all symbol translation
 		if (tableSize > 0) {
 			MemoryAllocator::free(translationTable, tableSize);
