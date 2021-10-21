@@ -13,8 +13,8 @@
 #include <map>
 #include <string>
 
-#include <api/library-mode.h>
-#include <api/task-instantiation.h>
+#include <nanos6/library-mode.h>
+#include <nanos6/task-instantiation.h>
 
 #include "common/SpinLock.hpp"
 

@@ -11,7 +11,7 @@
 
 #include <nosv.h>
 
-#include <api/task-instantiation.h>
+#include <nanos6/task-instantiation.h>
 
 #include "CPUDependencyData.hpp"
 #include "DataAccess.hpp"

@@ -6,8 +6,8 @@
 
 #include <nosv.h>
 
-#include <api/bootstrap.h>
-#include <api/taskwait.h>
+#include <nanos6/bootstrap.h>
+#include <nanos6/taskwait.h>
 
 #include "dependencies/discrete/DependencySystem.hpp"
 #include "hardware/HardwareInfo.hpp"

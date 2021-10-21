@@ -8,7 +8,7 @@
 
 #include <nosv.h>
 
-#include <api/final.h>
+#include <nanos6/final.h>
 
 #include "tasks/TaskMetadata.hpp"
 

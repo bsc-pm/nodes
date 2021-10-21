@@ -22,25 +22,27 @@ lib_suffix = $(lib_major).$(lib_age).$(lib_revision)
 
 nanos6includedir = $(includedir)/nanos6
 
-include_HEADERS = \
-	api/blocking.h \
-	api/bootstrap.h \
-	api/constants.h \
-	api/dependencies.h \
-	api/final.h \
-	api/library-mode.h \
-	api/loop.h \
-	api/major.h \
-	api/nanos6.h \
-	api/reductions.h \
-	api/task-info-registration.h \
-	api/task-instantiation.h \
-	api/taskwait.h \
-	api/user-mutex.h
+nanos6include_HEADERS = \
+	api/nanos6/blocking.h \
+	api/nanos6/bootstrap.h \
+	api/nanos6/constants.h \
+	api/nanos6/dependencies.h \
+	api/nanos6/final.h \
+	api/nanos6/library-mode.h \
+	api/nanos6/loop.h \
+	api/nanos6/major.h \
+	api/nanos6/reductions.h \
+	api/nanos6/task-info-registration.h \
+	api/nanos6/task-instantiation.h \
+	api/nanos6/taskwait.h \
+	api/nanos6/user-mutex.h
 
 nodist_nanos6include_HEADERS = \
 	nanos6/multidimensional-dependencies.h \
 	nanos6/multidimensional-release.h
+
+include_HEADERS = \
+	api/nanos6.h
 
 noinst_HEADERS = \
 	src/common/AtomicBitset.hpp \

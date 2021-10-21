@@ -10,9 +10,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <api/bootstrap.h>
-#include <api/library-mode.h>
-#include <api/taskwait.h>
+#include <api/nanos6/bootstrap.h>
+#include <api/nanos6/library-mode.h>
+#include <api/nanos6/taskwait.h>
 
 #include "main-wrapper.h"
 

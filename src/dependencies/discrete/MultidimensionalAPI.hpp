@@ -7,8 +7,8 @@
 #ifndef MULTIDIMENSIONAL_API_HPP
 #define MULTIDIMENSIONAL_API_HPP
 
-#include <dependencies.h>
-#include <reductions.h>
+#include <nanos6/dependencies.h>
+#include <nanos6/reductions.h>
 #include <nanos6/multidimensional-dependencies.h>
 
 #include "dependencies/DataAccessType.hpp"

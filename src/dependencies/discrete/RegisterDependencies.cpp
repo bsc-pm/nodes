@@ -9,8 +9,8 @@
 
 #include <nosv.h>
 
-#include <api/dependencies.h>
-#include <api/reductions.h>
+#include <nanos6/dependencies.h>
+#include <nanos6/reductions.h>
 
 #include "DataAccessRegistration.hpp"
 #include "ReductionSpecific.hpp"

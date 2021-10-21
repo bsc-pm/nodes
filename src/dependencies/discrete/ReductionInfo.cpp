@@ -9,7 +9,7 @@
 
 #include <nosv.h>
 
-#include <api/reductions.h>
+#include <nanos6/reductions.h>
 
 #include "DeviceReductionStorage.hpp"
 #include "ReductionInfo.hpp"

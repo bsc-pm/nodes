@@ -9,8 +9,8 @@
 
 #include <nosv.h>
 
-#include <api/blocking.h>
-#include <api/user-mutex.h>
+#include <nanos6/blocking.h>
+#include <nanos6/user-mutex.h>
 
 #include "common/UserMutex.hpp"
 

@@ -6,7 +6,7 @@
 
 #include <nosv.h>
 
-#include <api/taskwait.h>
+#include <nanos6/taskwait.h>
 
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "hardware/HardwareInfo.hpp"

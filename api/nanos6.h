@@ -14,21 +14,21 @@
 #define __NANOS6__
 
 
-#include "blocking.h"
-#include "bootstrap.h"
-#include "constants.h"
-#include "dependencies.h"
-#include "final.h"
-#include "library-mode.h"
-#include "loop.h"
-#include "major.h"
+#include "nanos6/blocking.h"
+#include "nanos6/bootstrap.h"
+#include "nanos6/constants.h"
+#include "nanos6/dependencies.h"
+#include "nanos6/final.h"
+#include "nanos6/library-mode.h"
+#include "nanos6/loop.h"
+#include "nanos6/major.h"
 #include "nanos6/multidimensional-dependencies.h"
 #include "nanos6/multidimensional-release.h"
-#include "reductions.h"
-#include "task-info-registration.h"
-#include "task-instantiation.h"
-#include "taskwait.h"
-#include "user-mutex.h"
+#include "nanos6/reductions.h"
+#include "nanos6/task-info-registration.h"
+#include "nanos6/task-instantiation.h"
+#include "nanos6/taskwait.h"
+#include "nanos6/user-mutex.h"
 
 
 #endif /* NANOS6_H */

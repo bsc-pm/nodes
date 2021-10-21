@@ -4,7 +4,7 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#include <api/task-info-registration.h>
+#include <nanos6/task-info-registration.h>
 
 #include "tasks/TaskInfo.hpp"
 

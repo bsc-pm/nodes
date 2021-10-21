@@ -9,7 +9,7 @@
 
 #include <cmath>
 
-#include <api/loop.h>
+#include <nanos6/loop.h>
 
 #include "TaskMetadata.hpp"
 #include "common/MathSupport.hpp"

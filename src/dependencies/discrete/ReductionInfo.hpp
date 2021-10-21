@@ -12,7 +12,7 @@
 
 #include <nosv.h>
 
-#include <api/task-instantiation.h>
+#include <nanos6/task-instantiation.h>
 
 #include "ReductionSpecific.hpp"
 #include "common/Containers.hpp"

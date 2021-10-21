@@ -22,17 +22,6 @@ AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
-AC_LANG([C++])
-
-# Prepare compilation flags before AC_PROG_CXX
-AX_COMPILE_FLAGS
-
-# Retrieve compiler version
-AX_CHECK_CXX_VERSION
-
-# AM_PROG_AR must be called before LT_INIT or a warning ensues
-AM_PROG_AR
-
 # Automake initialization
 AM_INIT_AUTOMAKE([foreign -Wall dist-bzip2 -Wno-portability subdir-objects silent-rules])
 AM_SILENT_RULES([yes])
@@ -40,10 +29,15 @@ AM_SILENT_RULES([yes])
 # Checks for header files
 AC_CHECK_HEADERS([unistd.h])
 
-# Checks for libraries
-AX_BOOST_BASE([1.59], [], [ AC_MSG_ERROR([Boost library not found]) ])
-CHECK_PTHREAD
-AC_CHECK_NOSV
+# AM_PROG_AR must be called before LT_INIT or a warning ensues
+AM_PROG_AR
+LT_INIT([shared disable-static pic-only])
+
+# Checks for compiler characteristics
+# Prepare compilation flags before AC_PROG_CXX
+SSS_PREPARE_COMPILER_FLAGS
+AC_PROG_CXX
+AX_CXX_COMPILE_STDCXX_11([], [mandatory])
 
 # Check for mercurium
 SSS_CHECK_NANOS6_MERCURIUM
@@ -51,23 +45,23 @@ SSS_PUSH_NANOS6_MERCURIUM
 SSS_CHECK_MERCURIUM_ACCEPTS_EXTERNAL_INSTALLATION
 SSS_POP_NANOS6_MERCURIUM
 
-if test x"${ac_have_nanos6_mercurium}" = x"yes" ; then
-	NANOS6_MCXX="${NANOS6_MCXX} -std=c++03"
-	NANOS6_MCC="${NANOS6_MCC}"
-fi
+# Checks for libraries
+AX_BOOST_BASE([1.59], [], [ AC_MSG_ERROR([Boost library not found]) ])
+CHECK_PTHREAD
+AC_CHECK_NOSV
 
-# Checks for typedefs, structures, and compiler characteristics
-AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+# Checks for typedefs, structures
 AC_CHECK_HEADER_STDBOOL
 AC_TYPE_SIZE_T
 
-LT_INIT([shared disable-static pic-only])
+if test x"${ac_have_nanos6_mercurium}" = x"yes" ; then
+	NANOS6_MCXX="${NANOS6_MCXX} -std=c++03"
+fi
 
-# Enable/disable architecture specific code
-AS_CASE([$host], [x86_64*], [ARCH=x86_64])
-AS_IF([test "$ARCH" = "x86_64"], [
-	AC_DEFINE([X86_64_ARCH], [1], [Compiling for x86_64 host])
-])
+
+SSS_FIXUP_COMPILER_FLAGS
+AC_CHECK_EXTRACT_FIRST_COMPILER_FLAG([FALIGNED_NEW_FLAG], [-faligned-new])
+AC_CHECK_EXTRACT_FIRST_COMPILER_FLAG([MCMODEL_FLAGS], [-mcmodel=large -mcmodel=medium])
 
 AC_CONFIG_FILES([Makefile tests/Makefile])
 AC_OUTPUT

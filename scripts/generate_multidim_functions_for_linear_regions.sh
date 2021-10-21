@@ -18,7 +18,7 @@ shift
 . $(dirname $0)/common.sh
 
 
-echo '#include <dependencies.h>'
+echo '#include <nanos6/dependencies.h>'
 echo '#include <nanos6/multidimensional-dependencies.h>'
 echo ''
 echo '#include "MultidimensionalAPI.hpp"'

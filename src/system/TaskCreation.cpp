@@ -9,7 +9,7 @@
 
 #include <nosv.h>
 
-#include <api/task-instantiation.h>
+#include <nanos6/task-instantiation.h>
 
 #include "common/ErrorHandler.hpp"
 #include "dependencies/discrete/CPUDependencyData.hpp"
