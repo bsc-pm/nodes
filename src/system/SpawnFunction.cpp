@@ -11,6 +11,7 @@
 #include <nosv.h>
 
 #include "SpawnFunction.hpp"
+#include "instrument/OVNIInstrumentation.hpp"
 #include "tasks/TaskInfo.hpp"
 
 
@@ -76,6 +77,8 @@ void SpawnFunction::spawnFunction(
 	char const *label,
 	bool fromUserCode
 ) {
+	Instrument::enterSpawnFunction();
+
 	// Increase the number of spawned functions in case it is
 	// spawned from outside the runtime system
 	if (fromUserCode) {
@@ -139,5 +142,7 @@ void SpawnFunction::spawnFunction(
 
 	// Submit the task
 	nanos6_submit_task(task);
+
+	Instrument::exitSpawnFunction();
 }
 
