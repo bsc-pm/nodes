@@ -15,6 +15,7 @@
 #include "dependencies/discrete/CPUDependencyData.hpp"
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "hardware/HardwareInfo.hpp"
+#include "memory/MemoryAllocator.hpp"
 #include "system/SpawnFunction.hpp"
 #include "tasks/TaskMetadata.hpp"
 
@@ -27,10 +28,8 @@ void TaskFinalization::taskEndedCallback(nosv_task_t task)
 
 void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 {
-	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
-	assert(taskMetadata != nullptr);
-
 	// Mark that the task has finished user code execution
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 	taskMetadata->markAsFinished();
 
 	// If the task has a wait clause, the release of dependencies must be
@@ -69,11 +68,9 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 
 void TaskFinalization::taskFinished(nosv_task_t task)
 {
-	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
-	assert(taskMetadata != nullptr);
-
 	// Decrease the _countdownToBeWokenUp of the task, which was initialized to 1
 	// If it becomes 0, we can propagate the counter through its parents
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 	bool ready = taskMetadata->finishChild();
 
 	// NOTE: Needed?
@@ -124,9 +121,7 @@ void TaskFinalization::taskFinished(nosv_task_t task)
 
 		// Using 'task' here is forbidden, as it may have been disposed
 		if (ready && parent != nullptr) {
-			parentMetadata = (TaskMetadata *) nosv_get_task_metadata(parent);
-			assert(parentMetadata != nullptr);
-
+			parentMetadata = TaskMetadata::getTaskMetadata(parent);
 			ready = parentMetadata->finishChild();
 		}
 
@@ -141,8 +136,7 @@ void TaskFinalization::taskFinished(nosv_task_t task)
 
 void TaskFinalization::disposeTask(nosv_task_t task)
 {
-	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
-	assert(taskMetadata != nullptr);
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 
 	// Follow up the chain of ancestors and dispose them as needed and wake up
 	// any in a taskwait that finishes in this moment
@@ -152,7 +146,7 @@ void TaskFinalization::disposeTask(nosv_task_t task)
 	while ((task != nullptr) && disposable) {
 		parent = taskMetadata->getParent();
 		if (parent != nullptr) {
-			parentMetadata = (TaskMetadata *) nosv_get_task_metadata(parent);
+			parentMetadata = TaskMetadata::getTaskMetadata(parent);
 			assert(taskMetadata->hasFinished());
 
 			// Check if we continue the chain with the parent
@@ -172,6 +166,12 @@ void TaskFinalization::disposeTask(nosv_task_t task)
 
 		if (taskMetadata->isSpawned()) {
 			SpawnFunction::_pendingSpawnedFunctions--;
+		}
+
+		// If the metadata was allocated locally, free it now
+		if (taskMetadata->isLocallyAllocated()) {
+			size_t metadataSize = taskMetadata->getTaskMetadataSize();
+			MemoryAllocator::free(taskMetadata, metadataSize);
 		}
 
 		// Destroy the task

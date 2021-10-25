@@ -62,9 +62,7 @@ private:
 			task, cpuId, stackTranslationTable, tableSize
 		);
 
-		TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
-		assert(taskMetadata != nullptr);
-
+		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 		if (taskMetadata->isTaskloop()) {
 			TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) taskMetadata;
 			if (!taskloopMetadata->isTaskloopSource()) {

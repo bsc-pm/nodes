@@ -21,9 +21,7 @@ extern "C" void nanos6_taskwait(char const */*invocationSource*/)
 	nosv_task_t task = nosv_self();
 
 	// Retreive the task's metadata
-	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
-	assert(taskMetadata != nullptr);
-
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 	if (taskMetadata->doesNotNeedToBlockForChildren()) {
 		std::atomic_thread_fence(std::memory_order_acquire);
 		return;

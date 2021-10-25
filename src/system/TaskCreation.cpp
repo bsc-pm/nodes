@@ -16,6 +16,7 @@
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "dependencies/discrete/TaskDataAccesses.hpp"
 #include "dependencies/discrete/TaskDataAccessesInfo.hpp"
+#include "memory/MemoryAllocator.hpp"
 #include "hardware/HardwareInfo.hpp"
 #include "tasks/TaskloopMetadata.hpp"
 #include "tasks/TaskMetadata.hpp"
@@ -59,19 +60,42 @@ void nanos6_create_task(
 		// Allocation and layout
 		taskSize += argsBlockSize + taskAccessesSize;
 	}
-	ErrorHandler::failIf(taskSize > NOSV_MAX_METADATA_SIZE, "Task argsBlock size too large (max 4K)");
+
+	// nOS-V Might not be able to allocate the argsBlocks
+	bool locallyAllocated = (taskSize > NOSV_MAX_METADATA_SIZE);
 
 	// Create the nOS-V task
 	nosv_task_type_t tasktype = (nosv_task_type_t) taskInfo->task_type_data;
 	assert(tasktype != nullptr);
 
 	nosv_task_t task;
-	int ret = nosv_create(&task, tasktype, taskSize, NOSV_CREATE_NONE);
+	int ret = nosv_create(
+		&task,
+		tasktype,
+		(locallyAllocated) ? sizeof(void *) : sizeof (void *) + taskSize,
+		NOSV_CREATE_NONE
+	);
 	assert(!ret);
 
-	// Assign part of the nOS-V allocated metadata as the argsBlocks
-	void *metadata = nosv_get_task_metadata(task);
+	// Since we won't know if the metadata returned by nOS-V is a memory region
+	// or a pointer that points to a locally allocated region, we always alloc
+	// extra space for a pointer that references the metadata's real region.
+	// - If nOS-V can allocate the memory, the pointer will point to the memory
+	// allocated right next to it.
+	// - If nOS-V can't allocate the memory, the pointer will point to a region
+	// of memory allocated by Nanos6-Lite.
+	void **metadataPointer = (void **) nosv_get_task_metadata(task);
+	assert(metadataPointer != nullptr);
+
+	if (locallyAllocated) {
+		*metadataPointer = MemoryAllocator::alloc(taskSize);
+	} else {
+		*metadataPointer = ((char *) metadataPointer + sizeof(void *));
+	}
+
+	void *metadata = *metadataPointer;
 	assert(metadata != nullptr);
+
 	if (!hasPreallocatedArgsBlock) {
 		if (isTaskloop) {
 			// Skip sizeof(TaskloopMetadata) to assign the pointer
@@ -87,9 +111,9 @@ void nanos6_create_task(
 
 	// Retreive and construct the task's metadata
 	if (isTaskloop) {
-		new (metadata) TaskloopMetadata(*argsBlockPointer, originalArgsBlockSize, flags, taskAccesses);
+		new (metadata) TaskloopMetadata(*argsBlockPointer, originalArgsBlockSize, flags, taskAccesses, taskSize, locallyAllocated);
 	} else {
-		new (metadata) TaskMetadata(*argsBlockPointer, originalArgsBlockSize, flags, taskAccesses);
+		new (metadata) TaskMetadata(*argsBlockPointer, originalArgsBlockSize, flags, taskAccesses, taskSize, locallyAllocated);
 	}
 
 	// Assign the nOS-V task pointer for a future submit
@@ -124,7 +148,7 @@ void nanos6_create_loop(
 		args_block_pointer, task_pointer, flags, num_deps
 	);
 
-	TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) nosv_get_task_metadata((nosv_task_t) (*task_pointer));
+	TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
 	assert(*task_pointer != nullptr);
 	assert(taskloopMetadata != nullptr);
 	assert(taskloopMetadata->isTaskloop());
@@ -144,8 +168,7 @@ void nanos6_submit_task(void *taskHandle)
 	nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
 	assert(taskInfo != nullptr);
 
-	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
-	assert(taskMetadata != nullptr);
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 
 	// Obtain the parent task and link both parent and child
 	nosv_task_t parentTask = nosv_self();

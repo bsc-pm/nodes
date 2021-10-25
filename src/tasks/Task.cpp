@@ -18,9 +18,7 @@ extern "C" signed int nanos6_in_final(void)
 	nosv_task_t currentTask = nosv_self();
 	assert(currentTask != nullptr);
 
-	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(currentTask);
-	assert(taskMetadata != nullptr);
-
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(currentTask);
 	return taskMetadata->isFinal();
 }
 
@@ -29,8 +27,6 @@ extern "C" signed int nanos6_in_serial_context(void)
 	nosv_task_t currentTask = nosv_self();
 	assert(currentTask != nullptr);
 
-	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(currentTask);
-	assert(taskMetadata != nullptr);
-
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(currentTask);
 	return taskMetadata->isFinal() || taskMetadata->isIf0();
 }

@@ -134,9 +134,7 @@ void SpawnFunction::spawnFunction(
 	argsBlock->_completionArgs = completionArgs;
 
 	// Set the task as spawned
-	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata((nosv_task_t) task);
-	assert(taskMetadata != nullptr);
-
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata((nosv_task_t) task);
 	taskMetadata->setSpawned(true);
 
 	// Submit the task

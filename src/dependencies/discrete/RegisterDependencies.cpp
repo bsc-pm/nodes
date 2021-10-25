@@ -30,10 +30,8 @@ void register_access(void *handler, void *start, size_t length, int symbolIndex,
 		return;
 	}
 
-	TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
-	assert(taskMetadata != nullptr);
-
 	//bool weak = (WEAK && !task->isFinal() && !task->isTaskfor()) || task->isTaskloopSource();
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 	bool weak = (WEAK && !taskMetadata->isFinal()) || taskMetadata->isTaskloopSource();
 	DataAccessRegistration::registerTaskDataAccess(task, ACCESS_TYPE, weak, start,
 		length, reductionTypeAndOperatorIndex, reductionIndex, symbolIndex);

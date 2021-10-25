@@ -76,6 +76,12 @@ private:
 	//! Whether the task was executed inline if it is if0
 	bool _if0Inlined;
 
+	//! The size needed to allocate this metadata
+	size_t _metadataSize;
+
+	//! Whether the task's metadata was locally allocated (not allocd from nOS-V)
+	bool _locallyAllocated;
+
 protected:
 
 	//! Dependencies of the task
@@ -90,7 +96,9 @@ public:
 		void *argsBlock,
 		size_t argsBlockSize,
 		size_t flags,
-		const TaskDataAccessesInfo &taskAccessInfo
+		const TaskDataAccessesInfo &taskAccessInfo,
+		size_t taskMetadataSize,
+		bool locallyAllocated
 	) :
 		_argsBlock(argsBlock),
 		_argsBlockSize(argsBlockSize),
@@ -102,7 +110,9 @@ public:
 		_finished(false),
 		_if0Inlined(true),
 		_dataAccesses(taskAccessInfo),
-		_flags(flags)
+		_flags(flags),
+		_metadataSize(taskMetadataSize),
+		_locallyAllocated(locallyAllocated)
 	{
 	}
 
@@ -237,9 +247,7 @@ public:
 		_parent = parent;
 
 		// Retreive the task's metadata
-		TaskMetadata *parentMetadata = (TaskMetadata *) nosv_get_task_metadata(parent);
-		assert(parentMetadata != nullptr);
-
+		TaskMetadata *parentMetadata = getTaskMetadata(parent);
 		parentMetadata->addChild();
 	}
 
@@ -268,6 +276,16 @@ public:
 	inline bool isIf0Inlined() const
 	{
 		return _if0Inlined;
+	}
+
+	inline size_t getTaskMetadataSize() const
+	{
+		return _metadataSize;
+	}
+
+	inline bool isLocallyAllocated() const
+	{
+		return _locallyAllocated;
 	}
 
 	inline TaskDataAccesses &getTaskDataAccesses()
@@ -361,6 +379,18 @@ public:
 		assert(taskInfo != nullptr);
 
 		taskInfo->register_depinfo(_argsBlock, nullptr, task);
+	}
+
+	static inline TaskMetadata *getTaskMetadata(nosv_task_t task)
+	{
+		// For info on why, TaskCreation.cpp
+		TaskMetadata **taskMetadataPointer = (TaskMetadata **) nosv_get_task_metadata(task);
+		assert(taskMetadataPointer != nullptr);
+
+		TaskMetadata *taskMetadata = *taskMetadataPointer;
+		assert(taskMetadata != nullptr);
+
+		return taskMetadata;
 	}
 
 };

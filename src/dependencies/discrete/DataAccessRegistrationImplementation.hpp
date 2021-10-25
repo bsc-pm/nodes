@@ -23,9 +23,7 @@ namespace DataAccessRegistration {
 		assert(task != nullptr);
 
 		// Retreive the task's metadata
-		TaskMetadata *taskMetadata = (TaskMetadata *) nosv_get_task_metadata(task);
-		assert(taskMetadata != nullptr);
-
+		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 		TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 

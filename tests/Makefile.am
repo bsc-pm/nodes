@@ -30,13 +30,12 @@ correctness_tests = \
 	red-nonest.test \
 	red-nqueens.test \
 	red-stress.test \
+	taskloop-dep-multiaxpy.test \
 	taskloop-multiaxpy.test \
+	taskloop-nested-dep-multiaxpy.test \
 	taskloop-nonpod.test \
 	taskloop-nqueens.test
 
-# Not available due to nOS-V argsBlock size constraints (> 4K)
-#	taskloop-dep-multiaxpy.test
-#	taskloop-nested-dep-multiaxpy.test
 
 check_PROGRAMS = $(correctness_tests)
 TESTS = $(correctness_tests)
@@ -118,13 +117,13 @@ taskloop_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
 taskloop_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
 
 # Not available due to nOS-V argsBlock size constraints (> 4K)
-#taskloop_dep_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-dep-multiaxpy.cpp
-#taskloop_dep_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
-#taskloop_dep_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
+taskloop_dep_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-dep-multiaxpy.cpp
+taskloop_dep_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskloop_dep_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
 
-#taskloop_nested_dep_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-nested-dep-multiaxpy.cpp
-#taskloop_nested_dep_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
-#taskloop_nested_dep_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
+taskloop_nested_dep_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-nested-dep-multiaxpy.cpp
+taskloop_nested_dep_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskloop_nested_dep_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
 
 taskloop_nonpod_test_SOURCES  = correctness/taskloop/taskloop-nonpod.cpp
 taskloop_nonpod_test_CXXFLAGS = $(AM_CXXFLAGS)

@@ -41,9 +41,11 @@ public:
 		void *argsBlock,
 		size_t argsBlockSize,
 		size_t flags,
-		const TaskDataAccessesInfo &taskAccessInfo
+		const TaskDataAccessesInfo &taskAccessInfo,
+		size_t taskMetadataSize,
+		bool locallyAllocated
 	) :
-		TaskMetadata(argsBlock, argsBlockSize, flags, taskAccessInfo),
+		TaskMetadata(argsBlock, argsBlockSize, flags, taskAccessInfo, taskMetadataSize, locallyAllocated),
 		_bounds(),
 		_source(false),
 		_maxChildDeps(0)
@@ -150,7 +152,7 @@ namespace Taskloop {
 		);
 		assert(taskPointer != nullptr);
 
-		TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) nosv_get_task_metadata((nosv_task_t) taskPointer);
+		TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) taskPointer);
 		argsBlock = taskloopMetadata->getArgsBlock();
 		assert(argsBlock != nullptr);
 
