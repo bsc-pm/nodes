@@ -109,10 +109,10 @@ public:
 		_parent(nullptr),
 		_finished(false),
 		_if0Inlined(true),
-		_dataAccesses(taskAccessInfo),
-		_flags(flags),
 		_metadataSize(taskMetadataSize),
-		_locallyAllocated(locallyAllocated)
+		_locallyAllocated(locallyAllocated),
+		_dataAccesses(taskAccessInfo),
+		_flags(flags)
 	{
 	}
 
@@ -244,11 +244,17 @@ public:
 	{
 		assert(parent != nullptr);
 
-		_parent = parent;
+		// NOTE: It may happen that the task has no metadata (i.e. the attached task
+		// from Initialization.cpp)
+		// TODO: Assert that it can only be that task
+		TaskMetadata **parentMetadataPointer = (TaskMetadata **) nosv_get_task_metadata(parent);
+		if (parentMetadataPointer != nullptr) {
+			TaskMetadata *parentMetadata = *parentMetadataPointer;
+			assert(parentMetadata != nullptr);
 
-		// Retreive the task's metadata
-		TaskMetadata *parentMetadata = getTaskMetadata(parent);
-		parentMetadata->addChild();
+			_parent = parent;
+			parentMetadata->addChild();
+		}
 	}
 
 	inline nosv_task_t getParent() const
@@ -383,13 +389,16 @@ public:
 
 	static inline TaskMetadata *getTaskMetadata(nosv_task_t task)
 	{
-		// For info on why, TaskCreation.cpp
+		// For info on the why of this double de-ref, check TaskCreation.cpp
 		TaskMetadata **taskMetadataPointer = (TaskMetadata **) nosv_get_task_metadata(task);
-		assert(taskMetadataPointer != nullptr);
+		TaskMetadata *taskMetadata = nullptr;
+		if (taskMetadataPointer != nullptr) {
+			taskMetadata = *taskMetadataPointer;
+			assert(taskMetadata != nullptr);
+		}
 
-		TaskMetadata *taskMetadata = *taskMetadataPointer;
-		assert(taskMetadata != nullptr);
-
+		// TODO: Make sure that if we're returning nullptr it is due to the
+		// wrapped initialization in (Initialization.hpp)
 		return taskMetadata;
 	}
 

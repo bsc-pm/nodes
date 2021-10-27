@@ -24,7 +24,7 @@
 
 void nanos6_create_task(
 	nanos6_task_info_t *taskInfo,
-	nanos6_task_invocation_info_t *taskInvocationInfo,
+	nanos6_task_invocation_info_t *,
 	size_t argsBlockSize,
 	void **argsBlockPointer,
 	void **taskPointer,

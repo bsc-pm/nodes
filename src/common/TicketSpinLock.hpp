@@ -66,7 +66,7 @@ public:
 		}
 	}
 
-	inline void unlock(bool ignoreOwner = false)
+	inline void unlock(bool = false)
 	{
 		_currentTicket.fetch_add(1, std::memory_order_release);
 	}

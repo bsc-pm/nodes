@@ -40,8 +40,7 @@ bool CommutativeSemaphore::registerTask(nosv_task_t task)
 void CommutativeSemaphore::releaseTask(nosv_task_t task, CPUDependencyData &hpDependencyData)
 {
 	// Retreive the task's metadata
-	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-	TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+	TaskDataAccesses &accessStruct = TaskMetadata::getTaskMetadata(task)->getTaskDataAccesses();
 	const commutative_mask_t &mask = accessStruct._commutativeMask;
 	assert(mask.any());
 
