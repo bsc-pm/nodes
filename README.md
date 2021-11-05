@@ -42,3 +42,12 @@ The development of Nanos6-Lite requires contributors to follow these few simple 
 1. C++11
 1. K&R indentation style
 1. Camel case coding style
+
+## Features and Known Limitations
+
+Nanos6-Lite supports most of the features found in the Nanos6 runtime. However, at the moment, it does not support the following:
+1. Linear-region dependency system
+1. Taskfor construct
+1. Assert directive
+
+Furthermore, the instrumentation provided differs in the sense that it only provides (1) entry-exit points instrumentation, and (2) instrumentation related to the dependency system. Thus, instrumentation variants such as `profile`, `graph`, and the linter (`lint`) are not available in Nanos6-Lite.
