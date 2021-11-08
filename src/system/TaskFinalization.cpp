@@ -54,9 +54,21 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 
 	// Check whether all external events have been also fulfilled, so the dependencies can be released
 	if (dependenciesReleaseable) {
-		int cpuId = nosv_get_current_logical_cpu();
-		CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
+		// Check whether this is an external thread (no cpuDepData)
+		bool isExternal = (nosv_self() == nullptr);
+		CPUDependencyData *cpuDepData;
+		if (isExternal) {
+			cpuDepData = new CPUDependencyData();
+		} else {
+			int cpuId = nosv_get_current_logical_cpu();
+			cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
+		}
+
 		DataAccessRegistration::unregisterTaskDataAccesses(task, *cpuDepData);
+
+		if (isExternal) {
+			delete cpuDepData;
+		}
 
 		TaskFinalization::taskFinished(task);
 

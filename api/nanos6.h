@@ -18,6 +18,7 @@
 #include "nanos6/bootstrap.h"
 #include "nanos6/constants.h"
 #include "nanos6/dependencies.h"
+#include "nanos6/events.h"
 #include "nanos6/final.h"
 #include "nanos6/library-mode.h"
 #include "nanos6/loop.h"

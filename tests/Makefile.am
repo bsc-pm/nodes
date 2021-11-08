@@ -22,6 +22,8 @@ correctness_tests = \
 	discrete-deps-nonest.test \
 	discrete-deps-release.test \
 	discrete-deps-wait.test \
+	events.test \
+	events-dep.test \
 	fibonacci.test \
 	if0.test \
 	red-firstprivate.test \
@@ -80,6 +82,14 @@ discrete_deps_wait_test_SOURCES  = correctness/dependencies/discrete-deps-wait.c
 discrete_deps_wait_test_CXXFLAGS = $(AM_CXXFLAGS)
 discrete_deps_wait_test_LDFLAGS  = $(AM_LDFLAGS)
 
+events_test_SOURCES  = correctness/events/events.cpp
+events_test_CXXFLAGS = $(AM_CXXFLAGS)
+events_test_LDFLAGS  = $(AM_LDFLAGS)
+
+events_dep_test_SOURCES  = correctness/events/events-dep.cpp
+events_dep_test_CXXFLAGS = $(AM_CXXFLAGS)
+events_dep_test_LDFLAGS  = $(AM_LDFLAGS)
+
 fibonacci_test_SOURCES  = correctness/fibonacci/fibonacci.cpp
 fibonacci_test_CXXFLAGS = $(AM_CXXFLAGS)
 fibonacci_test_LDFLAGS  = $(AM_LDFLAGS)
@@ -116,7 +126,6 @@ taskloop_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-multiaxpy.cpp
 taskloop_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
 taskloop_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
 
-# Not available due to nOS-V argsBlock size constraints (> 4K)
 taskloop_dep_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-dep-multiaxpy.cpp
 taskloop_dep_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
 taskloop_dep_multiaxpy_test_LDFLAGS  = $(AM_LDFLAGS)
