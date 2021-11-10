@@ -439,6 +439,10 @@ public:
 		return (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
 	}
 
+	virtual inline bool isTaskiter() const
+	{
+		return false;
+	}
 };
 
 #endif // TASK_METADATA_HPP

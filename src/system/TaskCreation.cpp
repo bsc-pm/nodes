@@ -20,6 +20,7 @@
 #include "memory/MemoryAllocator.hpp"
 #include "hardware/HardwareInfo.hpp"
 #include "tasks/TaskloopMetadata.hpp"
+#include "tasks/TaskiterMetadata.hpp"
 #include "tasks/TaskMetadata.hpp"
 
 
@@ -165,6 +166,34 @@ void nanos6_create_loop(
 	taskloopMetadata->initialize(lower_bound, upper_bound, grainsize, chunksize);
 
 	Instrument::exitCreateTask();
+}
+
+void nanos6_create_iter(
+	nanos6_task_info_t *task_info,
+	nanos6_task_invocation_info_t *task_invocation_info,
+	size_t args_block_size,
+	/* OUT */ void **args_block_pointer,
+	/* OUT */ void **task_pointer,
+	size_t flags,
+	size_t num_deps,
+	size_t lower_bound,
+	size_t upper_bound,
+	size_t unroll
+) {
+	assert(task_info->implementation_count == 1);
+	assert(flags & nanos6_taskiter_task);
+
+	nanos6_create_task(
+		task_info, task_invocation_info, args_block_size,
+		args_block_pointer, task_pointer, flags, num_deps
+	);
+
+	TaskiterMetadata *taskiterMetadata = (TaskiterMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
+	assert(*task_pointer != nullptr);
+	assert(taskiterMetadata != nullptr);
+	assert(taskiterMetadata->isTaskiter());
+
+	taskiterMetadata->initialize(lower_bound, upper_bound, unroll, task_info->iter_condition);
 }
 
 //! Public API function to submit tasks

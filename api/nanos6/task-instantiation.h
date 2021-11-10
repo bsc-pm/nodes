@@ -8,6 +8,7 @@
 #define NANOS6_TASK_INSTANTIATION_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include "major.h"
 
@@ -149,6 +150,13 @@ typedef struct __attribute__((aligned(64)))
 
 	//! \brief A pointer to data structures related to this type of task
 	void *task_type_data;
+
+	//! \brief Function that the runtime calls to evaluate taskiter while condition
+	//!
+	//! \param[in] args_block A pointer to the source block of parameters to be copied
+	//! \param[out] result the result of the evaluation
+	void (*iter_condition)(void *args_block, uint8_t *result);
+
 } nanos6_task_info_t;
 
 //! \brief Struct that contains data shared by all tasks invoked at fixed location in the source code
@@ -167,12 +175,16 @@ typedef enum {
 	nanos6_taskloop_task = (1 << 2),
 	//! Specifies that the task is really a taskfor
 	nanos6_taskfor_task = (1 << 3),
+	//! Specifies that the task is really a taskiter
+	nanos6_taskiter_task = (1 << 4),
 	//! Specifies that the task has the "wait" clause
-	nanos6_waiting_task = (1 << 4),
+	nanos6_waiting_task = (1 << 5),
 	//! Specifies that the args_block is preallocated from user side
-	nanos6_preallocated_args_block = (1 << 5),
+	nanos6_preallocated_args_block = (1 << 6),
 	//! Specifies that the task has been verified by the user, hence it doesn't need runtime linting
-	nanos6_verified_task = (1 << 6)
+	nanos6_verified_task = (1 << 7),
+	//! Specifies that the task has the "update" clause
+	nanos6_update_task = (1 << 8)
 } nanos6_task_flag_t;
 
 
