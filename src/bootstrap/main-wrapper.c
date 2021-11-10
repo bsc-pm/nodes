@@ -5,12 +5,12 @@
 */
 
 #include <assert.h>
-#include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <api/nanos6/bootstrap.h>
+#include <api/nanos6/blocking.h>
 #include <api/nanos6/library-mode.h>
 #include <api/nanos6/taskwait.h>
 
@@ -25,12 +25,6 @@ typedef struct {
 	char **envp;
 	int returnCode;
 } main_task_args_block_t;
-
-typedef struct {
-	pthread_mutex_t _mutex;
-	pthread_cond_t _cond;
-	int _signaled;
-} condition_variable_t;
 
 
 static void main_task_wrapper(void *argsBlock)
@@ -49,13 +43,10 @@ static void main_task_wrapper(void *argsBlock)
 
 static void main_completion_callback(void *args)
 {
-	condition_variable_t *condVar = (condition_variable_t *) args;
-	assert(condVar != NULL);
+	void *blocking_context = args;
+	assert(blocking_context != NULL);
 
-	pthread_mutex_lock(&condVar->_mutex);
-	condVar->_signaled = 1;
-	pthread_cond_signal(&condVar->_cond);
-	pthread_mutex_unlock(&condVar->_mutex);
+	nanos6_unblock_task(blocking_context);
 }
 
 
@@ -65,16 +56,12 @@ int _nanos6_loader_main(int argc, char **argv, char **envp)
 	nanos6_init();
 
 	// Spawn the main task
-	condition_variable_t condVar = {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0};
 	main_task_args_block_t argsBlock = { argc, argv, envp, 0 };
-	nanos6_spawn_function(main_task_wrapper, &argsBlock, main_completion_callback, &condVar, argv[0]);
+	void *blocking_context = nanos6_get_current_blocking_context();
+	nanos6_spawn_function(main_task_wrapper, &argsBlock, main_completion_callback, blocking_context, argv[0]);
 
 	// Wait for the completion callback
-	pthread_mutex_lock(&condVar._mutex);
-	while (condVar._signaled == 0) {
-		pthread_cond_wait(&condVar._cond, &condVar._mutex);
-	}
-	pthread_mutex_unlock(&condVar._mutex);
+	nanos6_block_current_task(NULL);
 
 	// Terminate nOS-V
 	nanos6_shutdown();
