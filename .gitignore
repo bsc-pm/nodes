@@ -36,3 +36,11 @@ libtool
 stamp-h1
 *.swp
 **cscope.out
+.vscode/**
+*.a
+m4/libtool.m4
+m4/lt*.m4
+multidimensional-dependencies.h
+multidimensional-release.h
+depcomp
+MultidimensionalAPIToLinear.cpp
