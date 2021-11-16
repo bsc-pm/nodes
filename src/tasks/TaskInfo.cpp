@@ -32,8 +32,8 @@ void TaskInfo::registerTaskInfo(nanos6_task_info_t *taskInfo)
 		int ret = nosv_type_init(
 			&type,                                      /* Out: The pointer to the type */
 			&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
-			&(TaskFinalization::taskCompletedCallback), /* End callback cleanup function for when a task finishes */
-			&(TaskFinalization::taskEndedCallback),     /* Completed callback */
+			&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
+			&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
 			taskInfo->implementations->task_label,      /* Task label */
 			(void *) taskInfo,                          /* Metadata: Link to nanos6lite taskinfo */
 			NOSV_TYPE_INIT_NONE
