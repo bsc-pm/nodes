@@ -49,9 +49,14 @@ namespace DataAccessRegistration {
 			CPUDependencyData::satisfied_originator_list_t &list = hpDependencyData.getSatisfiedOriginators(i);
 			if (list.size() > 0) {
 				nosv_task_t *taskArray = list.getArray();
-				for (size_t j = 0; j < list.size(); ++j) {
-					nosv_task_t task = taskArray[j];
-					nosv_submit(task, NOSV_SUBMIT_UNLOCKED);
+
+				// TODO: Control using envvar? Config file (overkill?) ?
+				// Immediate successor submit
+				int err = nosv_submit(taskArray[0], NOSV_SUBMIT_IMMEDIATE);
+				assert(err == 0);
+
+				for (size_t j = 1; j < list.size(); ++j) {
+					nosv_submit(taskArray[j], NOSV_SUBMIT_UNLOCKED);
 				}
 			}
 		}
