@@ -38,6 +38,7 @@ LT_INIT([shared disable-static pic-only])
 SSS_PREPARE_COMPILER_FLAGS
 AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX_11([], [mandatory])
+AX_PREPARE_CXX_FLAGS
 
 # Check for mercurium
 SSS_CHECK_NANOS6_MERCURIUM

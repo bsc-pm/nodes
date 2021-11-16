@@ -169,3 +169,21 @@ AC_DEFUN([SSS_FIXUP_COMPILER_FLAGS],
 	]
 )
 
+AC_DEFUN([AX_PREPARE_CXX_FLAGS], [
+	AC_ARG_ENABLE(
+		[debug],
+		[AS_HELP_STRING(
+			[--enable-debug],
+			[Adds compiler debug flags and enables additional internal debugging mechanisms @<:@default=disabled@:>@]
+		)]
+	)
+
+	AS_IF([test "$enable_debug" = yes], [
+		nanos6_CXXFLAGS="-O0 -g3"
+	],[
+		nanos6_CXXFLAGS="-O3 -g"
+	])
+
+	AC_SUBST(nanos6_CXXFLAGS)
+])
+
