@@ -10,13 +10,12 @@
 #include <bitset>
 #include <cstdint>
 
-#include <nosv.h>
-
 #include "common/Containers.hpp"
 #include "common/PaddedTicketSpinLock.hpp"
 
 
 struct CPUDependencyData;
+class TaskMetadata;
 
 class CommutativeSemaphore {
 
@@ -26,9 +25,9 @@ public:
 
 	typedef std::bitset<commutative_mask_bits> commutative_mask_t;
 
-	static bool registerTask(nosv_task_t task);
+	static bool registerTask(TaskMetadata *task);
 
-	static void releaseTask(nosv_task_t task, CPUDependencyData &hpDependencyData);
+	static void releaseTask(TaskMetadata *task, CPUDependencyData &hpDependencyData);
 
 	static inline void combineMaskAndAddress(commutative_mask_t &mask, void *address)
 	{
@@ -39,7 +38,7 @@ private:
 
 	typedef PaddedTicketSpinLock<> lock_t;
 
-	typedef Container::deque<nosv_task_t> waiting_tasks_t;
+	typedef Container::deque<TaskMetadata *> waiting_tasks_t;
 
 	static lock_t _lock;
 

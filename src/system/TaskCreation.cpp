@@ -111,9 +111,9 @@ void nanos6_create_task(
 
 	// Retreive and construct the task's metadata
 	if (isTaskloop) {
-		new (metadata) TaskloopMetadata(*argsBlockPointer, originalArgsBlockSize, flags, taskAccesses, taskSize, locallyAllocated);
+		new (metadata) TaskloopMetadata(*argsBlockPointer, originalArgsBlockSize, task, flags, taskAccesses, taskSize, locallyAllocated);
 	} else {
-		new (metadata) TaskMetadata(*argsBlockPointer, originalArgsBlockSize, flags, taskAccesses, taskSize, locallyAllocated);
+		new (metadata) TaskMetadata(*argsBlockPointer, originalArgsBlockSize, task, flags, taskAccesses, taskSize, locallyAllocated);
 	}
 
 	// Assign the nOS-V task pointer for a future submit
@@ -181,7 +181,7 @@ void nanos6_submit_task(void *taskHandle)
 	if (taskInfo->register_depinfo != nullptr) {
 		int cpuId = nosv_get_current_logical_cpu();
 		CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
-		ready = DataAccessRegistration::registerTaskDataAccesses(task, *cpuDepData);
+		ready = DataAccessRegistration::registerTaskDataAccesses(taskMetadata, *cpuDepData);
 	}
 
 	bool isIf0 = taskMetadata->isIf0();

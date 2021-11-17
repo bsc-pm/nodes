@@ -13,6 +13,7 @@
 #include <nanos6/user-mutex.h>
 
 #include "common/UserMutex.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 /*    BLOCKING API    */
@@ -89,7 +90,7 @@ extern "C" void nanos6_user_lock(void **handlerPointer, char const *)
 		return;
 	}
 
-	nosv_task_t currentTask = nosv_self();
+	TaskMetadata *currentTask = TaskMetadata::getCurrentTask();
 	assert(currentTask != nullptr);
 
 	// Acquire the lock if possible. Otherwise queue the task
@@ -114,8 +115,10 @@ extern "C" void nanos6_user_unlock(void **handlerPointer)
 
 	mutex_t &userMutexReference = (mutex_t &) *handlerPointer;
 	UserMutex &userMutex = *(userMutexReference.load());
-	nosv_task_t releasedTask = userMutex.dequeueOrUnlock();
+	TaskMetadata *releasedTask = userMutex.dequeueOrUnlock();
 	if (releasedTask != nullptr) {
-		nosv_submit(releasedTask, NOSV_SUBMIT_UNLOCKED);
+		assert(releasedTask->getTaskPointer() != nullptr);
+
+		nosv_submit(releasedTask->getTaskPointer(), NOSV_SUBMIT_UNLOCKED);
 	}
 }

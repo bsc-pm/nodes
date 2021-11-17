@@ -12,8 +12,6 @@
 #include <functional>
 #include <mutex>
 
-#include <nosv.h>
-
 #include "BottomMapEntry.hpp"
 #include "CommutativeSemaphore.hpp"
 #include "TaskDataAccessesInfo.hpp"
@@ -23,6 +21,7 @@
 
 
 struct DataAccess;
+class TaskMetadata;
 
 struct TaskDataAccesses {
 
@@ -173,7 +172,7 @@ struct TaskDataAccesses {
 		_totalDataSize += size;
 	}
 
-	inline DataAccess *allocateAccess(void *address, DataAccessType type, nosv_task_t originator, size_t length, bool weak, bool &existing)
+	inline DataAccess *allocateAccess(void *address, DataAccessType type, TaskMetadata *originator, size_t length, bool weak, bool &existing)
 	{
 		if (_accessMap != nullptr) {
 			std::pair<access_map_t::iterator, bool> emplaced = _accessMap->emplace(std::piecewise_construct,

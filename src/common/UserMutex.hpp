@@ -12,10 +12,9 @@
 #include <deque>
 #include <mutex>
 
-#include <nosv.h>
-
 #include "SpinLock.hpp"
 #include "SpinWait.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 class UserMutex {
@@ -27,7 +26,7 @@ class UserMutex {
 	SpinLock _blockedTasksLock;
 
 	//! \brief The list of tasks blocked on this user-side mutex
-	std::deque<nosv_task_t> _blockedTasks;
+	std::deque<TaskMetadata *> _blockedTasks;
 
 public:
 
@@ -68,7 +67,7 @@ public:
 	//! \brief Try to lock or queue the task
 	//! \param[in] task The task that will be queued if the lock cannot be acquired
 	//! \returns Whether the lock has been acquired (if false, the task has been queued)
-	inline bool lockOrQueue(nosv_task_t task)
+	inline bool lockOrQueue(TaskMetadata *task)
 	{
 		std::lock_guard<SpinLock> guard(_blockedTasksLock);
 		if (tryLock()) {
@@ -79,7 +78,7 @@ public:
 		}
 	}
 
-	inline nosv_task_t dequeueOrUnlock()
+	inline TaskMetadata *dequeueOrUnlock()
 	{
 		std::lock_guard<SpinLock> guard(_blockedTasksLock);
 
@@ -88,7 +87,7 @@ public:
 			return nullptr;
 		}
 
-		nosv_task_t releasedTask = _blockedTasks.front();
+		TaskMetadata *releasedTask = _blockedTasks.front();
 		_blockedTasks.pop_front();
 		assert(releasedTask != nullptr);
 

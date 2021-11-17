@@ -6,8 +6,6 @@
 
 #include <mutex>
 
-#include <nosv.h>
-
 #include "CommutativeSemaphore.hpp"
 #include "CPUDependencyData.hpp"
 #include "DataAccessRegistration.hpp"
@@ -19,11 +17,9 @@ CommutativeSemaphore::lock_t CommutativeSemaphore::_lock;
 CommutativeSemaphore::waiting_tasks_t CommutativeSemaphore::_waitingTasks;
 CommutativeSemaphore::commutative_mask_t CommutativeSemaphore::_mask;
 
-bool CommutativeSemaphore::registerTask(nosv_task_t task)
+bool CommutativeSemaphore::registerTask(TaskMetadata *task)
 {
-	// Retreive the task's metadata
-	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-	TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+	TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 	const commutative_mask_t &mask = accessStruct._commutativeMask;
 	assert(mask.any());
 
@@ -33,14 +29,15 @@ bool CommutativeSemaphore::registerTask(nosv_task_t task)
 		return true;
 	}
 
-	_waitingTasks.emplace_back(std::forward<nosv_task_t>(task));
+	_waitingTasks.emplace_back(std::forward<TaskMetadata *>(task));
 	return false;
 }
 
-void CommutativeSemaphore::releaseTask(nosv_task_t task, CPUDependencyData &hpDependencyData)
+void CommutativeSemaphore::releaseTask(TaskMetadata *task, CPUDependencyData &hpDependencyData)
 {
-	// Retreive the task's metadata
-	TaskDataAccesses &accessStruct = TaskMetadata::getTaskMetadata(task)->getTaskDataAccesses();
+	assert(task != nullptr);
+
+	TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 	const commutative_mask_t &mask = accessStruct._commutativeMask;
 	assert(mask.any());
 
@@ -52,11 +49,10 @@ void CommutativeSemaphore::releaseTask(nosv_task_t task, CPUDependencyData &hpDe
 	waiting_tasks_t::iterator it = _waitingTasks.begin();
 
 	while (it != _waitingTasks.end()) {
-		nosv_task_t candidate = *it;
+		TaskMetadata *candidate = *it;
 
 		// Retreive the task's metadata
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(candidate);
-		TaskDataAccesses &candidateStruct = taskMetadata->getTaskDataAccesses();
+		TaskDataAccesses &candidateStruct = candidate->getTaskDataAccesses();
 		const commutative_mask_t &candidateMask = candidateStruct._commutativeMask;
 
 		if (maskIsCompatible(candidateMask)) {

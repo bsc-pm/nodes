@@ -10,8 +10,6 @@
 #include <atomic>
 #include <functional>
 
-#include <nosv.h>
-
 #include <nanos6/task-instantiation.h>
 
 #include "ReductionSpecific.hpp"
@@ -21,6 +19,7 @@
 
 
 class DeviceReductionStorage;
+class TaskMetadata;
 
 class ReductionInfo {
 
@@ -75,9 +74,9 @@ public:
 
 	void combine();
 
-	void releaseSlotsInUse(nosv_task_t task, size_t cpuId);
+	void releaseSlotsInUse(TaskMetadata *task, size_t cpuId);
 
-	void *getFreeSlot(nosv_task_t task, size_t cpuId);
+	void *getFreeSlot(TaskMetadata *task, size_t cpuId);
 
 	inline void incrementRegisteredAccesses()
 	{

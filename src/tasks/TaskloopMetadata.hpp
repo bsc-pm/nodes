@@ -40,12 +40,13 @@ public:
 	inline TaskloopMetadata(
 		void *argsBlock,
 		size_t argsBlockSize,
+		nosv_task_t taskPointer,
 		size_t flags,
 		const TaskDataAccessesInfo &taskAccessInfo,
 		size_t taskMetadataSize,
 		bool locallyAllocated
 	) :
-		TaskMetadata(argsBlock, argsBlockSize, flags, taskAccessInfo, taskMetadataSize, locallyAllocated),
+		TaskMetadata(argsBlock, argsBlockSize, taskPointer, flags, taskAccessInfo, taskMetadataSize, locallyAllocated),
 		_bounds(),
 		_source(false),
 		_maxChildDeps(0)
@@ -100,7 +101,7 @@ public:
 		return (_bounds.upper_bound - _bounds.lower_bound);
 	}
 
-	void registerDependencies(nosv_task_t task) override;
+	void registerDependencies() override;
 
 };
 

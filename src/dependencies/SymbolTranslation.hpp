@@ -12,6 +12,7 @@
 #include <nanos6/task-instantiation.h>
 
 #include "dependencies/discrete/DataAccessRegistration.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 class SymbolTranslation {
@@ -50,7 +51,7 @@ public:
 			table = (nanos6_address_translation_entry_t *) malloc(tableSize);
 		}
 
-		DataAccessRegistration::translateReductionAddresses(task, cpuId, table, numSymbols);
+		DataAccessRegistration::translateReductionAddresses(TaskMetadata::getTaskMetadata(task), cpuId, table, numSymbols);
 
 		return table;
 	}

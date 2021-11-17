@@ -11,6 +11,7 @@
 #include "HostReductionStorage.hpp"
 #include "hardware/HardwareInfo.hpp"
 #include "memory/MemoryAllocator.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 HostReductionStorage::HostReductionStorage(void *address, size_t length, size_t paddedLength,
@@ -27,7 +28,7 @@ HostReductionStorage::HostReductionStorage(void *address, size_t length, size_t 
 	_currentCpuSlotIndices.resize(nCpus, -1);
 }
 
-void *HostReductionStorage::getFreeSlotStorage(__attribute__((unused)) nosv_task_t task, size_t slotIndex, size_t)
+void *HostReductionStorage::getFreeSlotStorage(__attribute__((unused)) TaskMetadata *task, size_t slotIndex, size_t)
 {
 	assert(task != nullptr);
 	assert(slotIndex < _slots.size());
@@ -67,7 +68,7 @@ void HostReductionStorage::combineInStorage(void *combineDestination)
 	}
 }
 
-size_t HostReductionStorage::getFreeSlotIndex(nosv_task_t, size_t cpuId)
+size_t HostReductionStorage::getFreeSlotIndex(TaskMetadata *, size_t cpuId)
 {
 	assert((size_t) cpuId < _currentCpuSlotIndices.size());
 	long int currentSlotIndex = _currentCpuSlotIndices[cpuId];
@@ -93,7 +94,7 @@ size_t HostReductionStorage::getFreeSlotIndex(nosv_task_t, size_t cpuId)
 	return freeSlotIndex;
 }
 
-void HostReductionStorage::releaseSlotsInUse(nosv_task_t, size_t cpuId)
+void HostReductionStorage::releaseSlotsInUse(TaskMetadata *, size_t cpuId)
 {
 	assert(cpuId < _currentCpuSlotIndices.size());
 	long int currentSlotIndex = _currentCpuSlotIndices[cpuId];

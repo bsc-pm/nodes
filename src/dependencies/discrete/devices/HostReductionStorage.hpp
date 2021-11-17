@@ -7,10 +7,9 @@
 #ifndef HOST_REDUCTION_STORAGE_HPP
 #define HOST_REDUCTION_STORAGE_HPP
 
-#include <nosv.h>
-
 #include "common/AtomicBitset.hpp"
 #include "dependencies/discrete/DeviceReductionStorage.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 class HostReductionStorage : public DeviceReductionStorage {
@@ -28,13 +27,13 @@ public:
 		std::function<void(void *, void *, size_t)> initializationFunction,
 		std::function<void(void *, void *, size_t)> combinationFunction);
 
-	void *getFreeSlotStorage(nosv_task_t task, size_t slotIndex, size_t cpuId);
+	void *getFreeSlotStorage(TaskMetadata *task, size_t slotIndex, size_t cpuId);
 
 	void combineInStorage(void *combineDestination);
 
-	void releaseSlotsInUse(nosv_task_t task, size_t cpuId);
+	void releaseSlotsInUse(TaskMetadata *task, size_t cpuId);
 
-	size_t getFreeSlotIndex(nosv_task_t task, size_t cpuId);
+	size_t getFreeSlotIndex(TaskMetadata *task, size_t cpuId);
 
 	~HostReductionStorage(){};
 

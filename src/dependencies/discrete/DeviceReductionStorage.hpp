@@ -12,11 +12,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include <nosv.h>
-
 #include "ReductionInfo.hpp"
 #include "ReductionSpecific.hpp"
 #include "dependencies/DataAccessRegion.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 class DeviceReductionStorage {
@@ -48,11 +47,11 @@ public:
 	{
 	}
 
-	virtual void releaseSlotsInUse(nosv_task_t task, size_t cpuId) = 0;
+	virtual void releaseSlotsInUse(TaskMetadata *task, size_t cpuId) = 0;
 
-	virtual size_t getFreeSlotIndex(nosv_task_t task, size_t cpuId) = 0;
+	virtual size_t getFreeSlotIndex(TaskMetadata *task, size_t cpuId) = 0;
 
-	virtual void *getFreeSlotStorage(nosv_task_t task, size_t slotIndex, size_t cpuId) = 0;
+	virtual void *getFreeSlotStorage(TaskMetadata *task, size_t slotIndex, size_t cpuId) = 0;
 
 	virtual void combineInStorage(void *combineDestination) = 0;
 };

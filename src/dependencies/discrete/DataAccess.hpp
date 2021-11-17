@@ -13,14 +13,14 @@
 #include <iostream>
 #include <stack>
 
-#include <nosv.h>
-
 #include "DataAccessFlags.hpp"
 #include "ReductionInfo.hpp"
 #include "ReductionSpecific.hpp"
 #include "dependencies/DataAccessType.hpp"
 #include "dependencies/DataTrackingSupport.hpp"
 
+
+class TaskMetadata;
 
 //! The accesses that one or more tasks perform sequentially to a memory location that can occur concurrently (unless commutative)
 //! WARNING: When modifying this structure, please mind to pack it as much as possible
@@ -40,7 +40,7 @@ private:
 
 	//! 8-byte fields
 	//! The originator of the access
-	nosv_task_t _originator;
+	TaskMetadata *_originator;
 
 	//! A bitmap of the "symbols" this access is related to
 	symbols_t _symbols;
@@ -74,7 +74,7 @@ private:
 
 public:
 
-	DataAccess(DataAccessType type, nosv_task_t originator, void *address, size_t length, bool weak) :
+	DataAccess(DataAccessType type, TaskMetadata *originator, void *address, size_t length, bool weak) :
 		_region(address, length),
 		_originator(originator),
 		_reductionInfo(nullptr),
@@ -126,7 +126,7 @@ public:
 		return _region;
 	}
 
-	inline nosv_task_t getOriginator() const
+	inline TaskMetadata *getOriginator() const
 	{
 		return _originator;
 	}
