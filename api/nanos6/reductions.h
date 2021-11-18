@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_REDUCTIONS_H
-#define NANOS6_REDUCTIONS_H
+#ifndef NANOS6_LITE_REDUCTIONS_H
+#define NANOS6_LITE_REDUCTIONS_H
 
 #include "major.h"
 
@@ -77,4 +77,4 @@ void nanos6_register_region_weak_reduction_depinfo1(
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_REDUCTIONS_H
+#endif // NANOS6_LITE_REDUCTIONS_H

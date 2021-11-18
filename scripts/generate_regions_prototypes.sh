@@ -24,8 +24,8 @@ echo '	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)'
 echo '*/'
 echo
 echo
-echo '#ifndef NANOS6_MULTIDIMENSIONAL_DEPENDENCIES_H'
-echo '#define NANOS6_MULTIDIMENSIONAL_DEPENDENCIES_H'
+echo '#ifndef NANOS6_LITE_MULTIDIMENSIONAL_DEPENDENCIES_H'
+echo '#define NANOS6_LITE_MULTIDIMENSIONAL_DEPENDENCIES_H'
 echo
 echo '#pragma GCC visibility push(default)'
 echo
@@ -59,5 +59,5 @@ echo "}"
 echo "#endif"
 echo
 echo
-echo '#endif /* NANOS6_MULTIDIMENSIONAL_DEPENDENCIES_H */'
+echo '#endif /* NANOS6_LITE_MULTIDIMENSIONAL_DEPENDENCIES_H */'
 

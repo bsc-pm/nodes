@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_CONSTANTS_H
-#define NANOS6_CONSTANTS_H
+#ifndef NANOS6_LITE_CONSTANTS_H
+#define NANOS6_LITE_CONSTANTS_H
 
 #include "major.h"
 
@@ -26,4 +26,4 @@ typedef enum {
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_CONSTANTS_H
+#endif // NANOS6_LITE_CONSTANTS_H

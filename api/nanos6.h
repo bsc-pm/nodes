@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_H
-#define NANOS6_H
+#ifndef NANOS6_LITE_H
+#define NANOS6_LITE_H
 
 #ifdef __cplusplus
 #include <new>
@@ -32,4 +32,4 @@
 #include "nanos6/user-mutex.h"
 
 
-#endif /* NANOS6_H */
+#endif /* NANOS6_LITE_H */
