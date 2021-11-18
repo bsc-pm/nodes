@@ -70,7 +70,6 @@ noinst_HEADERS = \
 	src/dependencies/discrete/DataAccess.hpp \
 	src/dependencies/discrete/DataAccessFlags.hpp \
 	src/dependencies/discrete/DataAccessRegistration.hpp \
-	src/dependencies/discrete/DataAccessRegistrationImplementation.hpp \
 	src/dependencies/discrete/DependencySystem.hpp \
 	src/dependencies/discrete/DeviceReductionStorage.hpp \
 	src/dependencies/discrete/MultidimensionalAPI.hpp \
