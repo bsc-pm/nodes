@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_FINAL_H
-#define NANOS6_FINAL_H
+#ifndef NANOS6_LITE_FINAL_H
+#define NANOS6_LITE_FINAL_H
 
 #include "major.h"
 
@@ -30,4 +30,4 @@ signed int nanos6_in_serial_context(void);
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_FINAL_H
+#endif // NANOS6_LITE_FINAL_H

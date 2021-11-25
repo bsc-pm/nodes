@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_EVENTS_H
-#define NANOS6_EVENTS_H
+#ifndef NANOS6_LITE_EVENTS_H
+#define NANOS6_LITE_EVENTS_H
 
 #include "major.h"
 
@@ -49,4 +49,4 @@ void nanos6_decrease_task_event_counter(void *event_counter, unsigned int decrem
 #pragma GCC visibility pop
 
 
-#endif // NANOS6_EVENTS_H
+#endif // NANOS6_LITE_EVENTS_H

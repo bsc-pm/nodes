@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_DEPENDENCIES_H
-#define NANOS6_DEPENDENCIES_H
+#ifndef NANOS6_LITE_DEPENDENCIES_H
+#define NANOS6_LITE_DEPENDENCIES_H
 
 #include <stddef.h>
 
@@ -88,4 +88,4 @@ void nanos6_register_weak_commutative_depinfo(void *handler, void *start, size_t
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_DEPENDENCIES_H
+#endif // NANOS6_LITE_DEPENDENCIES_H
