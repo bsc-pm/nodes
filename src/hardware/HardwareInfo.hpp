@@ -30,20 +30,15 @@ public:
 	{
 		_numCpus = nosv_get_num_cpus();
 
-		_cpuDepDataArray = (CPUDependencyData *) malloc(sizeof(CPUDependencyData) * _numCpus);
+		_cpuDepDataArray = new CPUDependencyData[_numCpus];
 		assert(_cpuDepDataArray != nullptr);
-
-		// Initialize each CPUDependencyData
-		for (size_t i = 0; i < _numCpus; ++i) {
-			new (&(_cpuDepDataArray[i])) CPUDependencyData();
-		}
 	}
 
 	static inline void shutdown()
 	{
 		assert(_cpuDepDataArray != nullptr);
 
-		free(_cpuDepDataArray);
+		delete[] _cpuDepDataArray;
 	}
 
 	static inline size_t getNumCpus()
