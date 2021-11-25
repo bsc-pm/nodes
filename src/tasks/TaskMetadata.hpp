@@ -131,7 +131,7 @@ public:
 		return _argsBlockSize;
 	}
 
-	inline nosv_task_t getTaskPointer() const
+	inline nosv_task_t getTaskHandle() const
 	{
 		return _task;
 	}
@@ -390,8 +390,7 @@ public:
 	virtual inline void registerDependencies()
 	{
 		// Retreive the args block and taskinfo of the task
-		nosv_task_type_t type = nosv_get_task_type(_task);
-		nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(_task);
 		assert(taskInfo != nullptr);
 
 		taskInfo->register_depinfo(_argsBlock, nullptr, this);
@@ -416,6 +415,19 @@ public:
 	{
 		nosv_task_t task = nosv_self();
 		return TaskMetadata::getTaskMetadata(task);
+	}
+
+	static inline nanos6_task_info_t *getTaskInfo(TaskMetadata *task)
+	{
+		nosv_task_t originalTask = task->getTaskHandle();
+		nosv_task_type_t type = nosv_get_task_type(originalTask);
+		return (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+	}
+
+	static inline nanos6_task_info_t *getTaskInfo(nosv_task_t task)
+	{
+		nosv_task_type_t type = nosv_get_task_type(task);
+		return (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
 	}
 
 };

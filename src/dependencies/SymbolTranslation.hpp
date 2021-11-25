@@ -30,10 +30,7 @@ public:
 	) {
 		assert(task != nullptr);
 
-		nosv_task_type_t type = nosv_get_task_type(task);
-		assert(type != nullptr);
-
-		nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task);
 		assert(taskInfo != nullptr);
 
 		nanos6_address_translation_entry_t *table = nullptr;

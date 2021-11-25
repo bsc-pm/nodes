@@ -162,10 +162,7 @@ void nanos6_submit_task(void *taskHandle)
 	nosv_task_t task = (nosv_task_t) taskHandle;
 	assert(task != nullptr);
 
-	nosv_task_type_t type = nosv_get_task_type(task);
-	assert(type != nullptr);
-
-	nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+	nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task);
 	assert(taskInfo != nullptr);
 
 	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);

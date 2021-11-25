@@ -123,8 +123,7 @@ namespace Taskloop {
 		assert(parentMetadata != nullptr);
 
 		// Retreive the args block and taskinfo of the task
-		nosv_task_type_t type = nosv_get_task_type(parent);
-		nanos6_task_info_t *parentTaskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *parentTaskInfo = TaskMetadata::getTaskInfo(parent);
 		assert(parentTaskInfo != nullptr);
 
 		size_t flags = parentMetadata->getFlags();

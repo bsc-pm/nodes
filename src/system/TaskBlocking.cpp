@@ -117,8 +117,8 @@ extern "C" void nanos6_user_unlock(void **handlerPointer)
 	UserMutex &userMutex = *(userMutexReference.load());
 	TaskMetadata *releasedTask = userMutex.dequeueOrUnlock();
 	if (releasedTask != nullptr) {
-		assert(releasedTask->getTaskPointer() != nullptr);
+		assert(releasedTask->getTaskHandle() != nullptr);
 
-		nosv_submit(releasedTask->getTaskPointer(), NOSV_SUBMIT_UNLOCKED);
+		nosv_submit(releasedTask->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 	}
 }

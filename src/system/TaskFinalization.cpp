@@ -126,7 +126,7 @@ void TaskFinalization::taskFinished(TaskMetadata *task)
 			}
 		} else {
 			// An ancestor in a taskwait that must be unblocked at this point
-			nosv_submit(taskMetadata->getTaskPointer(), NOSV_SUBMIT_UNLOCKED);
+			nosv_submit(taskMetadata->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 
 			ready = false;
 		}
@@ -163,8 +163,7 @@ void TaskFinalization::disposeTask(TaskMetadata *task)
 		}
 
 		// Call the taskinfo destructor if not null
-		nosv_task_type_t type = nosv_get_task_type(taskMetadata->getTaskPointer());
-		nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(taskMetadata);
 		assert(taskInfo != nullptr);
 
 		if (taskInfo->destroy_args_block != nullptr) {
@@ -182,7 +181,7 @@ void TaskFinalization::disposeTask(TaskMetadata *task)
 		}
 
 		// Destroy the task
-		nosv_destroy(taskMetadata->getTaskPointer(), NOSV_DESTROY_NONE);
+		nosv_destroy(taskMetadata->getTaskHandle(), NOSV_DESTROY_NONE);
 
 		// Follow the chain of ancestors
 		taskMetadata = parentMetadata;

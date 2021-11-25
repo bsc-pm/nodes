@@ -52,11 +52,11 @@ namespace DataAccessRegistration {
 
 				// TODO: Control using envvar? Config file (overkill?) ?
 				// Immediate successor submit
-				int err = nosv_submit(taskArray[0]->getTaskPointer(), NOSV_SUBMIT_IMMEDIATE);
+				int err = nosv_submit(taskArray[0]->getTaskHandle(), NOSV_SUBMIT_IMMEDIATE);
 				assert(err == 0);
 
 				for (size_t j = 1; j < list.size(); ++j) {
-					nosv_submit(taskArray[j]->getTaskPointer(), NOSV_SUBMIT_UNLOCKED);
+					nosv_submit(taskArray[j]->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 				}
 			}
 		}
@@ -64,7 +64,7 @@ namespace DataAccessRegistration {
 		hpDependencyData.clearSatisfiedOriginators();
 
 		for (TaskMetadata *originator : hpDependencyData._satisfiedCommutativeOriginators) {
-			nosv_submit(originator->getTaskPointer(), NOSV_SUBMIT_UNLOCKED);
+			nosv_submit(originator->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 		}
 
 		hpDependencyData._satisfiedCommutativeOriginators.clear();
@@ -642,13 +642,7 @@ namespace DataAccessRegistration {
 		assert(dataAccessType == REDUCTION_ACCESS_TYPE);
 
 		// Retreive the args block and taskinfo of the task
-		nosv_task_t originalTask = task.getTaskPointer();
-		assert(originalTask != nullptr);
-
-		nosv_task_type_t type = nosv_get_task_type(originalTask);
-		assert(type != nullptr);
-
-		nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task.getTaskHandle());
 		assert(taskInfo != nullptr);
 
 		ReductionInfo *newReductionInfo = ObjectAllocator<ReductionInfo>::newObject(

@@ -10,8 +10,7 @@
 void TaskloopMetadata::registerDependencies()
 {
 	// Retreive the args block and taskinfo of the task
-	nosv_task_type_t type = nosv_get_task_type(_task);
-	nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+	nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(_task);
 	assert(taskInfo != nullptr);
 
 	if (isTaskloopSource()) {
