@@ -18,16 +18,14 @@
 //! \param[in] invocationSource A string that identifies the source code location of the invocation
 extern "C" void nanos6_taskwait(char const */*invocationSource*/)
 {
-	nosv_task_t task = nosv_self();
-
 	// Retreive the task's metadata
-	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
+	TaskMetadata *taskMetadata = TaskMetadata::getCurrentTask();
 	if (taskMetadata->doesNotNeedToBlockForChildren()) {
 		std::atomic_thread_fence(std::memory_order_acquire);
 		return;
 	}
 
-	DataAccessRegistration::handleEnterTaskwait(task);
+	DataAccessRegistration::handleEnterTaskwait(taskMetadata);
 	bool done = taskMetadata->markAsBlocked();
 
 	// done == true:
@@ -47,5 +45,5 @@ extern "C" void nanos6_taskwait(char const */*invocationSource*/)
 	assert(taskMetadata->canBeWokenUp());
 	taskMetadata->markAsUnblocked();
 
-	DataAccessRegistration::handleExitTaskwait(task);
+	DataAccessRegistration::handleExitTaskwait(taskMetadata);
 }

@@ -47,10 +47,7 @@ private:
 	{
 		assert(task != nullptr);
 
-		nosv_task_type_t type = nosv_get_task_type(task);
-		assert(type != nullptr);
-
-		nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task);
 		assert(taskInfo != nullptr);
 		assert(taskInfo->implementation_count == 1);
 		assert(taskInfo->implementations != nullptr);
@@ -85,9 +82,11 @@ private:
 		}
 
 		if (!taskMetadata->isIf0Inlined()) {
+			assert(taskMetadata->getParent() != nullptr);
+
 			// If the task is if0, it means the parent task was blocked. In this
 			// case, unblock the parent at the end of the task's execution
-			nosv_submit(taskMetadata->getParent(), NOSV_SUBMIT_UNLOCKED);
+			nosv_submit(taskMetadata->getParent()->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 		}
 
 		// Free up all symbol translation

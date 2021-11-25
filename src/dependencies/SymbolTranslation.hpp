@@ -12,6 +12,7 @@
 #include <nanos6/task-instantiation.h>
 
 #include "dependencies/discrete/DataAccessRegistration.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 class SymbolTranslation {
@@ -29,10 +30,7 @@ public:
 	) {
 		assert(task != nullptr);
 
-		nosv_task_type_t type = nosv_get_task_type(task);
-		assert(type != nullptr);
-
-		nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task);
 		assert(taskInfo != nullptr);
 
 		nanos6_address_translation_entry_t *table = nullptr;
@@ -50,7 +48,7 @@ public:
 			table = (nanos6_address_translation_entry_t *) malloc(tableSize);
 		}
 
-		DataAccessRegistration::translateReductionAddresses(task, cpuId, table, numSymbols);
+		DataAccessRegistration::translateReductionAddresses(TaskMetadata::getTaskMetadata(task), cpuId, table, numSymbols);
 
 		return table;
 	}

@@ -7,18 +7,17 @@
 #ifndef RELEASE_DIRECTIVE_HPP
 #define RELEASE_DIRECTIVE_HPP
 
-#include <nosv.h>
-
 #include <nanos6/multidimensional-release.h>
 
 #include "DataAccessRegistration.hpp"
 #include "hardware/HardwareInfo.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 template <DataAccessType ACCESS_TYPE, bool WEAK>
 void release_access(void *base_address, __attribute__((unused)) long dim1size, long dim1start, __attribute__((unused)) long dim1end)
 {
-	nosv_task_t task = nosv_self();
+	TaskMetadata *task = TaskMetadata::getCurrentTask();
 	assert(task != nullptr);
 
 	int cpuId = nosv_get_current_logical_cpu();

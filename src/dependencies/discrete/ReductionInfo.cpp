@@ -7,8 +7,6 @@
 #include <cassert>
 #include <sys/mman.h>
 
-#include <nosv.h>
-
 #include <nanos6/reductions.h>
 
 #include "DeviceReductionStorage.hpp"
@@ -16,6 +14,7 @@
 #include "common/Padding.hpp"
 #include "dependencies/discrete/devices/HostReductionStorage.hpp"
 #include "memory/MemoryAllocator.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 ReductionInfo::ReductionInfo(void *address, size_t length, reduction_type_and_operator_index_t typeAndOperatorIndex,
@@ -57,7 +56,7 @@ void ReductionInfo::combine()
 	}
 }
 
-void ReductionInfo::releaseSlotsInUse(nosv_task_t task, size_t cpuId)
+void ReductionInfo::releaseSlotsInUse(TaskMetadata *task, size_t cpuId)
 {
 	DeviceReductionStorage *storage = _deviceStorages[nanos6_host_device];
 	assert(storage != nullptr);
@@ -89,7 +88,7 @@ DeviceReductionStorage *ReductionInfo::allocateDeviceStorage(nanos6_device_t dev
 	return storage;
 }
 
-void *ReductionInfo::getFreeSlot(nosv_task_t task, size_t cpuId)
+void *ReductionInfo::getFreeSlot(TaskMetadata *task, size_t cpuId)
 {
 	DeviceReductionStorage *storage = _deviceStorages[nanos6_host_device];
 	if (storage == nullptr) {

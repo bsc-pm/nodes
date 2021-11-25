@@ -40,12 +40,13 @@ public:
 	inline TaskloopMetadata(
 		void *argsBlock,
 		size_t argsBlockSize,
+		nosv_task_t taskPointer,
 		size_t flags,
 		const TaskDataAccessesInfo &taskAccessInfo,
 		size_t taskMetadataSize,
 		bool locallyAllocated
 	) :
-		TaskMetadata(argsBlock, argsBlockSize, flags, taskAccessInfo, taskMetadataSize, locallyAllocated),
+		TaskMetadata(argsBlock, argsBlockSize, taskPointer, flags, taskAccessInfo, taskMetadataSize, locallyAllocated),
 		_bounds(),
 		_source(false),
 		_maxChildDeps(0)
@@ -100,7 +101,7 @@ public:
 		return (_bounds.upper_bound - _bounds.lower_bound);
 	}
 
-	void registerDependencies(nosv_task_t task) override;
+	void registerDependencies() override;
 
 };
 
@@ -122,8 +123,7 @@ namespace Taskloop {
 		assert(parentMetadata != nullptr);
 
 		// Retreive the args block and taskinfo of the task
-		nosv_task_type_t type = nosv_get_task_type(parent);
-		nanos6_task_info_t *parentTaskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *parentTaskInfo = TaskMetadata::getTaskInfo(parent);
 		assert(parentTaskInfo != nullptr);
 
 		size_t flags = parentMetadata->getFlags();

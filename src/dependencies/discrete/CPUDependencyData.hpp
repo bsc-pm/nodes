@@ -11,12 +11,11 @@
 #include <cassert>
 #include <limits.h>
 
-#include <nosv.h>
-
 #include <nanos6/task-instantiation.h>
 
 #include "DataAccessFlags.hpp"
 #include "common/Containers.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 class SatisfiedOriginatorList {
@@ -29,7 +28,7 @@ private:
 
 	static const size_t _schedulerChunkSize = 256;
 
-	nosv_task_t _array[_schedulerChunkSize];
+	TaskMetadata *_array[_schedulerChunkSize];
 
 	size_t _count;
 
@@ -50,14 +49,14 @@ public:
 		_count = 0;
 	}
 
-	inline void add(nosv_task_t task)
+	inline void add(TaskMetadata *task)
 	{
 		assert(_count < _actualChunkSize);
 
 		_array[_count++] = task;
 	}
 
-	inline nosv_task_t *getArray()
+	inline TaskMetadata **getArray()
 	{
 		return &_array[0];
 	}
@@ -71,8 +70,8 @@ public:
 struct CPUDependencyData {
 
 	typedef SatisfiedOriginatorList satisfied_originator_list_t;
-	typedef Container::deque<nosv_task_t> commutative_satisfied_list_t;
-	typedef Container::deque<nosv_task_t> deletable_originator_list_t;
+	typedef Container::deque<TaskMetadata *> commutative_satisfied_list_t;
+	typedef Container::deque<TaskMetadata *> deletable_originator_list_t;
 
 	//! Tasks whose accesses have been satisfied after ending a task
 	satisfied_originator_list_t _satisfiedOriginators[nanos6_device_t::nanos6_device_type_num];
@@ -112,7 +111,7 @@ struct CPUDependencyData {
 		return _deletableOriginators.empty() && _mailBox.empty() && _satisfiedCommutativeOriginators.empty();
 	}
 
-	inline void addSatisfiedOriginator(nosv_task_t task, int deviceType = nanos6_host_device)
+	inline void addSatisfiedOriginator(TaskMetadata *task, int deviceType = nanos6_host_device)
 	{
 		assert(task != nullptr);
 		assert(deviceType == nanos6_host_device);

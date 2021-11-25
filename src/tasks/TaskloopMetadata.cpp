@@ -7,11 +7,10 @@
 #include "TaskloopMetadata.hpp"
 
 
-void TaskloopMetadata::registerDependencies(nosv_task_t task)
+void TaskloopMetadata::registerDependencies()
 {
 	// Retreive the args block and taskinfo of the task
-	nosv_task_type_t type = nosv_get_task_type(task);
-	nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+	nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(_task);
 	assert(taskInfo != nullptr);
 
 	if (isTaskloopSource()) {
@@ -28,7 +27,7 @@ void TaskloopMetadata::registerDependencies(nosv_task_t task)
 			tmpBounds.lower_bound = _bounds.lower_bound + t * _bounds.grainsize;
 			tmpBounds.upper_bound = std::min(tmpBounds.lower_bound + _bounds.grainsize, _bounds.upper_bound);
 
-			taskInfo->register_depinfo(getArgsBlock(), (void *) &tmpBounds, task);
+			taskInfo->register_depinfo(getArgsBlock(), (void *) &tmpBounds, this);
 
 			// Restore previous maxChildDeps if it is bigger than current one
 			if (maxChildDepsStart > _maxChildDeps) {
@@ -37,6 +36,6 @@ void TaskloopMetadata::registerDependencies(nosv_task_t task)
 		}
 		assert(tmpBounds.upper_bound == _bounds.upper_bound);
 	} else {
-		taskInfo->register_depinfo(getArgsBlock(), (void *) &_bounds, task);
+		taskInfo->register_depinfo(getArgsBlock(), (void *) &_bounds, this);
 	}
 }

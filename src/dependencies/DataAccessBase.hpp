@@ -9,12 +9,11 @@
 
 #include <cassert>
 
-#include <nosv.h>
-
 #include <boost/intrusive/list.hpp>
 #include <boost/intrusive/list_hook.hpp>
 
 #include "DataAccessType.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 struct DataAccessBase {
@@ -31,10 +30,10 @@ struct DataAccessBase {
 	bool _weak;
 
 	//! Tasks to which the access corresponds
-	nosv_task_t _originator;
+	TaskMetadata *_originator;
 
 
-	DataAccessBase(DataAccessType type, bool weak, nosv_task_t originator)
+	DataAccessBase(DataAccessType type, bool weak, TaskMetadata *originator)
 		: _type(type), _weak(weak), _originator(originator)
 	{
 		assert(originator != nullptr);

@@ -68,7 +68,7 @@ private:
 	std::atomic<int> _countdownToRelease;
 
 	//! Link to the parent task
-	nosv_task_t _parent;
+	TaskMetadata *_parent;
 
 	//! Whether the task has finished user code execution
 	std::atomic<bool> _finished;
@@ -84,6 +84,9 @@ private:
 
 protected:
 
+	//! A pointer to the original task that wraps this metadata
+	nosv_task_t _task;
+
 	//! Dependencies of the task
 	TaskDataAccesses _dataAccesses;
 
@@ -95,6 +98,7 @@ public:
 	inline TaskMetadata(
 		void *argsBlock,
 		size_t argsBlockSize,
+		nosv_task_t taskPointer,
 		size_t flags,
 		const TaskDataAccessesInfo &taskAccessInfo,
 		size_t taskMetadataSize,
@@ -111,6 +115,7 @@ public:
 		_if0Inlined(true),
 		_metadataSize(taskMetadataSize),
 		_locallyAllocated(locallyAllocated),
+		_task(taskPointer),
 		_dataAccesses(taskAccessInfo),
 		_flags(flags)
 	{
@@ -124,6 +129,11 @@ public:
 	inline size_t getArgsBlockSize() const
 	{
 		return _argsBlockSize;
+	}
+
+	inline nosv_task_t getTaskHandle() const
+	{
+		return _task;
 	}
 
 	inline void increasePredecessors(int amount = 1)
@@ -252,12 +262,12 @@ public:
 			TaskMetadata *parentMetadata = *parentMetadataPointer;
 			assert(parentMetadata != nullptr);
 
-			_parent = parent;
+			_parent = parentMetadata;
 			parentMetadata->addChild();
 		}
 	}
 
-	inline nosv_task_t getParent() const
+	inline TaskMetadata *getParent() const
 	{
 		return _parent;
 	}
@@ -377,14 +387,13 @@ public:
 		return false;
 	}
 
-	virtual inline void registerDependencies(nosv_task_t task)
+	virtual inline void registerDependencies()
 	{
 		// Retreive the args block and taskinfo of the task
-		nosv_task_type_t type = nosv_get_task_type(task);
-		nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(_task);
 		assert(taskInfo != nullptr);
 
-		taskInfo->register_depinfo(_argsBlock, nullptr, task);
+		taskInfo->register_depinfo(_argsBlock, nullptr, this);
 	}
 
 	static inline TaskMetadata *getTaskMetadata(nosv_task_t task)
@@ -400,6 +409,25 @@ public:
 		// TODO: Make sure that if we're returning nullptr it is due to the
 		// wrapped initialization in (Initialization.hpp)
 		return taskMetadata;
+	}
+
+	static inline TaskMetadata *getCurrentTask()
+	{
+		nosv_task_t task = nosv_self();
+		return TaskMetadata::getTaskMetadata(task);
+	}
+
+	static inline nanos6_task_info_t *getTaskInfo(TaskMetadata *task)
+	{
+		nosv_task_t originalTask = task->getTaskHandle();
+		nosv_task_type_t type = nosv_get_task_type(originalTask);
+		return (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+	}
+
+	static inline nanos6_task_info_t *getTaskInfo(nosv_task_t task)
+	{
+		nosv_task_type_t type = nosv_get_task_type(task);
+		return (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
 	}
 
 };

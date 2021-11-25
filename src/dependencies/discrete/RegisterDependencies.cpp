@@ -7,8 +7,6 @@
 #include <cassert>
 #include <cstdlib>
 
-#include <nosv.h>
-
 #include <nanos6/dependencies.h>
 #include <nanos6/reductions.h>
 
@@ -23,7 +21,7 @@ void register_access(void *handler, void *start, size_t length, int symbolIndex,
 	reduction_type_and_operator_index_t reductionTypeAndOperatorIndex = no_reduction_type_and_operator,
 	reduction_index_t reductionIndex = no_reduction_index)
 {
-	nosv_task_t task = (nosv_task_t) handler;
+	TaskMetadata *task = (TaskMetadata *) handler;
 	assert(task != nullptr);
 
 	if (start == nullptr || length == 0) {
@@ -31,8 +29,7 @@ void register_access(void *handler, void *start, size_t length, int symbolIndex,
 	}
 
 	//bool weak = (WEAK && !task->isFinal() && !task->isTaskfor()) || task->isTaskloopSource();
-	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-	bool weak = (WEAK && !taskMetadata->isFinal()) || taskMetadata->isTaskloopSource();
+	bool weak = (WEAK && !task->isFinal()) || task->isTaskloopSource();
 	DataAccessRegistration::registerTaskDataAccess(task, ACCESS_TYPE, weak, start,
 		length, reductionTypeAndOperatorIndex, reductionIndex, symbolIndex);
 }

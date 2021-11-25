@@ -10,6 +10,8 @@
 #include <nosv.h>
 
 
+class TaskMetadata;
+
 class TaskFinalization {
 
 public:
@@ -21,10 +23,10 @@ public:
 	static void taskCompletedCallback(nosv_task_t task);
 
 	//! \brief Further actions (wrapper) to take after a task has finished
-	static void taskFinished(nosv_task_t task);
+	static void taskFinished(TaskMetadata *task);
 
 	//! \brief Dispose of a task
-	static void disposeTask(nosv_task_t task);
+	static void disposeTask(TaskMetadata *task);
 
 };
 

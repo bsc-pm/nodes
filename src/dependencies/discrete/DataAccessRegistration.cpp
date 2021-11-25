@@ -30,16 +30,16 @@ namespace DataAccessRegistration {
 
 	typedef TaskDataAccesses::bottom_map_t bottom_map_t;
 
-	static inline void insertAccesses(nosv_task_t task, CPUDependencyData &hpDependencyData);
+	static inline void insertAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData);
 
 	static inline ReductionInfo *allocateReductionInfo(
 		DataAccessType &dataAccessType, reduction_index_t reductionIndex,
 		reduction_type_and_operator_index_t reductionTypeAndOpIndex,
-		void *address, const size_t length, const nosv_task &task);
+		void *address, const size_t length, const TaskMetadata &task);
 
 	static inline void releaseReductionInfo(ReductionInfo *info);
 
-	static inline void decreaseDeletableCountOrDelete(nosv_task_t originator,
+	static inline void decreaseDeletableCountOrDelete(TaskMetadata *originator,
 		CPUDependencyData::deletable_originator_list_t &deletableOriginators);
 
 	//! Process all the originators that have become ready
@@ -48,23 +48,23 @@ namespace DataAccessRegistration {
 		for (int i = 0; i < nanos6_device_t::nanos6_device_type_num; ++i) {
 			CPUDependencyData::satisfied_originator_list_t &list = hpDependencyData.getSatisfiedOriginators(i);
 			if (list.size() > 0) {
-				nosv_task_t *taskArray = list.getArray();
+				TaskMetadata **taskArray = list.getArray();
 
 				// TODO: Control using envvar? Config file (overkill?) ?
 				// Immediate successor submit
-				int err = nosv_submit(taskArray[0], NOSV_SUBMIT_IMMEDIATE);
+				int err = nosv_submit(taskArray[0]->getTaskHandle(), NOSV_SUBMIT_IMMEDIATE);
 				assert(err == 0);
 
 				for (size_t j = 1; j < list.size(); ++j) {
-					nosv_submit(taskArray[j], NOSV_SUBMIT_UNLOCKED);
+					nosv_submit(taskArray[j]->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 				}
 			}
 		}
 
 		hpDependencyData.clearSatisfiedOriginators();
 
-		for (nosv_task_t originator : hpDependencyData._satisfiedCommutativeOriginators) {
-			nosv_submit(originator, NOSV_SUBMIT_UNLOCKED);
+		for (TaskMetadata *originator : hpDependencyData._satisfiedCommutativeOriginators) {
+			nosv_submit(originator->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 		}
 
 		hpDependencyData._satisfiedCommutativeOriginators.clear();
@@ -76,7 +76,7 @@ namespace DataAccessRegistration {
 		// destruct the tasks for us if we mark them as not needed on the
 		// unregisterTaskDataAccesses call, so this takes care on tasks ended anywhere else
 
-		for (nosv_task_t deletableOriginator : hpDependencyData._deletableOriginators) {
+		for (TaskMetadata *deletableOriginator : hpDependencyData._deletableOriginators) {
 			assert(deletableOriginator != nullptr);
 
 			TaskFinalization::disposeTask(deletableOriginator);
@@ -85,11 +85,12 @@ namespace DataAccessRegistration {
 		hpDependencyData._deletableOriginators.clear();
 	}
 
-	static inline void satisfyTask(nosv_task_t task, CPUDependencyData &hpDependencyData)
+	static inline void satisfyTask(TaskMetadata *task, CPUDependencyData &hpDependencyData)
 	{
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-		if (taskMetadata->decreasePredecessors()) {
-			TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+		assert(task != nullptr);
+
+		if (task->decreasePredecessors()) {
+			TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 			if (accessStruct._commutativeMask.any() && !CommutativeSemaphore::registerTask(task)) {
 				return;
 			}
@@ -126,7 +127,7 @@ namespace DataAccessRegistration {
 	}
 
 	void registerTaskDataAccess(
-		nosv_task_t task, DataAccessType accessType, bool weak, void *address, size_t length,
+		TaskMetadata *task, DataAccessType accessType, bool weak, void *address, size_t length,
 		reduction_type_and_operator_index_t reductionTypeAndOperatorIndex,
 		reduction_index_t reductionIndex, int symbolIndex)
 	{
@@ -138,8 +139,7 @@ namespace DataAccessRegistration {
 		assert(address != nullptr);
 		assert(length > 0);
 
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-		TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 
 		bool alreadyExisting;
@@ -160,7 +160,7 @@ namespace DataAccessRegistration {
 		access->addToSymbol(symbolIndex);
 
 		// Tuning the number of deps of child taskloops
-		taskMetadata->increaseMaxChildDependencies();
+		task->increaseMaxChildDependencies();
 	}
 
 	void propagateMessages(
@@ -178,9 +178,8 @@ namespace DataAccessRegistration {
 
 			if (next.to != nullptr && next.flagsForNext) {
 				if (next.to->apply(next, mailBox)) {
-					nosv_task_t task = next.to->getOriginator();
-					TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-					TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+					TaskMetadata *task = next.to->getOriginator();
+					TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 					assert(!accessStruct.hasBeenDeleted());
 					assert(next.to != next.from);
 
@@ -191,18 +190,16 @@ namespace DataAccessRegistration {
 			bool dispose = false;
 
 			if (next.schedule) {
-				nosv_task_t task = next.from->getOriginator();
-				TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-				TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+				TaskMetadata *task = next.from->getOriginator();
+				TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 				assert(!accessStruct.hasBeenDeleted());
 
 				satisfyTask(task, hpDependencyData);
 			}
 
 			if (next.combine) {
-				nosv_task_t task = next.from->getOriginator();
-				TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-				TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+				TaskMetadata *task = next.from->getOriginator();
+				TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 				assert(!accessStruct.hasBeenDeleted());
 
 				ReductionInfo *reductionInfo = next.from->getReductionInfo();
@@ -217,18 +214,16 @@ namespace DataAccessRegistration {
 			}
 
 			if (next.flagsAfterPropagation) {
-				nosv_task_t task = next.from->getOriginator();
-				TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-				TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+				TaskMetadata *task = next.from->getOriginator();
+				TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 				assert(!accessStruct.hasBeenDeleted());
 
 				dispose = next.from->applyPropagated(next);
 			}
 
 			if (dispose) {
-				nosv_task_t task = next.from->getOriginator();
-				TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-				TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+				TaskMetadata *task = next.from->getOriginator();
+				TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 				assert(!accessStruct.hasBeenDeleted());
 
 				decreaseDeletableCountOrDelete(task, hpDependencyData._deletableOriginators);
@@ -236,7 +231,7 @@ namespace DataAccessRegistration {
 		}
 	}
 
-	void finalizeDataAccess(nosv_task_t task, DataAccess *access, void *address, CPUDependencyData &hpDependencyData)
+	void finalizeDataAccess(TaskMetadata *task, DataAccess *access, void *address, CPUDependencyData &hpDependencyData)
 	{
 		DataAccessType originalAccessType = access->getType();
 
@@ -255,8 +250,7 @@ namespace DataAccessRegistration {
 			// Place ourselves as successors of the last access.
 			DataAccess *lastChild = nullptr;
 
-			TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-			TaskDataAccesses &taskAccesses = taskMetadata->getTaskDataAccesses();
+			TaskDataAccesses &taskAccesses = task->getTaskDataAccesses();
 			assert(!taskAccesses.hasBeenDeleted());
 
 			bottom_map_t &bottomMap = taskAccesses._subaccessBottomMap;
@@ -298,7 +292,7 @@ namespace DataAccessRegistration {
 		}
 	}
 
-	bool registerTaskDataAccesses(nosv_task_t task, CPUDependencyData &hpDependencyData)
+	bool registerTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
 	{
 		// This is called once per task, and will create all the dependencies in
 		// register_depinfo, to later insert them into the chain in the insertAccesses call
@@ -311,21 +305,19 @@ namespace DataAccessRegistration {
 		}
 #endif
 
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-
 		// Increase the number of predecessors by two (avoiding races)
-		taskMetadata->increasePredecessors(2);
+		task->increasePredecessors(2);
 
 		// This part creates the DataAccesses and inserts it to dependency system
-		taskMetadata->registerDependencies(task);
+		task->registerDependencies();
 
 		insertAccesses(task, hpDependencyData);
 
-		TaskDataAccesses &accessStructures = taskMetadata->getTaskDataAccesses();
+		TaskDataAccesses &accessStructures = task->getTaskDataAccesses();
 		assert(!accessStructures.hasBeenDeleted());
 
 		if (accessStructures.hasDataAccesses()) {
-			taskMetadata->increaseRemovalBlockingCount();
+			task->increaseRemovalBlockingCount();
 		}
 
 		processSatisfiedOriginators(hpDependencyData);
@@ -338,7 +330,7 @@ namespace DataAccessRegistration {
 		}
 #endif
 
-		bool ready = taskMetadata->decreasePredecessors(2);
+		bool ready = task->decreasePredecessors(2);
 
 		// Commutative accesses have to acquire the commutative region
 		if (ready && accessStructures._commutativeMask.any()) {
@@ -348,12 +340,11 @@ namespace DataAccessRegistration {
 		return ready;
 	}
 
-	void unregisterTaskDataAccesses(nosv_task_t task, CPUDependencyData &hpDependencyData)
+	void unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
 	{
 		assert(task != nullptr);
 
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-		TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 		assert(hpDependencyData._mailBox.empty());
 
@@ -418,7 +409,7 @@ namespace DataAccessRegistration {
 			// it's performing the dependency release
 
 			if (accessStruct.decreaseDeletableCount()) {
-				taskMetadata->decreaseRemovalBlockingCount();
+				task->decreaseRemovalBlockingCount();
 			}
 		}
 
@@ -433,12 +424,11 @@ namespace DataAccessRegistration {
 #endif
 	}
 
-	void handleEnterTaskwait(nosv_task_t task)
+	void handleEnterTaskwait(TaskMetadata *task)
 	{
 		assert(task != nullptr);
 
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-		TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 
 		bottom_map_t &bottomMap = accessStruct._subaccessBottomMap;
@@ -461,19 +451,17 @@ namespace DataAccessRegistration {
 		}
 	}
 
-	void handleExitTaskwait(nosv_task_t)
+	void handleExitTaskwait(TaskMetadata *)
 	{
 	}
 
-	static inline void insertAccesses(nosv_task_t task, CPUDependencyData &hpDependencyData)
+	static inline void insertAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
 	{
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-		TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 
-		nosv_task_t parentTask = taskMetadata->getParent();
-		TaskMetadata *parentTaskMetadata = TaskMetadata::getTaskMetadata(parentTask);
-		TaskDataAccesses &parentAccessStruct = parentTaskMetadata->getTaskDataAccesses();
+		TaskMetadata *parentTask = task->getParent();
+		TaskDataAccesses &parentAccessStruct = parentTask->getTaskDataAccesses();
 		assert(!parentAccessStruct.hasBeenDeleted());
 
 		mailbox_t &mailBox = hpDependencyData._mailBox;
@@ -618,7 +606,7 @@ namespace DataAccessRegistration {
 				schedule = true;
 
 			if (!schedule) {
-				taskMetadata->increasePredecessors();
+				task->increasePredecessors();
 			}
 
 			return true; // Continue iteration
@@ -635,13 +623,12 @@ namespace DataAccessRegistration {
 		ObjectAllocator<ReductionInfo>::deleteObject(info);
 	}
 
-	static inline void decreaseDeletableCountOrDelete(nosv_task_t originator,
+	static inline void decreaseDeletableCountOrDelete(TaskMetadata *originator,
 		CPUDependencyData::deletable_originator_list_t &deletableOriginators)
 	{
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(originator);
-		TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+		TaskDataAccesses &accessStruct = originator->getTaskDataAccesses();
 		if (accessStruct.decreaseDeletableCount()) {
-			if (taskMetadata->decreaseRemovalBlockingCount()) {
+			if (originator->decreaseRemovalBlockingCount()) {
 				deletableOriginators.push_back(originator); // Ensure destructor is called
 			}
 		}
@@ -650,15 +637,12 @@ namespace DataAccessRegistration {
 	static inline ReductionInfo *allocateReductionInfo(
 		__unused DataAccessType &dataAccessType, reduction_index_t reductionIndex,
 		reduction_type_and_operator_index_t reductionTypeAndOpIndex,
-		void *address, const size_t length, const nosv_task &task)
+		void *address, const size_t length, const TaskMetadata &task)
 	{
 		assert(dataAccessType == REDUCTION_ACCESS_TYPE);
 
 		// Retreive the args block and taskinfo of the task
-		nosv_task_type_t type = nosv_get_task_type((nosv_task_t) &task);
-		assert(type != nullptr);
-
-		nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task.getTaskHandle());
 		assert(taskInfo != nullptr);
 
 		ReductionInfo *newReductionInfo = ObjectAllocator<ReductionInfo>::newObject(
@@ -670,12 +654,11 @@ namespace DataAccessRegistration {
 		return newReductionInfo;
 	}
 
-	void combineTaskReductions(nosv_task_t task, size_t cpuId)
+	void combineTaskReductions(TaskMetadata *task, size_t cpuId)
 	{
 		assert(task != nullptr);
 
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-		TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 
 		if (!accessStruct.hasDataAccesses())
@@ -695,7 +678,7 @@ namespace DataAccessRegistration {
 		});
 	}
 
-	void translateReductionAddresses(nosv_task_t task, size_t cpuId,
+	void translateReductionAddresses(TaskMetadata *task, size_t cpuId,
 		nanos6_address_translation_entry_t *translationTable,
 		int totalSymbols)
 	{
@@ -706,8 +689,7 @@ namespace DataAccessRegistration {
 		for (int i = 0; i < totalSymbols; ++i)
 			translationTable[i] = {0, 0};
 
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-		TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 
 		accessStruct.forAll([&](void *address, DataAccess *access) {
@@ -729,7 +711,7 @@ namespace DataAccessRegistration {
 	}
 
 	void releaseAccessRegion(
-		nosv_task_t task,
+		TaskMetadata *task,
 		void *address,
 		DataAccessType accessType,
 		bool weak,
@@ -739,8 +721,7 @@ namespace DataAccessRegistration {
 		assert(task != nullptr);
 		assert(hpDependencyData._mailBox.empty());
 
-		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-		TaskDataAccesses &accessStruct = taskMetadata->getTaskDataAccesses();
+		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 
 #ifndef NDEBUG
@@ -789,7 +770,7 @@ namespace DataAccessRegistration {
 	}
 
 	void releaseTaskwaitFragment(
-		__attribute__((unused)) nosv_task_t task,
+		__attribute__((unused)) TaskMetadata *task,
 		__attribute__((unused)) DataAccessRegion region,
 		__attribute__((unused)) size_t cpuId,
 		__attribute__((unused)) CPUDependencyData &hpDependencyData)

@@ -22,8 +22,9 @@
 
 void TaskFinalization::taskEndedCallback(nosv_task_t task)
 {
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 	int cpuId = nosv_get_current_logical_cpu();
-	DataAccessRegistration::combineTaskReductions(task, cpuId);
+	DataAccessRegistration::combineTaskReductions(taskMetadata, cpuId);
 }
 
 void TaskFinalization::taskCompletedCallback(nosv_task_t task)
@@ -37,13 +38,13 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 	// its children complete and become disposable
 	bool dependenciesReleaseable = true;
 	if (taskMetadata->mustDelayRelease()) {
-		DataAccessRegistration::handleEnterTaskwait(task);
+		DataAccessRegistration::handleEnterTaskwait(taskMetadata);
 		if (!taskMetadata->markAsBlocked()) {
 			dependenciesReleaseable = false;
 		} else {
 			// All its children are completed, so the delayed release as well
 			taskMetadata->completeDelayedRelease();
-			DataAccessRegistration::handleExitTaskwait(task);
+			DataAccessRegistration::handleExitTaskwait(taskMetadata);
 			taskMetadata->markAsUnblocked();
 		}
 	}
@@ -64,42 +65,41 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 			cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 		}
 
-		DataAccessRegistration::unregisterTaskDataAccesses(task, *cpuDepData);
+		DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *cpuDepData);
 
 		if (isExternal) {
 			delete cpuDepData;
 		}
 
-		TaskFinalization::taskFinished(task);
+		TaskFinalization::taskFinished(taskMetadata);
 
 		if (taskMetadata->decreaseRemovalBlockingCount()) {
-			TaskFinalization::disposeTask(task);
+			TaskFinalization::disposeTask(taskMetadata);
 		}
 	}
 }
 
-void TaskFinalization::taskFinished(nosv_task_t task)
+void TaskFinalization::taskFinished(TaskMetadata *task)
 {
 	// Decrease the _countdownToBeWokenUp of the task, which was initialized to 1
 	// If it becomes 0, we can propagate the counter through its parents
-	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
+	TaskMetadata *taskMetadata = task;
 	bool ready = taskMetadata->finishChild();
 
 	// NOTE: Needed?
 	// We always use a local CPUDependencyData struct here to avoid issues
 	// with re-using an already used CPUDependencyData
 	CPUDependencyData *localHpDependencyData = nullptr;
-	nosv_task_t parent = nullptr;
 	TaskMetadata *parentMetadata = nullptr;
-	while ((task != nullptr) && ready) {
-		parent = taskMetadata->getParent();
+	while ((taskMetadata != nullptr) && ready) {
+		parentMetadata = taskMetadata->getParent();
 
 		// If this is the first iteration of the loop, the task will test true
 		// to hasFinished and false to mustDelayRelease, which does nothing
 		if (taskMetadata->hasFinished()) {
 			if (taskMetadata->mustDelayRelease()) {
 				taskMetadata->completeDelayedRelease();
-				DataAccessRegistration::handleExitTaskwait(task);
+				DataAccessRegistration::handleExitTaskwait(taskMetadata);
 				taskMetadata->markAsUnblocked();
 
 				// Check whether all external events have been also fulfilled
@@ -109,7 +109,7 @@ void TaskFinalization::taskFinished(nosv_task_t task)
 						localHpDependencyData = new CPUDependencyData();
 					}
 
-					DataAccessRegistration::unregisterTaskDataAccesses(task, *localHpDependencyData);
+					DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *localHpDependencyData);
 
 					// This is just to emulate a recursive call to TaskFinalization::taskFinished() again
 					// It should not return false because at this point delayed release has happenned which means that
@@ -118,7 +118,7 @@ void TaskFinalization::taskFinished(nosv_task_t task)
 					assert(ready);
 
 					if (taskMetadata->decreaseRemovalBlockingCount()) {
-						TaskFinalization::disposeTask(task);
+						TaskFinalization::disposeTask(taskMetadata);
 					}
 				}
 
@@ -126,18 +126,16 @@ void TaskFinalization::taskFinished(nosv_task_t task)
 			}
 		} else {
 			// An ancestor in a taskwait that must be unblocked at this point
-			nosv_submit(task, NOSV_SUBMIT_UNLOCKED);
+			nosv_submit(taskMetadata->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 
 			ready = false;
 		}
 
 		// Using 'task' here is forbidden, as it may have been disposed
-		if (ready && parent != nullptr) {
-			parentMetadata = TaskMetadata::getTaskMetadata(parent);
+		if (ready && parentMetadata != nullptr) {
 			ready = parentMetadata->finishChild();
 		}
 
-		task = parent;
 		taskMetadata = parentMetadata;
 	}
 
@@ -146,19 +144,16 @@ void TaskFinalization::taskFinished(nosv_task_t task)
 	}
 }
 
-void TaskFinalization::disposeTask(nosv_task_t task)
+void TaskFinalization::disposeTask(TaskMetadata *task)
 {
-	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-
 	// Follow up the chain of ancestors and dispose them as needed and wake up
 	// any in a taskwait that finishes in this moment
 	bool disposable = true;
-	nosv_task_t parent = nullptr;
+	TaskMetadata *taskMetadata = task;
 	TaskMetadata *parentMetadata = nullptr;
-	while ((task != nullptr) && disposable) {
-		parent = taskMetadata->getParent();
-		if (parent != nullptr) {
-			parentMetadata = TaskMetadata::getTaskMetadata(parent);
+	while ((taskMetadata != nullptr) && disposable) {
+		parentMetadata = taskMetadata->getParent();
+		if (parentMetadata != nullptr) {
 			assert(taskMetadata->hasFinished());
 
 			// Check if we continue the chain with the parent
@@ -168,8 +163,7 @@ void TaskFinalization::disposeTask(nosv_task_t task)
 		}
 
 		// Call the taskinfo destructor if not null
-		nosv_task_type_t type = nosv_get_task_type(task);
-		nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
+		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(taskMetadata);
 		assert(taskInfo != nullptr);
 
 		if (taskInfo->destroy_args_block != nullptr) {
@@ -187,10 +181,9 @@ void TaskFinalization::disposeTask(nosv_task_t task)
 		}
 
 		// Destroy the task
-		nosv_destroy(task, NOSV_DESTROY_NONE);
+		nosv_destroy(taskMetadata->getTaskHandle(), NOSV_DESTROY_NONE);
 
 		// Follow the chain of ancestors
-		task = parent;
 		taskMetadata = parentMetadata;
 	}
 }
