@@ -19,6 +19,9 @@ extern "C" {
 //! \brief Get the total number of CPUs available to the runtime
 unsigned int nanos6_get_total_num_cpus(void);
 
+//! \brief Get the number of CPUs that were enabled when the program started
+unsigned int nanos6_get_num_cpus(void);
+
 //! \brief Get the operating system assigned identifier of the
 //! CPU where the call to this function originated
 long nanos6_get_current_system_cpu(void);

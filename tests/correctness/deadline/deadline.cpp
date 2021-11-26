@@ -62,7 +62,7 @@ bool checkTimeouts(uint64_t theoric, uint64_t *timeouts, int numTimeouts, bool c
 
 int main(int argc, char **argv)
 {
-	const int numCPUs = sysconf(_SC_NPROCESSORS_ONLN);
+	const int numCPUs = nanos6_get_total_num_cpus();
 	const int numTasks = std::min(NUM_TASKS, numCPUs);
 	const int numRegularTasks = NUM_REGULAR_TASKS;
 	const int numWaits = NUM_WAITS;

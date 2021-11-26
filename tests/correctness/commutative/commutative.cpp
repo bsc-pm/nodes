@@ -10,6 +10,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <nanos6.h>
+
 #include "Atomic.hpp"
 #include "Functors.hpp"
 #include "TAPDriver.hpp"
@@ -116,7 +118,7 @@ static inline void taskCode(int currentTaskNumber, ExperimentStatus<NUM_TASKS> &
 
 int main(int argc, char **argv)
 {
-	long activeCPUs = sysconf(_SC_NPROCESSORS_ONLN);
+	long activeCPUs = nanos6_get_total_num_cpus();
 	if (activeCPUs < 2) {
 		// This test only works correctly with at least 2 CPUs
 		tap.skip("This test does not work with less than 2 CPUs");

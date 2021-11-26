@@ -80,7 +80,7 @@ static void t2_verification(ExperimentStatus &status, ExpectedOutcome &expected)
 
 int main(int argc, char **argv)
 {
-	long activeCPUs = sysconf(_SC_NPROCESSORS_ONLN);
+	long activeCPUs = nanos6_get_total_num_cpus();
 	if (activeCPUs <= 2) {
 		tap.skip("This test requires more than 2 CPUs");
 		tap.end();

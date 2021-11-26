@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <vector>
 
+#include <nanos6.h>
+
 #include "Atomic.hpp"
 #include "Functors.hpp"
 #include "TAPDriver.hpp"
@@ -79,7 +81,7 @@ void recursion(int &x, int depth, Atomic<bool> &parentReady)
 
 int main() {
 
-	int activeCPUs = sysconf(_SC_NPROCESSORS_ONLN);
+	int activeCPUs = nanos6_get_total_num_cpus();
 	delayMultiplier = sqrt(activeCPUs);
 
 	// Maximum, it gets rounded to closest complete level

@@ -16,6 +16,11 @@ extern "C" unsigned int nanos6_get_total_num_cpus(void)
 	return nosv_get_num_cpus();
 }
 
+extern "C" unsigned int nanos6_get_num_cpus(void)
+{
+	return nosv_get_num_cpus();
+}
+
 extern "C" long nanos6_get_current_system_cpu(void)
 {
 	return nosv_get_current_system_cpu();
