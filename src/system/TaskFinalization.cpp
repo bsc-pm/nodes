@@ -174,6 +174,9 @@ void TaskFinalization::disposeTask(TaskMetadata *task)
 			SpawnFunction::_pendingSpawnedFunctions--;
 		}
 
+		// Fetch the handle now as the metadata may get deleted
+		nosv_task_t taskHandle = taskMetadata->getTaskHandle();
+
 		// If the metadata was allocated locally, free it now
 		if (taskMetadata->isLocallyAllocated()) {
 			size_t metadataSize = taskMetadata->getTaskMetadataSize();
@@ -181,7 +184,7 @@ void TaskFinalization::disposeTask(TaskMetadata *task)
 		}
 
 		// Destroy the task
-		nosv_destroy(taskMetadata->getTaskHandle(), NOSV_DESTROY_NONE);
+		nosv_destroy(taskHandle, NOSV_DESTROY_NONE);
 
 		// Follow the chain of ancestors
 		taskMetadata = parentMetadata;
