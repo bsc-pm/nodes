@@ -121,6 +121,15 @@ public:
 	{
 	}
 
+	inline bool hasCode() const
+	{
+		nanos6_task_info_t *taskInfo = getTaskInfo(_task);
+		assert(taskInfo->implementation_count == 1);
+		assert(taskInfo != nullptr);
+
+		return (taskInfo->implementations[0].run != nullptr);
+	}
+
 	inline void *getArgsBlock() const
 	{
 		return _argsBlock;

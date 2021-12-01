@@ -52,33 +52,40 @@ private:
 		assert(taskInfo->implementation_count == 1);
 		assert(taskInfo->implementations != nullptr);
 
-		size_t tableSize = 0;
-		int cpuId = nosv_get_current_logical_cpu();
-		nanos6_address_translation_entry_t stackTranslationTable[SymbolTranslation::MAX_STACK_SYMBOLS];
-		nanos6_address_translation_entry_t *translationTable = SymbolTranslation::generateTranslationTable(
-			task, cpuId, stackTranslationTable, tableSize
-		);
-
 		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-		if (taskMetadata->isTaskloop()) {
-			TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) taskMetadata;
-			if (!taskloopMetadata->isTaskloopSource()) {
+		if (taskMetadata->hasCode()) {
+			size_t tableSize = 0;
+			int cpuId = nosv_get_current_logical_cpu();
+			nanos6_address_translation_entry_t stackTranslationTable[SymbolTranslation::MAX_STACK_SYMBOLS];
+			nanos6_address_translation_entry_t *translationTable = SymbolTranslation::generateTranslationTable(
+				task, cpuId, stackTranslationTable, tableSize
+			);
+
+			if (taskMetadata->isTaskloop()) {
+				TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) taskMetadata;
+				if (!taskloopMetadata->isTaskloopSource()) {
+					taskInfo->implementations->run(
+						taskloopMetadata->getArgsBlock(),
+						&(taskloopMetadata->getBounds()),
+						translationTable
+					);
+				} else {
+					while (taskloopMetadata->getIterationCount() > 0) {
+						Taskloop::createTaskloopExecutor(task, taskloopMetadata, taskloopMetadata->getBounds());
+					}
+				}
+			} else {
 				taskInfo->implementations->run(
-					taskloopMetadata->getArgsBlock(),
-					&(taskloopMetadata->getBounds()),
+					taskMetadata->getArgsBlock(),
+					nullptr, /* deviceEnvironment */
 					translationTable
 				);
-			} else {
-				while (taskloopMetadata->getIterationCount() > 0) {
-					Taskloop::createTaskloopExecutor(task, taskloopMetadata, taskloopMetadata->getBounds());
-				}
 			}
-		} else {
-			taskInfo->implementations->run(
-				taskMetadata->getArgsBlock(),
-				nullptr, /* deviceEnvironment */
-				translationTable
-			);
+
+			// Free up all symbol translation
+			if (tableSize > 0) {
+				MemoryAllocator::free(translationTable, tableSize);
+			}
 		}
 
 		if (!taskMetadata->isIf0Inlined()) {
@@ -87,11 +94,6 @@ private:
 			// If the task is if0, it means the parent task was blocked. In this
 			// case, unblock the parent at the end of the task's execution
 			nosv_submit(taskMetadata->getParent()->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
-		}
-
-		// Free up all symbol translation
-		if (tableSize > 0) {
-			MemoryAllocator::free(translationTable, tableSize);
 		}
 	}
 
