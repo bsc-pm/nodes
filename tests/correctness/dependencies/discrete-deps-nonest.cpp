@@ -511,7 +511,7 @@ static VerifierConstraintCalculator _constraintCalculator;
 
 int main(int argc, char **argv)
 {
-	ncpus = sysconf(_SC_NPROCESSORS_ONLN);
+	ncpus = nanos6_get_total_num_cpus();
 	ncpus = std::min(ncpus, 64);
 
 	delayMultiplier = sqrt(ncpus);

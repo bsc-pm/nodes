@@ -26,6 +26,7 @@ nanos6include_HEADERS = \
 	api/nanos6/blocking.h \
 	api/nanos6/bootstrap.h \
 	api/nanos6/constants.h \
+	api/nanos6/debug.h \
 	api/nanos6/dependencies.h \
 	api/nanos6/events.h \
 	api/nanos6/final.h \
@@ -105,6 +106,7 @@ common_sources = \
 	src/dependencies/discrete/ReleaseDirective.cpp \
 	src/dependencies/discrete/devices/HostReductionStorage.cpp \
 	src/hardware/HardwareInfo.cpp \
+	src/system/DebugAPI.cpp \
 	src/system/EventsAPI.cpp \
 	src/system/SpawnFunction.cpp \
 	src/system/TaskBlocking.cpp \

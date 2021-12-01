@@ -4,12 +4,12 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#include <nanos6.h>
-
 #include <cassert>
 #include <cstdlib>
 #include <unistd.h>
 #include <vector>
+
+#include <nanos6.h>
 
 #include "Atomic.hpp"
 #include "TAPDriver.hpp"
@@ -62,7 +62,7 @@ void fulfill(counters_list_t &counters, processed_list_t &processed)
 
 int main(int argc, char **argv)
 {
-	const long activeCPUs = sysconf(_SC_NPROCESSORS_ONLN);
+	const long activeCPUs = nanos6_get_total_num_cpus();
 	if (activeCPUs == 1) {
 		// This test only works correctly with more than 1 CPU
 		tap.skip("This test does not work with just 1 CPU");

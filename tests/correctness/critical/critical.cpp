@@ -64,7 +64,7 @@ static void sum(long participant)
 
 
 int main(int argc, char **argv) {
-	numCPUs = sysconf(_SC_NPROCESSORS_ONLN);
+	numCPUs = nanos6_get_total_num_cpus();
 
 	// Initialize in parallel
 	data = new long[ARRAY_SIZE];
