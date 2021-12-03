@@ -1,11 +1,11 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of nODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_LITE_TASK_INFO_REGISTRATION_H
-#define NANOS6_LITE_TASK_INFO_REGISTRATION_H
+#ifndef NODES_TASK_INFO_REGISTRATION_H
+#define NODES_TASK_INFO_REGISTRATION_H
 
 #include "major.h"
 #include "task-instantiation.h"
@@ -30,4 +30,4 @@ void nanos6_register_task_info(nanos6_task_info_t *task_info);
 
 #pragma GCC visibility pop
 
-#endif /* NANOS6_LITE_TASK_INFO_REGISTRATION_H */
+#endif /* NODES_TASK_INFO_REGISTRATION_H */

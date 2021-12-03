@@ -1,13 +1,13 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of nODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_LITE_MAJOR_H
-#define NANOS6_LITE_MAJOR_H
+#ifndef NODES_MAJOR_H
+#define NODES_MAJOR_H
 
 
 enum nanos6_major_api_t { nanos6_major_api = 3 };
 
-#endif // NANOS6_LITE_MAJOR_H
+#endif // NODES_MAJOR_H

@@ -1,5 +1,5 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of nODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
@@ -27,7 +27,7 @@ __attribute__((visibility ("hidden"))) libc_start_main_function_t *_nanos6_loade
 
 #pragma GCC visibility push(default)
 
-//! \brief This function overrides the function of the same name and is in charge of loading the Nanos6 runtime
+//! \brief This function overrides the function of the same name and is in charge of loading the nODES runtime
 int __libc_start_main(
 	int (*main) (int, char **, char **),
 	int argc,

@@ -1,11 +1,11 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of nODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_LITE_FINAL_H
-#define NANOS6_LITE_FINAL_H
+#ifndef NODES_FINAL_H
+#define NODES_FINAL_H
 
 #include "major.h"
 
@@ -30,4 +30,4 @@ signed int nanos6_in_serial_context(void);
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_LITE_FINAL_H
+#endif // NODES_FINAL_H

@@ -1,11 +1,11 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of nODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_LITE_REDUCTIONS_H
-#define NANOS6_LITE_REDUCTIONS_H
+#ifndef NODES_REDUCTIONS_H
+#define NODES_REDUCTIONS_H
 
 #include "major.h"
 
@@ -56,14 +56,12 @@ enum ReductionType {
 	NUM_RED_TYPES = 19000
 };
 
-//! \brief TODO
 void nanos6_register_region_reduction_depinfo1(
 	int reduction_operation, int reduction_index, void *handler,
 	int symbol_index, char const *region_text, void *base_address,
 	long dim1size, long dim1start, long dim1end
 );
 
-//! \brief TODO
 void nanos6_register_region_weak_reduction_depinfo1(
 	int reduction_operation, int reduction_index, void *handler,
 	int symbol_index, char const *region_text, void *base_address,
@@ -77,4 +75,4 @@ void nanos6_register_region_weak_reduction_depinfo1(
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_LITE_REDUCTIONS_H
+#endif // NODES_REDUCTIONS_H

@@ -1,5 +1,5 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of nODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
@@ -79,11 +79,11 @@ void nanos6_create_task(
 
 	// Since we won't know if the metadata returned by nOS-V is a memory region
 	// or a pointer that points to a locally allocated region, we always alloc
-	// extra space for a pointer that references the metadata's real region.
+	// extra space for a pointer that references the metadata's real region
 	// - If nOS-V can allocate the memory, the pointer will point to the memory
-	// allocated right next to it.
+	// allocated right next to it
 	// - If nOS-V can't allocate the memory, the pointer will point to a region
-	// of memory allocated by Nanos6-Lite.
+	// of memory allocated by nODES
 	void **metadataPointer = (void **) nosv_get_task_metadata(task);
 	assert(metadataPointer != nullptr);
 

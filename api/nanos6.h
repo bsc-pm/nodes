@@ -1,17 +1,18 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of nODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_LITE_H
-#define NANOS6_LITE_H
+#ifndef NODES_H
+#define NODES_H
 
 #ifdef __cplusplus
 #include <new>
 #endif
 
 #define __NANOS6__
+#define __NODES__
 
 
 #include "nanos6/blocking.h"
@@ -33,4 +34,4 @@
 #include "nanos6/user-mutex.h"
 
 
-#endif /* NANOS6_LITE_H */
+#endif /* NODES_H */

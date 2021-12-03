@@ -1,11 +1,11 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of nODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_LITE_LIBRARY_MODE_H
-#define NANOS6_LITE_LIBRARY_MODE_H
+#ifndef NODES_LIBRARY_MODE_H
+#define NODES_LIBRARY_MODE_H
 
 #include <stddef.h>
 
@@ -41,4 +41,4 @@ void nanos6_spawn_function(
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_LITE_LIBRARY_MODE_H
+#endif // NODES_LIBRARY_MODE_H

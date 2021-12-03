@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+#	This file is part of nODES and is licensed under the terms contained in the COPYING file.
 #
 #	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 
@@ -18,14 +18,14 @@ shift
 . $(dirname $0)/common.sh
 
 echo '/*'
-echo '	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.'
+echo '	This file is part of nODES and is licensed under the terms contained in the COPYING file.'
 echo '	'
 echo '	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)'
 echo '*/'
 echo
 echo
-echo '#ifndef NANOS6_LITE_MULTIDIMENSIONAL_DEPENDENCIES_H'
-echo '#define NANOS6_LITE_MULTIDIMENSIONAL_DEPENDENCIES_H'
+echo '#ifndef NODES_MULTIDIMENSIONAL_DEPENDENCIES_H'
+echo '#define NODES_MULTIDIMENSIONAL_DEPENDENCIES_H'
 echo
 echo '#pragma GCC visibility push(default)'
 echo
@@ -33,8 +33,8 @@ echo
 echo 'enum nanos6_multidimensional_dependencies_api_t { nanos6_multidimensional_dependencies_api = 6 };'
 echo
 echo
-echo "#ifndef NANOS6_MAX_DEPENDENCY_DIMENSIONS"
-echo "#define NANOS6_MAX_DEPENDENCY_DIMENSIONS ${maxdimensions}"
+echo "#ifndef NODES_MAX_DEPENDENCY_DIMENSIONS"
+echo "#define NODES_MAX_DEPENDENCY_DIMENSIONS ${maxdimensions}"
 echo "#endif"
 echo
 echo
@@ -59,5 +59,5 @@ echo "}"
 echo "#endif"
 echo
 echo
-echo '#endif /* NANOS6_LITE_MULTIDIMENSIONAL_DEPENDENCIES_H */'
+echo '#endif /* NODES_MULTIDIMENSIONAL_DEPENDENCIES_H */'
 

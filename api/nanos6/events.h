@@ -1,11 +1,11 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of nODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_LITE_EVENTS_H
-#define NANOS6_LITE_EVENTS_H
+#ifndef NODES_EVENTS_H
+#define NODES_EVENTS_H
 
 #include "major.h"
 
@@ -49,4 +49,4 @@ void nanos6_decrease_task_event_counter(void *event_counter, unsigned int decrem
 #pragma GCC visibility pop
 
 
-#endif // NANOS6_LITE_EVENTS_H
+#endif // NODES_EVENTS_H
