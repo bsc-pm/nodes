@@ -82,9 +82,6 @@ AC_DEFUN([SSS_CHECK_MERCURIUM],
 			CC="${NODES_MCC} --ompss-v2 -I${srcdir}/api -Iconftest-header-dir"
 			AC_COMPILE_IFELSE(
 				[ AC_LANG_SOURCE( [[
-#ifndef __NODES__
-#error Not nODES!
-#endif
 
 #ifndef __NANOS6__
 #error Not Nanos6!
@@ -103,9 +100,6 @@ int main(int argc, char ** argv) {
 			CC="${NODES_MCC} --ompss-2 -I${srcdir}/api -Iconftest-header-dir"
 			AC_COMPILE_IFELSE(
 				[ AC_LANG_SOURCE( [[
-#ifndef __NODES__
-#error Not nODES!
-#endif
 
 #ifndef __NANOS6__
 #error Not Nanos6!

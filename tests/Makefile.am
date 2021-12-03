@@ -11,6 +11,7 @@ LDADD = -ldl
 CXX = $(NODES_MCXX)
 CC = $(NODES_MCC)
 
+if HAVE_NODES_MERCURIUM
 correctness_tests = \
 	blocking.test \
 	commutative.test \
@@ -37,6 +38,7 @@ correctness_tests = \
 	taskloop-nested-dep-multiaxpy.test \
 	taskloop-nonpod.test \
 	taskloop-nqueens.test
+endif
 
 
 check_PROGRAMS = $(correctness_tests)
