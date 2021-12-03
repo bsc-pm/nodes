@@ -4,10 +4,10 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NODES_MAJOR_H
-#define NODES_MAJOR_H
+#ifndef NANOS6_MAJOR_H
+#define NANOS6_MAJOR_H
 
 
 enum nanos6_major_api_t { nanos6_major_api = 3 };
 
-#endif // NODES_MAJOR_H
+#endif // NANOS6_MAJOR_H

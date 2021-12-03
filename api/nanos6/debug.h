@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NODES_DEBUG_H
-#define NODES_DEBUG_H
+#ifndef NANOS6_DEBUG_H
+#define NANOS6_DEBUG_H
 
 #include "major.h"
 
@@ -38,4 +38,4 @@ unsigned int nanos6_get_current_virtual_cpu(void);
 #pragma GCC visibility pop
 
 
-#endif /* NODES_DEBUG_H */
+#endif /* NANOS6_DEBUG_H */

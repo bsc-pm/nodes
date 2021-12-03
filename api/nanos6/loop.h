@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NODES_LOOP_H
-#define NODES_LOOP_H
+#ifndef NANOS6_LOOP_H
+#define NANOS6_LOOP_H
 
 #include "major.h"
 #include "task-instantiation.h"
@@ -63,4 +63,4 @@ void nanos6_create_loop(
 
 #pragma GCC visibility pop
 
-#endif /* NODES_LOOP_H */
+#endif /* NANOS6_LOOP_H */

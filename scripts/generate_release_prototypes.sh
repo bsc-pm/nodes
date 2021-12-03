@@ -24,8 +24,8 @@ echo '	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)'
 echo '*/'
 echo
 echo
-echo '#ifndef NODES_MULTIDIMENSIONAL_RELEASE_H'
-echo '#define NODES_MULTIDIMENSIONAL_RELEASE_H'
+echo '#ifndef NANOS6_MULTIDIMENSIONAL_RELEASE_H'
+echo '#define NANOS6_MULTIDIMENSIONAL_RELEASE_H'
 echo
 echo '#pragma GCC visibility push(default)'
 echo
@@ -33,8 +33,8 @@ echo
 echo 'enum nanos6_multidimensional_release_api_t { nanos6_multidimensional_release_api = 2 };'
 echo
 echo
-echo "#ifndef NODES_MAX_DEPENDENCY_DIMENSIONS"
-echo "#define NODES_MAX_DEPENDENCY_DIMENSIONS ${maxdimensions}"
+echo "#ifndef NANOS6_MAX_DEPENDENCY_DIMENSIONS"
+echo "#define NANOS6_MAX_DEPENDENCY_DIMENSIONS ${maxdimensions}"
 echo "#endif"
 echo
 echo
@@ -66,5 +66,5 @@ echo
 echo '#pragma GCC visibility pop'
 echo
 echo
-echo '#endif /* NODES_MULTIDIMENSIONAL_RELEASE_H */'
+echo '#endif /* NANOS6_MULTIDIMENSIONAL_RELEASE_H */'
 

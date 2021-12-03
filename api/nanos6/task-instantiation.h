@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NODES_TASK_INSTANTIATION_H
-#define NODES_TASK_INSTANTIATION_H
+#ifndef NANOS6_TASK_INSTANTIATION_H
+#define NANOS6_TASK_INSTANTIATION_H
 
 #include <stddef.h>
 
@@ -214,4 +214,4 @@ void nanos6_submit_task(void *task);
 #pragma GCC visibility pop
 
 
-#endif /* NODES_TASK_INSTANTIATION_H */
+#endif /* NANOS6_TASK_INSTANTIATION_H */

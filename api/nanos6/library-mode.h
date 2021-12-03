@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NODES_LIBRARY_MODE_H
-#define NODES_LIBRARY_MODE_H
+#ifndef NANOS6_LIBRARY_MODE_H
+#define NANOS6_LIBRARY_MODE_H
 
 #include <stddef.h>
 
@@ -41,4 +41,4 @@ void nanos6_spawn_function(
 
 #pragma GCC visibility pop
 
-#endif // NODES_LIBRARY_MODE_H
+#endif // NANOS6_LIBRARY_MODE_H

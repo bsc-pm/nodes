@@ -4,8 +4,8 @@
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NODES_TASKWAIT_H
-#define NODES_TASKWAIT_H
+#ifndef NANOS6_TASKWAIT_H
+#define NANOS6_TASKWAIT_H
 
 #include "major.h"
 
@@ -29,4 +29,4 @@ void nanos6_taskwait(char const *invocation_source);
 
 #pragma GCC visibility pop
 
-#endif // NODES_TASKWAIT_H
+#endif // NANOS6_TASKWAIT_H
