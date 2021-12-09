@@ -1,5 +1,5 @@
 /*
-	This file is part of nODES and is licensed under the terms contained in the COPYING file.
+	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
@@ -117,7 +117,7 @@ public:
 				&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
 				&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
 				taskInfo->implementations->task_label,      /* Task label */
-				(void *) taskInfo,                          /* Metadata: Link to nODES' taskinfo */
+				(void *) taskInfo,                          /* Metadata: Link to NODES' taskinfo */
 				NOSV_TYPE_INIT_NONE
 			);
 			assert(!ret);

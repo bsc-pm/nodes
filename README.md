@@ -1,8 +1,8 @@
-# nODES Library
+# NODES Library
 
 ## Licensing
 
-The nODES (nOS-V based OmpSs-2 DEpendency System) Runtiem Library is
+The NODES (nOS-V based OmpSs-2 DEpendency System) Runtiem Library is
 Free Software, licensed under the clauses of the GNU GPL v3 License
 included in the [COPYING](COPYING) file. The copyright of the files
 included in this package belongs to the Barcelona Supercomputing
@@ -12,7 +12,7 @@ Center, unless otherwise stated.
 
 ### Build requirements
 
-The following software is required to build and install nODES:
+The following software is required to build and install NODES:
 
 1. automake, autoconf, libtool, pkg-config, make and a C++11 compiler
 
@@ -34,11 +34,11 @@ $ make all
 $ make install
 ```
 
-where `INSTALLATION_PREFIX` is the directory into which to install nODES.
+where `INSTALLATION_PREFIX` is the directory into which to install NODES.
 
 ## Contributing
 
-The development of nODES requires contributors to follow these few simple guidelines:
+The development of NODES requires contributors to follow these few simple guidelines:
 
 1. C++11
 1. K&R indentation style
@@ -46,9 +46,9 @@ The development of nODES requires contributors to follow these few simple guidel
 
 ## Features and Known Limitations
 
-nODES supports most of the features found in the Nanos6 runtime. However, at the moment, it does not support the following:
+NODES supports most of the features found in the Nanos6 runtime. However, at the moment, it does not support the following:
 1. Linear-region dependency system
 1. Taskfor construct
 1. Assert directive
 
-Furthermore, the instrumentation provided differs in the sense that it only provides (1) entry-exit points instrumentation, and (2) instrumentation related to the dependency system. Thus, instrumentation variants such as `profile`, `graph`, and the linter (`lint`) are not available in nODES.
+Furthermore, the instrumentation provided differs in the sense that it only provides (1) entry-exit points instrumentation, and (2) instrumentation related to the dependency system. Thus, instrumentation variants such as `profile`, `graph`, and the linter (`lint`) are not available in NODES.

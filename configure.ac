@@ -1,18 +1,18 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-#	This file is part of nODES and is licensed under the terms contained in the COPYING file.
+#	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
 #	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 
-# nODES Version and Copyright
+# NODES Version and Copyright
 
 m4_define([nodes_version], [1.0.0])
 m4_define([nodes_license], ["GPL3"])
 m4_define([nodes_copyright], ["2021 Barcelona Supercomputing Center (BSC)"])
 
 AC_PREREQ([2.69])
-AC_INIT([nODES], [nodes_version], [antoni.navarro@bsc.es])
+AC_INIT([NODES], [nodes_version], [antoni.navarro@bsc.es])
 
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_MACRO_DIR([m4])

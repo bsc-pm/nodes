@@ -1,4 +1,4 @@
-#	This file is part of nODES and is licensed under the terms contained in the COPYING file.
+#	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
 #	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 
@@ -37,9 +37,9 @@ AC_DEFUN([SSS_CHECK_MERCURIUM],
 			AC_PATH_PROGS(NODES_MCXX, [${mcxx_vendor_prefix}mcxx.nanos6 ${mcc_vendor_prefix}mcxx], [])
 			if test x"${NODES_MCC}" = x"" || test x"${NODES_MCXX}" = x"" ; then
 				if test x"${ac_use_mercurium_prefix}" = x"yes"; then
-					AC_MSG_ERROR([could not find nODES Mercurium])
+					AC_MSG_ERROR([could not find NODES Mercurium])
 				else
-					AC_MSG_WARN([could not find nODES Mercurium])
+					AC_MSG_WARN([could not find NODES Mercurium])
 					ac_have_mercurium=no
 				fi
 			else
@@ -50,7 +50,7 @@ AC_DEFUN([SSS_CHECK_MERCURIUM],
 			AC_PATH_PROGS(NODES_MCC, [${mcc_vendor_prefix}mcc.nanos6 ${mcc_vendor_prefix}mcc], [], [${ac_use_mercurium_prefix}/bin])
 			AC_PATH_PROGS(NODES_MCXX, [${mcxx_vendor_prefix}mcxx.nanos6 ${mcc_vendor_prefix}mcxx], [], [${ac_use_mercurium_prefix}/bin])
 			if test x"${NODES_MCC}" = x"" || test x"${NODES_MCXX}" = x"" ; then
-				AC_MSG_ERROR([could not find nODES Mercurium])
+				AC_MSG_ERROR([could not find NODES Mercurium])
 			else
 				ac_use_mercurium_prefix=$(echo "${NODES_MCC}" | sed 's@/bin/'${mcc_vendor_prefix}'mcc.nanos6'\$'@@;s@/bin/'${mcc_vendor_prefix}'mcc'\$'@@')
 				ac_have_mercurium=yes
@@ -60,7 +60,7 @@ AC_DEFUN([SSS_CHECK_MERCURIUM],
 			ac_have_mercurium=no
 		fi
 
-		AC_MSG_CHECKING([the nODES Mercurium installation prefix])
+		AC_MSG_CHECKING([the NODES Mercurium installation prefix])
 		if test x"${ac_have_mercurium}" = x"yes" ; then
 			AC_MSG_RESULT([${ac_use_mercurium_prefix}])
 		else
@@ -122,7 +122,7 @@ int main(int argc, char ** argv) {
 				NODES_MCXX="${NODES_MCXX} ${OMPSS2_FLAG}"
 			else
 				AC_MSG_RESULT([none])
-				AC_MSG_WARN([will not use ${NODES_MCC} since it does not support nODES])
+				AC_MSG_WARN([will not use ${NODES_MCC} since it does not support NODES])
 				NODES_MCC=""
 				NODES_MCXX=""
 				OMPSS2_FLAG=""
