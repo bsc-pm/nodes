@@ -1,18 +1,18 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-#	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+#	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
 #	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 
-# Nanos6-Lite Version and Copyright
+# NODES Version and Copyright
 
-m4_define([nanos6lite_version], [1.0.0])
-m4_define([nanos6lite_license], ["GPL3"])
-m4_define([nanos6lite_copyright], ["2021 Barcelona Supercomputing Center (BSC)"])
+m4_define([nodes_version], [1.0.0])
+m4_define([nodes_license], ["GPL3"])
+m4_define([nodes_copyright], ["2021 Barcelona Supercomputing Center (BSC)"])
 
 AC_PREREQ([2.69])
-AC_INIT([Nanos6-Lite], [nanos6lite_version], [antoni.navarro@bsc.es])
+AC_INIT([NODES], [nodes_version], [antoni.navarro@bsc.es])
 
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_MACRO_DIR([m4])
@@ -41,10 +41,10 @@ AX_CXX_COMPILE_STDCXX_11([], [mandatory])
 AX_PREPARE_CXX_FLAGS
 
 # Check for mercurium
-SSS_CHECK_NANOS6_MERCURIUM
-SSS_PUSH_NANOS6_MERCURIUM
+SSS_CHECK_MERCURIUM
+SSS_PUSH_NODES_MERCURIUM
 SSS_CHECK_MERCURIUM_ACCEPTS_EXTERNAL_INSTALLATION
-SSS_POP_NANOS6_MERCURIUM
+SSS_POP_NODES_MERCURIUM
 
 # Checks for libraries
 AX_BOOST_BASE([1.59], [], [ AC_MSG_ERROR([Boost library not found]) ])
@@ -55,8 +55,8 @@ AC_CHECK_NOSV
 AC_CHECK_HEADER_STDBOOL
 AC_TYPE_SIZE_T
 
-if test x"${ac_have_nanos6_mercurium}" = x"yes" ; then
-	NANOS6_MCXX="${NANOS6_MCXX} -std=c++03"
+if test x"${ac_have_nodes_mercurium}" = x"yes" ; then
+	NODES_MCXX="${NODES_MCXX} -std=c++03"
 fi
 
 
@@ -67,7 +67,7 @@ AC_CHECK_EXTRACT_FIRST_COMPILER_FLAG([MCMODEL_FLAGS], [-mcmodel=large -mcmodel=m
 AC_CONFIG_FILES([Makefile tests/Makefile])
 AC_OUTPUT
 
-if test x"${ac_have_nanos6_mercurium}" = x"no" ; then
+if test x"${ac_have_nodes_mercurium}" = x"no" ; then
 	AC_MSG_WARN([the directive based tests will not be checked since there is no Mercurium compiler available])
 fi
 

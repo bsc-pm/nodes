@@ -1,11 +1,11 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_LITE_LOOP_H
-#define NANOS6_LITE_LOOP_H
+#ifndef NANOS6_LOOP_H
+#define NANOS6_LOOP_H
 
 #include "major.h"
 #include "task-instantiation.h"
@@ -63,4 +63,4 @@ void nanos6_create_loop(
 
 #pragma GCC visibility pop
 
-#endif /* NANOS6_LITE_LOOP_H */
+#endif /* NANOS6_LOOP_H */

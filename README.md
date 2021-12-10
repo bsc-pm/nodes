@@ -1,17 +1,18 @@
-# Nanos6-Lite Library
+# NODES Library
 
 ## Licensing
 
-The Nanos6-Lite Library is Free Software, licensed under the clauses of the
-GNU GPL v3 License included in the [COPYING](COPYING) file.
-The copyright of the files included in this package belongs to the
-Barcelona Supercomputing Center, unless otherwise stated.
+The NODES (nOS-V based OmpSs-2 DEpendency System) Runtiem Library is
+Free Software, licensed under the clauses of the GNU GPL v3 License
+included in the [COPYING](COPYING) file. The copyright of the files
+included in this package belongs to the Barcelona Supercomputing
+Center, unless otherwise stated.
 
 ## Installation
 
 ### Build requirements
 
-The following software is required to build and install Nanos6-Lite:
+The following software is required to build and install NODES:
 
 1. automake, autoconf, libtool, pkg-config, make and a C++11 compiler
 
@@ -33,11 +34,11 @@ $ make all
 $ make install
 ```
 
-where `INSTALLATION_PREFIX` is the directory into which to install Nanos6-Lite.
+where `INSTALLATION_PREFIX` is the directory into which to install NODES.
 
 ## Contributing
 
-The development of Nanos6-Lite requires contributors to follow these few simple guidelines:
+The development of NODES requires contributors to follow these few simple guidelines:
 
 1. C++11
 1. K&R indentation style
@@ -45,9 +46,9 @@ The development of Nanos6-Lite requires contributors to follow these few simple 
 
 ## Features and Known Limitations
 
-Nanos6-Lite supports most of the features found in the Nanos6 runtime. However, at the moment, it does not support the following:
+NODES supports most of the features found in the Nanos6 runtime. However, at the moment, it does not support the following:
 1. Linear-region dependency system
 1. Taskfor construct
 1. Assert directive
 
-Furthermore, the instrumentation provided differs in the sense that it only provides (1) entry-exit points instrumentation, and (2) instrumentation related to the dependency system. Thus, instrumentation variants such as `profile`, `graph`, and the linter (`lint`) are not available in Nanos6-Lite.
+Furthermore, the instrumentation provided differs in the sense that it only provides (1) entry-exit points instrumentation, and (2) instrumentation related to the dependency system. Thus, instrumentation variants such as `profile`, `graph`, and the linter (`lint`) are not available in NODES.

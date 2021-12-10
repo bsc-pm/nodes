@@ -1,5 +1,5 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
@@ -33,7 +33,7 @@ public:
 		wait_flag,
 		preallocated_args_block_flag,
 		lint_verified_flag,
-		//! Flags added by the Nanos6 runtime. Note that
+		//! Flags added by the NODES runtime. Note that
 		//! these flags must be always declared after the
 		//! Mercurium flags
 		non_runnable_flag,

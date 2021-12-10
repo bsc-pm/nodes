@@ -1,5 +1,5 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
@@ -52,7 +52,7 @@ static void main_completion_callback(void *args)
 
 int _nanos6_loader_main(int argc, char **argv, char **envp)
 {
-	// Initialize Nanos6-Lite
+	// Initialize NODES
 	nanos6_init();
 
 	// Spawn the main task

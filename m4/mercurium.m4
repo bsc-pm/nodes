@@ -1,12 +1,13 @@
-#	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+#	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
 #	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+
 
 AC_DEFUN([SSS_CHECK_MERCURIUM],
 	[
 		AC_ARG_WITH(
 			[mercurium],
-			[AS_HELP_STRING([--with-mercurium=prefix], [specify the installation prefix of the mercurium compiler @<:@default=auto@:>@])],
+			[AS_HELP_STRING([--with-mercurium=prefix], [specify the installation prefix of the Mercurium compiler, which must be compiled with Nanos6 support @<:@default=auto@:>@])],
 			[ac_use_mercurium_prefix="${withval}"],
 			[ac_use_mercurium_prefix="auto"]
 		)
@@ -32,108 +33,41 @@ AC_DEFUN([SSS_CHECK_MERCURIUM],
 		fi
 
 		if test x"${ac_use_mercurium_prefix}" = x"auto" || test x"${ac_use_mercurium_prefix}" = x"yes" ; then
-			AC_PATH_PROG(MCC, ${mcc_vendor_prefix}mcc, [])
-			AC_PATH_PROG(MCXX, ${mcxx_vendor_prefix}mcxx, [])
-			if test x"${MCC}" = x"" || test x"${MCXX}" = x"" ; then
+			AC_PATH_PROGS(NODES_MCC, [${mcc_vendor_prefix}mcc.nanos6 ${mcc_vendor_prefix}mcc], [])
+			AC_PATH_PROGS(NODES_MCXX, [${mcxx_vendor_prefix}mcxx.nanos6 ${mcc_vendor_prefix}mcxx], [])
+			if test x"${NODES_MCC}" = x"" || test x"${NODES_MCXX}" = x"" ; then
 				if test x"${ac_use_mercurium_prefix}" = x"yes"; then
-					AC_MSG_ERROR([could not find Mercurium])
+					AC_MSG_ERROR([could not find NODES Mercurium])
 				else
-					AC_MSG_WARN([could not find Mercurium])
+					AC_MSG_WARN([could not find NODES Mercurium])
+					ac_have_mercurium=no
 				fi
 			else
-				ac_use_mercurium_prefix=$(echo "${MCC}" | sed 's@/bin/'${mcc_vendor_prefix}'mcc'\$'@@')
+				ac_use_mercurium_prefix=$(echo "${NODES_MCC}" | sed 's@/bin/'${mcc_vendor_prefix}'mcc.nanos6'\$'@@;s@/bin/'${mcc_vendor_prefix}'mcc'\$'@@')
+				ac_have_mercurium=yes
 			fi
 		elif test x"${ac_use_mercurium_prefix}" != x"no" ; then
-			AC_PATH_PROG(MCC, ${mcc_vendor_prefix}mcc, [], [${ac_use_mercurium_prefix}/bin])
-			AC_PATH_PROG(MCXX, ${mcxx_vendor_prefix}mcxx, [], [${ac_use_mercurium_prefix}/bin])
-			if test x"${MCC}" = x"" || test x"${MCXX}" = x"" ; then
-				AC_MSG_ERROR([could not find Mercurium])
+			AC_PATH_PROGS(NODES_MCC, [${mcc_vendor_prefix}mcc.nanos6 ${mcc_vendor_prefix}mcc], [], [${ac_use_mercurium_prefix}/bin])
+			AC_PATH_PROGS(NODES_MCXX, [${mcxx_vendor_prefix}mcxx.nanos6 ${mcc_vendor_prefix}mcxx], [], [${ac_use_mercurium_prefix}/bin])
+			if test x"${NODES_MCC}" = x"" || test x"${NODES_MCXX}" = x"" ; then
+				AC_MSG_ERROR([could not find NODES Mercurium])
 			else
-				ac_use_mercurium_prefix=$(echo "${MCC}" | sed 's@/bin/'${mcc_vendor_prefix}'mcc'\$'@@')
+				ac_use_mercurium_prefix=$(echo "${NODES_MCC}" | sed 's@/bin/'${mcc_vendor_prefix}'mcc.nanos6'\$'@@;s@/bin/'${mcc_vendor_prefix}'mcc'\$'@@')
+				ac_have_mercurium=yes
 			fi
 		else
 			ac_use_mercurium_prefix=""
+			ac_have_mercurium=no
 		fi
 
-		AC_MSG_CHECKING([the mercurium installation prefix])
-		if test x"${ac_use_mercurium_prefix}" != x"" ; then
+		AC_MSG_CHECKING([the NODES Mercurium installation prefix])
+		if test x"${ac_have_mercurium}" = x"yes" ; then
 			AC_MSG_RESULT([${ac_use_mercurium_prefix}])
 		else
 			AC_MSG_RESULT([not found])
 		fi
-		MCC_PREFIX="${ac_use_mercurium_prefix}"
-		AC_SUBST([MCC_PREFIX])
 
-		AM_CONDITIONAL(TEST_WITH_MCC, test x"${ac_use_mercurium_prefix}" != x"")
-	]
-)
-
-
-AC_DEFUN([SSS_CHECK_NANOS6_MERCURIUM],
-	[
-		AC_ARG_WITH(
-			[nanos6-mercurium],
-			[AS_HELP_STRING([--with-nanos6-mercurium=prefix], [specify the installation prefix of the Nanos6 Mercurium compiler @<:@default=auto@:>@])],
-			[ac_use_nanos6_mercurium_prefix="${withval}"],
-			[ac_use_nanos6_mercurium_prefix="auto"]
-		)
-
-		AC_LANG_PUSH([C])
-		AX_COMPILER_VENDOR
-		AC_LANG_POP([C])
-
-		AC_LANG_PUSH([C++])
-		AX_COMPILER_VENDOR
-		AC_LANG_POP([C++])
-
-		if test "$ax_cv_c_compiler_vendor" = "intel" ; then
-			mcc_vendor_prefix=i
-		elif test "$ax_cv_c_compiler_vendor" = "ibm" ; then
-			mcc_vendor_prefix=xl
-		fi
-
-		if test "$ax_cv_cxx_compiler_vendor" = "intel" ; then
-			mcxx_vendor_prefix=i
-		elif test "$ax_cv_cxx_compiler_vendor" = "ibm" ; then
-			mcxx_vendor_prefix=xl
-		fi
-
-		if test x"${ac_use_nanos6_mercurium_prefix}" = x"auto" || test x"${ac_use_nanos6_mercurium_prefix}" = x"yes" ; then
-			AC_PATH_PROGS(NANOS6_MCC, [${mcc_vendor_prefix}mcc.nanos6 ${mcc_vendor_prefix}mcc], [])
-			AC_PATH_PROGS(NANOS6_MCXX, [${mcxx_vendor_prefix}mcxx.nanos6 ${mcc_vendor_prefix}mcxx], [])
-			if test x"${NANOS6_MCC}" = x"" || test x"${NANOS6_MCXX}" = x"" ; then
-				if test x"${ac_use_nanos6_mercurium_prefix}" = x"yes"; then
-					AC_MSG_ERROR([could not find Nanos6 Mercurium])
-				else
-					AC_MSG_WARN([could not find Nanos6 Mercurium])
-					ac_have_nanos6_mercurium=no
-				fi
-			else
-				ac_use_nanos6_mercurium_prefix=$(echo "${NANOS6_MCC}" | sed 's@/bin/'${mcc_vendor_prefix}'mcc.nanos6'\$'@@;s@/bin/'${mcc_vendor_prefix}'mcc'\$'@@')
-				ac_have_nanos6_mercurium=yes
-			fi
-		elif test x"${ac_use_nanos6_mercurium_prefix}" != x"no" ; then
-			AC_PATH_PROGS(NANOS6_MCC, [${mcc_vendor_prefix}mcc.nanos6 ${mcc_vendor_prefix}mcc], [], [${ac_use_nanos6_mercurium_prefix}/bin])
-			AC_PATH_PROGS(NANOS6_MCXX, [${mcxx_vendor_prefix}mcxx.nanos6 ${mcc_vendor_prefix}mcxx], [], [${ac_use_nanos6_mercurium_prefix}/bin])
-			if test x"${NANOS6_MCC}" = x"" || test x"${NANOS6_MCXX}" = x"" ; then
-				AC_MSG_ERROR([could not find Nanos6 Mercurium])
-			else
-				ac_use_nanos6_mercurium_prefix=$(echo "${NANOS6_MCC}" | sed 's@/bin/'${mcc_vendor_prefix}'mcc.nanos6'\$'@@;s@/bin/'${mcc_vendor_prefix}'mcc'\$'@@')
-				ac_have_nanos6_mercurium=yes
-			fi
-		else
-			ac_use_nanos6_mercurium_prefix=""
-			ac_have_nanos6_mercurium=no
-		fi
-
-		AC_MSG_CHECKING([the Nanos6 Mercurium installation prefix])
-		if test x"${ac_have_nanos6_mercurium}" = x"yes" ; then
-			AC_MSG_RESULT([${ac_use_nanos6_mercurium_prefix}])
-		else
-			AC_MSG_RESULT([not found])
-		fi
-
-		if test x"${NANOS6_MCC}" != x"" ; then
+		if test x"${NODES_MCC}" != x"" ; then
 			ac_save_CC="${CC}"
 			AC_LANG_PUSH(C)
 
@@ -145,9 +79,10 @@ AC_DEFUN([SSS_CHECK_NANOS6_MERCURIUM],
 			echo 'enum nanos6_multidimensional_release_api_t { nanos6_multidimensional_release_api = 1 };' > conftest-header-dir/nanos6/multidimensional-release.h
 
 			# Try --ompss-v2
-			CC="${NANOS6_MCC} --ompss-v2 -I${srcdir}/api -Iconftest-header-dir"
+			CC="${NODES_MCC} --ompss-v2 -I${srcdir}/api -Iconftest-header-dir"
 			AC_COMPILE_IFELSE(
 				[ AC_LANG_SOURCE( [[
+
 #ifndef __NANOS6__
 #error Not Nanos6!
 #endif
@@ -162,9 +97,10 @@ int main(int argc, char ** argv) {
 			)
 
 			# Try --ompss-2
-			CC="${NANOS6_MCC} --ompss-2 -I${srcdir}/api -Iconftest-header-dir"
+			CC="${NODES_MCC} --ompss-2 -I${srcdir}/api -Iconftest-header-dir"
 			AC_COMPILE_IFELSE(
 				[ AC_LANG_SOURCE( [[
+
 #ifndef __NANOS6__
 #error Not Nanos6!
 #endif
@@ -182,16 +118,16 @@ int main(int argc, char ** argv) {
 
 			if test x"${OMPSS2_FLAG}" != x"none" ; then
 				AC_MSG_RESULT([${OMPSS2_FLAG}])
-				NANOS6_MCC="${NANOS6_MCC} ${OMPSS2_FLAG}"
-				NANOS6_MCXX="${NANOS6_MCXX} ${OMPSS2_FLAG}"
+				NODES_MCC="${NODES_MCC} ${OMPSS2_FLAG}"
+				NODES_MCXX="${NODES_MCXX} ${OMPSS2_FLAG}"
 			else
 				AC_MSG_RESULT([none])
-				AC_MSG_WARN([will not use ${NANOS6_MCC} since it does not support Nanos6])
-				NANOS6_MCC=""
-				NANOS6_MCXX=""
+				AC_MSG_WARN([will not use ${NODES_MCC} since it does not support NODES])
+				NODES_MCC=""
+				NODES_MCXX=""
 				OMPSS2_FLAG=""
-				unset ac_use_nanos6_mercurium_prefix
-				ac_have_nanos6_mercurium=no
+				unset ac_use_mercurium_prefix
+				ac_have_mercurium=no
 			fi
 
 			AC_LANG_POP(C)
@@ -199,89 +135,39 @@ int main(int argc, char ** argv) {
 
 		fi
 
-		NANOS6_MCC_PREFIX="${ac_use_nanos6_mercurium_prefix}"
-		AC_SUBST([NANOS6_MCC_PREFIX])
-		AC_SUBST([NANOS6_MCC])
-		AC_SUBST([NANOS6_MCXX])
+		NODES_MCC_PREFIX="${ac_use_mercurium_prefix}"
+		AC_SUBST([NODES_MCC_PREFIX])
+		AC_SUBST([NODES_MCC])
+		AC_SUBST([NODES_MCXX])
 
-		AM_CONDITIONAL(HAVE_NANOS6_MERCURIUM, test x"${ac_have_nanos6_mercurium}" = x"yes")
+		AM_CONDITIONAL(HAVE_NODES_MERCURIUM, test x"${ac_have_mercurium}" = x"yes")
 	]
 )
 
-AC_DEFUN([SSS_PUSH_NANOS6_MERCURIUM],
+AC_DEFUN([SSS_PUSH_NODES_MERCURIUM],
 	[
-		AC_REQUIRE([SSS_CHECK_NANOS6_MERCURIUM])
-		pre_nanos6_cc="${CC}"
-		pre_nanos6_cxx="${CXX}"
-		pre_nanos6_cpp="${CPP}"
-		pre_nanos6_cxxcpp="${CXXCPP}"
-		CC="${NANOS6_MCC} $1"
-		CXX="${NANOS6_MCXX} $1"
-		CPP="${NANOS6_MCC} -E $1"
-		CXXPP="${NANOS6_MCXX} -E $1"
+		AC_REQUIRE([SSS_CHECK_MERCURIUM])
+		pre_nodes_cc="${CC}"
+		pre_nodes_cxx="${CXX}"
+		pre_nodes_cpp="${CPP}"
+		pre_nodes_cxxcpp="${CXXCPP}"
+		CC="${NODES_MCC} $1"
+		CXX="${NODES_MCXX} $1"
+		CPP="${NODES_MCC} -E $1"
+		CXXPP="${NODES_MCXX} -E $1"
 		AC_MSG_NOTICE([The following checks will be performed with Mercurium])
 	]
 )
 
-AC_DEFUN([SSS_POP_NANOS6_MERCURIUM],
+AC_DEFUN([SSS_POP_NODES_MERCURIUM],
 	[
 		AC_MSG_NOTICE([The following checks will no longer be performed with Mercurium])
-		CC="${pre_nanos6_cc}"
-		CXX="${pre_nanos6_cxx}"
-		CPP="${pre_nanos6_cpp}"
-		CXXPP="${pre_nanos6_cxxcpp}"
+		CC="${pre_nodes_cc}"
+		CXX="${pre_nodes_cxx}"
+		CPP="${pre_nodes_cpp}"
+		CXXPP="${pre_nodes_cxxcpp}"
 	]
 )
-
-
-AC_DEFUN([SSS_CHECK_NANOS5_MERCURIUM],
-	[
-		AC_ARG_WITH(
-			[nanos5-mercurium],
-			[AS_HELP_STRING([--with-nanos5-mercurium=prefix], [specify the installation prefix of the Nanos5 Mercurium compiler @<:@default=auto@:>@])],
-			[ac_use_nanos5_mercurium_prefix="${withval}"],
-			[ac_use_nanos5_mercurium_prefix="auto"]
-		)
-
-		if test x"${ac_use_nanos5_mercurium_prefix}" = x"auto" || test x"${ac_use_nanos5_mercurium_prefix}" = x"yes" ; then
-			AC_PATH_PROGS(NANOS5_MCC, [mcc.nanos5 mcc], [])
-			AC_PATH_PROGS(NANOS5_MCXX, [mcxx.nanos5 mcxx], [])
-			if test x"${NANOS5_MCC}" = x"" || test x"${NANOS5_MCXX}" = x"" ; then
-				if test x"${ac_use_nanos5_mercurium_prefix}" = x"yes"; then
-					AC_MSG_ERROR([could not find Nanos5 Mercurium])
-				else
-					# AC_MSG_WARN([could not find Nanos5 Mercurium])
-					AC_MSG_ERROR([could not find Nanos5 Mercurium])
-				fi
-			else
-				ac_use_nanos5_mercurium_prefix=$(echo "${NANOS5_MCC}" | sed 's@/bin/mcc.nanos5'\$'@@;s@/bin/mcc'\$'@@')
-			fi
-		elif test x"${ac_use_nanos5_mercurium_prefix}" != x"no" ; then
-			AC_PATH_PROGS(NANOS5_MCC, [mcc.nanos5 mcc], [], [${ac_use_nanos5_mercurium_prefix}/bin])
-			AC_PATH_PROGS(NANOS5_MCXX, [mcxx.nanos5 mcxx], [], [${ac_use_nanos5_mercurium_prefix}/bin])
-			if test x"${NANOS5_MCC}" = x"" || test x"${NANOS5_MCXX}" = x"" ; then
-				AC_MSG_ERROR([could not find Nanos5 Mercurium])
-			else
-				ac_use_nanos5_mercurium_prefix=$(echo "${NANOS5_MCC}" | sed 's@/bin/mcc.nanos5'\$'@@;s@/bin/mcc'\$'@@')
-			fi
-		else
-			ac_use_nanos5_mercurium_prefix=""
-		fi
-
-		AC_MSG_CHECKING([the Nanos5 Mercurium installation prefix])
-		if test x"${ac_use_nanos5_mercurium_prefix}" != x"" ; then
-			AC_MSG_RESULT([${ac_use_nanos5_mercurium_prefix}])
-		else
-			AC_MSG_ERROR([not found])
-		fi
-
-		NANOS5_MCC_PREFIX="${ac_use_nanos5_mercurium_prefix}"
-		AC_SUBST([NANOS5_MCC_PREFIX])
-		AC_SUBST([NANOS5_MCC])
-		AC_SUBST([NANOS5_MCXX])
-	]
-)
-
 
 AC_DEFUN([SSS_REPLACE_WITH_MERCURIUM],
 	[
@@ -373,8 +259,7 @@ AC_DEFUN([SSS_REPLACE_WITH_MERCURIUM_WRAPPER],
 		USING_MERCURIUM=yes
 		USING_MERCURIUM_WRAPPER=yes
 
-		AC_SUBST([NANOS6_MCC_CONFIG_DIR])
-		AC_SUBST([NANOS5_MCC_CONFIG_DIR])
+		AC_SUBST([NODES_MCC_CONFIG_DIR])
 	]
 )
 
@@ -416,7 +301,7 @@ AC_DEFUN([SSS_ALTERNATIVE_MERCURIUM_CONFIGURATION],
 
 AC_DEFUN([SSS_CHECK_MERCURIUM_ACCEPTS_EXTERNAL_INSTALLATION],
 	[
-		if test x"${ac_have_nanos6_mercurium}" = x"yes" ; then
+		if test x"${ac_have_mercurium}" = x"yes" ; then
 			AC_MSG_CHECKING([if Mercurium allows using an external runtime])
 			AC_LANG_PUSH([C])
 			ac_save_[]_AC_LANG_PREFIX[]FLAGS="$[]_AC_LANG_PREFIX[]FLAGS"

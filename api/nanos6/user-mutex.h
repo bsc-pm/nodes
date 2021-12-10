@@ -1,11 +1,11 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_LITE_USER_MUTEX_H
-#define NANOS6_LITE_USER_MUTEX_H
+#ifndef NANOS6_USER_MUTEX_H
+#define NANOS6_USER_MUTEX_H
 
 #include "major.h"
 
@@ -43,4 +43,4 @@ void nanos6_user_unlock(void **handlerPointer);
 #pragma GCC visibility pop
 
 
-#endif /* NANOS6_LITE_USER_MUTEX_H */
+#endif /* NANOS6_USER_MUTEX_H */
