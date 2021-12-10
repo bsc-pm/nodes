@@ -16,6 +16,7 @@
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "dependencies/discrete/TaskDataAccesses.hpp"
 #include "dependencies/discrete/TaskDataAccessesInfo.hpp"
+#include "instrument/OVNIInstrumentation.hpp"
 #include "memory/MemoryAllocator.hpp"
 #include "hardware/HardwareInfo.hpp"
 #include "tasks/TaskloopMetadata.hpp"
@@ -31,6 +32,8 @@ void nanos6_create_task(
 	size_t flags,
 	size_t numDeps
 ) {
+	Instrument::enterCreateTask();
+
 	size_t originalArgsBlockSize = argsBlockSize;
 
 	// Get the necessary size to create the task
@@ -118,6 +121,8 @@ void nanos6_create_task(
 
 	// Assign the nOS-V task pointer for a future submit
 	*taskPointer = (void *) task;
+
+	Instrument::exitCreateTask();
 }
 
 void nanos6_create_loop(
@@ -133,6 +138,8 @@ void nanos6_create_loop(
 	size_t grainsize,
 	size_t chunksize
 ) {
+	Instrument::enterCreateTask();
+
 	assert(task_info->implementation_count == 1);
 
 	// The compiler passes either the num deps of a single child or -1. However, the parent taskloop
@@ -154,11 +161,15 @@ void nanos6_create_loop(
 	assert(taskloopMetadata->isTaskloop());
 
 	taskloopMetadata->initialize(lower_bound, upper_bound, grainsize, chunksize);
+
+	Instrument::exitCreateTask();
 }
 
 //! Public API function to submit tasks
 void nanos6_submit_task(void *taskHandle)
 {
+	Instrument::enterSubmitTask();
+
 	nosv_task_t task = (nosv_task_t) taskHandle;
 	assert(task != nullptr);
 
@@ -194,13 +205,20 @@ void nanos6_submit_task(void *taskHandle)
 	if (isIf0) {
 		if (ready) {
 			// Ready if0 tasks are executed inline
+			Instrument::enterInlineIf0();
 			nosv_submit(task, NOSV_SUBMIT_INLINE);
+			Instrument::exitInlineIf0();
 		} else {
 			// Non-ready if0 tasks cause this task to get paused. Before the
 			// if0 task starts executing (after deps are satisfied), it will
 			// detect that it was a non-ready if0 task and re-submit the parent
 			taskMetadata->markIf0AsNotInlined();
+
+			Instrument::enterWaitIf0();
 			nosv_pause(NOSV_SUBMIT_NONE);
+			Instrument::exitWaitIf0();
 		}
 	}
+
+	Instrument::exitSubmitTask();
 }

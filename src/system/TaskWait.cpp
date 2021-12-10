@@ -10,6 +10,7 @@
 
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "hardware/HardwareInfo.hpp"
+#include "instrument/OVNIInstrumentation.hpp"
 #include "tasks/TaskMetadata.hpp"
 
 
@@ -18,10 +19,13 @@
 //! \param[in] invocationSource A string that identifies the source code location of the invocation
 extern "C" void nanos6_taskwait(char const */*invocationSource*/)
 {
+	Instrument::enterTaskWait();
+
 	// Retreive the task's metadata
 	TaskMetadata *taskMetadata = TaskMetadata::getCurrentTask();
 	if (taskMetadata->doesNotNeedToBlockForChildren()) {
 		std::atomic_thread_fence(std::memory_order_acquire);
+		Instrument::exitTaskWait();
 		return;
 	}
 
@@ -46,4 +50,6 @@ extern "C" void nanos6_taskwait(char const */*invocationSource*/)
 	taskMetadata->markAsUnblocked();
 
 	DataAccessRegistration::handleExitTaskwait(taskMetadata);
+
+	Instrument::exitTaskWait();
 }

@@ -50,6 +50,7 @@ SSS_POP_NODES_MERCURIUM
 AX_BOOST_BASE([1.59], [], [ AC_MSG_ERROR([Boost library not found]) ])
 CHECK_PTHREAD
 AC_CHECK_NOSV
+AX_CHECK_OVNI
 
 # Checks for typedefs, structures
 AC_CHECK_HEADER_STDBOOL
@@ -85,3 +86,7 @@ echo "    Boost CPPFLAGS...      ${BOOST_CPPFLAGS}"
 echo "    Boost LDFLAGS...       ${BOOST_LDFLAGS}"
 echo ""
 echo "    nOS-V CPPFLAGS...      ${nosv_CPPFLAGS}"
+echo ""
+echo "    Ovni CPPFLAGS...       ${ovni_CPPFLAGS}"
+echo "    Ovni LDFLAGS....       ${ovni_LIBS}"
+

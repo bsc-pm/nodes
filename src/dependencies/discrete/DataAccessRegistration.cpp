@@ -14,6 +14,7 @@
 #include "CPUDependencyData.hpp"
 #include "DataAccessRegistration.hpp"
 #include "TaskDataAccesses.hpp"
+#include "instrument/OVNIInstrumentation.hpp"
 #include "memory/ObjectAllocator.hpp"
 #include "system/TaskFinalization.hpp"
 #include "tasks/TaskMetadata.hpp"
@@ -131,6 +132,8 @@ namespace DataAccessRegistration {
 		reduction_type_and_operator_index_t reductionTypeAndOperatorIndex,
 		reduction_index_t reductionIndex, int symbolIndex)
 	{
+		Instrument::enterRegisterAccesses();
+
 		// This is called once per access in the task and it's purpose is to initialize our DataAccess structure with the
 		// arguments of this function. No dependency registration is done here, and this call precedes the "registerTaskDataAccesses"
 		// one. All the access structs are constructed in-place in the task array, to prevent allocations.
@@ -161,6 +164,8 @@ namespace DataAccessRegistration {
 
 		// Tuning the number of deps of child taskloops
 		task->increaseMaxChildDependencies();
+
+		Instrument::exitRegisterAccesses();
 	}
 
 	void propagateMessages(
@@ -342,6 +347,8 @@ namespace DataAccessRegistration {
 
 	void unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
 	{
+		Instrument::enterUnregisterAccesses();
+
 		assert(task != nullptr);
 
 		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
@@ -422,6 +429,8 @@ namespace DataAccessRegistration {
 			assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, false));
 		}
 #endif
+
+		Instrument::exitUnregisterAccesses();
 	}
 
 	void handleEnterTaskwait(TaskMetadata *task)

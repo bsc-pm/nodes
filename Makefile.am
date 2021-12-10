@@ -4,9 +4,9 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = $(BOOST_CPPFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS} ${nanos6_CXXFLAGS} -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
-AM_CXXFLAGS = $(BOOST_CXXFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS} ${nanos6_CXXFLAGS} -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
-AM_LDFLAGS  = $(BOOST_LDFLAGS)  $(PTHREAD_CFLAGS) $(PTHREAD_LIBS) ${nosv_LIBS}
+AM_CPPFLAGS = $(ovni_CPPFLAGS) $(BOOST_CPPFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS} ${nanos6_CXXFLAGS} -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_CXXFLAGS = $(ovni_CXXFLAGS) $(BOOST_CXXFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS} ${nanos6_CXXFLAGS} -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_LDFLAGS  = $(ovni_LIBS) $(BOOST_LDFLAGS) $(PTHREAD_CFLAGS) $(PTHREAD_LIBS) ${nosv_LIBS}
 AM_LIBS     = -lrt -lpthread -lnosv
 
 SUBDIRS = . tests
@@ -80,6 +80,7 @@ noinst_HEADERS = \
 	src/dependencies/discrete/TaskDataAccessesInfo.hpp \
 	src/dependencies/discrete/devices/HostReductionStorage.hpp \
 	src/hardware/HardwareInfo.hpp \
+	src/instrument/OVNIInstrumentation.hpp \
 	src/memory/MemoryAllocator.hpp \
 	src/memory/ObjectAllocator.hpp \
 	src/system/SpawnFunction.hpp \
