@@ -8,10 +8,10 @@ AM_CXXFLAGS = -I$(top_srcdir)/tests/common $(PTHREAD_CFLAGS) -I$(top_srcdir)/api
 AM_LDFLAGS  = -L$(top_builddir)/.libs -rpath $(abs_top_builddir)/.libs
 LDADD = -ldl
 
-CXX = $(NODES_MCXX)
-CC = $(NODES_MCC)
+CXX = $(NODES_CLANG)
+CC = $(NODES_CLANGXX)
 
-if HAVE_NODES_MERCURIUM
+if HAVE_NODES_CLANG
 correctness_tests = \
 	blocking.test \
 	commutative.test \
