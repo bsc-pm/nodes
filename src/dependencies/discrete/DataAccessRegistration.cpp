@@ -17,7 +17,9 @@
 #include "instrument/OVNIInstrumentation.hpp"
 #include "memory/ObjectAllocator.hpp"
 #include "system/TaskFinalization.hpp"
+#include "taskiter/TaskiterGraph.hpp"
 #include "tasks/TaskMetadata.hpp"
+#include "tasks/TaskiterMetadata.hpp"
 
 
 #define __unused __attribute__((unused))
@@ -345,7 +347,7 @@ namespace DataAccessRegistration {
 		return ready;
 	}
 
-	void unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
+	bool unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
 	{
 		Instrument::enterUnregisterAccesses();
 
@@ -354,6 +356,30 @@ namespace DataAccessRegistration {
 		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 		assert(hpDependencyData._mailBox.empty());
+
+		TaskMetadata *parentTask = task->getParent();
+		const bool taskiterChild = parentTask && parentTask->isTaskiter();
+
+		if (taskiterChild && task->getOriginalPrecessorCount() >= 0) {
+			bool keepIterating = task->keepIterating();
+			if (keepIterating) {
+				task->increasePredecessors(task->getOriginalPrecessorCount());
+				task->increaseReleaseCount();
+				task->increaseRemovalBlockingCount();
+			}
+
+			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
+			TaskiterGraph &graph = taskiter->getGraph();
+
+			// We cannot cross iteration boundaries if we don't keep iterating
+			for (TaskMetadata *successor : graph.getSuccessors(task, keepIterating))
+				satisfyTask(successor, hpDependencyData);
+
+			processSatisfiedOriginators(hpDependencyData);
+
+			return false;
+			// return !keepIterating;
+		}
 
 #ifndef NDEBUG
 		{
@@ -430,13 +456,20 @@ namespace DataAccessRegistration {
 		}
 #endif
 
+		if (taskiterChild) {
+			task->increaseReleaseCount();
+			task->increaseRemovalBlockingCount();
+			task->incrementOriginalPredecessorCount();
+			task->setIterationCount(reinterpret_cast<TaskiterMetadata *>(parentTask)->getIterationCount());
+		}
+
 		Instrument::exitUnregisterAccesses();
+
+		return true;
 	}
 
-	void handleEnterTaskwait(TaskMetadata *task)
+	static inline void closeBottomReductions(TaskMetadata *task)
 	{
-		assert(task != nullptr);
-
 		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 
@@ -460,8 +493,27 @@ namespace DataAccessRegistration {
 		}
 	}
 
-	void handleExitTaskwait(TaskMetadata *)
+	void handleEnterTaskwait(TaskMetadata *task)
 	{
+		assert(task != nullptr);
+
+		closeBottomReductions(task);
+	}
+
+	void handleExitTaskwait(TaskMetadata *task)
+	{
+		if (task->hasFinished() && task->isTaskiter()) {
+			// At this point, as we have delayed dependency release, every child task has executed once, but
+			// hasn't been deleted.
+			// Thus, we can safely update their counters and dependencies, and re-launch them
+			// TODO: Support n=1 count
+			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(task);
+			TaskiterGraph &graph = taskiter->getGraph();
+
+			// taskiter->increasePredecessors(graph.getTasks());
+			graph.process();
+			graph.setTaskDegree();
+		}
 	}
 
 	static inline void insertAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
@@ -470,14 +522,23 @@ namespace DataAccessRegistration {
 		assert(!accessStruct.hasBeenDeleted());
 
 		TaskMetadata *parentTask = task->getParent();
+		assert(parentTask);
 		TaskDataAccesses &parentAccessStruct = parentTask->getTaskDataAccesses();
 		assert(!parentAccessStruct.hasBeenDeleted());
+
+		const bool isTaskiterChild = parentTask->isTaskiter();
 
 		mailbox_t &mailBox = hpDependencyData._mailBox;
 		assert(mailBox.empty());
 
 		// Default deletableCount of 1
 		accessStruct.increaseDeletableCount();
+
+		if (isTaskiterChild) {
+			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
+			TaskiterGraph &graph = taskiter->getGraph();
+			graph.addTask(task);
+		}
 
 		// Get all seqs
 		accessStruct.forAll([&](void *address, DataAccess *access) -> bool {
@@ -494,6 +555,12 @@ namespace DataAccessRegistration {
 			std::pair<bottom_map_t::iterator, bool> result = addresses.emplace(std::piecewise_construct,
 				std::forward_as_tuple(address),
 				std::forward_as_tuple(access));
+
+			if (isTaskiterChild) {
+				TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
+				TaskiterGraph &graph = taskiter->getGraph();
+				graph.addTaskAccess(task, address, accessType);
+			}
 
 			itMap = result.first;
 

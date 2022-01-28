@@ -8,14 +8,13 @@ AM_CXXFLAGS = -I$(top_srcdir)/tests/common $(PTHREAD_CFLAGS) -I$(top_srcdir)/api
 AM_LDFLAGS  = -L$(top_builddir)/.libs -rpath $(abs_top_builddir)/.libs
 LDADD = -ldl
 
-CXX = $(NODES_CLANG)
-CC = $(NODES_CLANGXX)
+CXX = $(NODES_CLANGXX)
+CC = $(NODES_CLANG)
 
 if HAVE_NODES_CLANG
 correctness_tests = \
 	blocking.test \
 	commutative.test \
-	critical.test \
 	deadline.test \
 	discrete-deps.test \
 	discrete-deps-early-release.test \

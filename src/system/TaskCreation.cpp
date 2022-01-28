@@ -24,8 +24,8 @@
 #include "tasks/TaskMetadata.hpp"
 
 
-void nanos6_create_task(
-	nanos6_task_info_t *taskInfo,
+template <typename T>
+static inline void createTask(nanos6_task_info_t *taskInfo,
 	nanos6_task_invocation_info_t *,
 	char const *,
 	size_t argsBlockSize,
@@ -39,13 +39,7 @@ void nanos6_create_task(
 	size_t originalArgsBlockSize = argsBlockSize;
 
 	// Get the necessary size to create the task
-	size_t taskSize = 0;
-	bool isTaskloop = (flags & nanos6_taskloop_task);
-	if (isTaskloop) {
-		taskSize += sizeof(TaskloopMetadata);
-	} else {
-		taskSize += sizeof(TaskMetadata);
-	}
+	size_t taskSize = sizeof(T);
 
 	// Get the necessary size for the task's dependencies
 	TaskDataAccessesInfo taskAccesses(numDeps);
@@ -102,29 +96,36 @@ void nanos6_create_task(
 	assert(metadata != nullptr);
 
 	if (!hasPreallocatedArgsBlock) {
-		if (isTaskloop) {
-			// Skip sizeof(TaskloopMetadata) to assign the pointer
-			*argsBlockPointer = (void *) ((char *) metadata + sizeof(TaskloopMetadata));
-		} else {
-			// Skip sizeof(TaskMetadata) to assign the pointer
-			*argsBlockPointer = (void *) ((char *) metadata + sizeof(TaskMetadata));
-		}
+		*argsBlockPointer = (void *) ((char *) metadata + sizeof(T));
 	}
 
 	// Compute the correct address for the task's accesses
 	taskAccesses.setAllocationAddress((char *) *argsBlockPointer + argsBlockSize);
 
 	// Retreive and construct the task's metadata
-	if (isTaskloop) {
-		new (metadata) TaskloopMetadata(*argsBlockPointer, originalArgsBlockSize, task, flags, taskAccesses, taskSize, locallyAllocated);
-	} else {
-		new (metadata) TaskMetadata(*argsBlockPointer, originalArgsBlockSize, task, flags, taskAccesses, taskSize, locallyAllocated);
-	}
+	new (metadata) T(*argsBlockPointer, originalArgsBlockSize, task, flags, taskAccesses, taskSize, locallyAllocated);
 
 	// Assign the nOS-V task pointer for a future submit
 	*taskPointer = (void *) task;
 
 	Instrument::exitCreateTask();
+}
+
+void nanos6_create_task(
+	nanos6_task_info_t *taskInfo,
+	nanos6_task_invocation_info_t *,
+	size_t argsBlockSize,
+	void **argsBlockPointer,
+	void **taskPointer,
+	size_t flags,
+	size_t numDeps
+) {
+	if (flags & nanos6_taskloop_task)
+		createTask<TaskloopMetadata>(taskInfo, NULL, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	else if (flags & nanos6_taskiter_task)
+		createTask<TaskiterMetadata>(taskInfo, NULL, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	else
+		createTask<TaskMetadata>(taskInfo, NULL, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
 }
 
 void nanos6_create_loop(

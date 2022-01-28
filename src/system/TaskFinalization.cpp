@@ -65,13 +65,15 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 			cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 		}
 
-		DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *cpuDepData);
+		bool finish = DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *cpuDepData);
 
 		if (isExternal) {
 			delete cpuDepData;
 		}
 
-		TaskFinalization::taskFinished(taskMetadata);
+		if (finish) {
+			TaskFinalization::taskFinished(taskMetadata);
+		}
 
 		if (taskMetadata->decreaseRemovalBlockingCount()) {
 			TaskFinalization::disposeTask(taskMetadata);
@@ -109,13 +111,16 @@ void TaskFinalization::taskFinished(TaskMetadata *task)
 						localHpDependencyData = new CPUDependencyData();
 					}
 
-					DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *localHpDependencyData);
+					bool finish = DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *localHpDependencyData);
 
 					// This is just to emulate a recursive call to TaskFinalization::taskFinished() again
 					// It should not return false because at this point delayed release has happenned which means that
 					// the task has gone through a taskwait (no more children should be unfinished)
-					ready = taskMetadata->finishChild();
-					assert(ready);
+
+					if (finish) {
+						ready = taskMetadata->finishChild();
+						assert(ready);
+					}
 
 					if (taskMetadata->decreaseRemovalBlockingCount()) {
 						TaskFinalization::disposeTask(taskMetadata);
@@ -190,4 +195,3 @@ void TaskFinalization::disposeTask(TaskMetadata *task)
 		taskMetadata = parentMetadata;
 	}
 }
-
