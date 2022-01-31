@@ -73,6 +73,7 @@ private:
 	Container::vector<TaskMetadata *> _tasks;
 	Container::set<TaskiterGraphEdge> _edges;
 	Container::unordered_map<access_address_t, TaskiterGraphAccessChain> _bottomMap;
+	bool _processed;
 
 	inline void createEdges(TaskMetadata *task, Container::vector<TaskMetadata *> &chain)
 	{
@@ -104,7 +105,8 @@ private:
 	}
 
 public:
-	TaskiterGraph()
+	TaskiterGraph() :
+		_processed(false)
 	{
 	}
 
@@ -147,7 +149,12 @@ public:
 
 	void process()
 	{
+		_processed = true;
+	}
 
+	inline bool isProcessed() const
+	{
+		return _processed;
 	}
 
 	void addTask(TaskMetadata *task)

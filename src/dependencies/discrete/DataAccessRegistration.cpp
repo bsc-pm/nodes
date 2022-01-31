@@ -366,6 +366,9 @@ namespace DataAccessRegistration {
 				task->increasePredecessors(task->getOriginalPrecessorCount());
 				task->increaseReleaseCount();
 				task->increaseRemovalBlockingCount();
+			} else {
+				// Prepare this task so it can be re-finished
+				task->addChilds(1);
 			}
 
 			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
@@ -377,8 +380,8 @@ namespace DataAccessRegistration {
 
 			processSatisfiedOriginators(hpDependencyData);
 
-			return false;
-			// return !keepIterating;
+			// return false;
+			return !keepIterating;
 		}
 
 #ifndef NDEBUG
@@ -460,6 +463,7 @@ namespace DataAccessRegistration {
 			task->increaseReleaseCount();
 			task->increaseRemovalBlockingCount();
 			task->incrementOriginalPredecessorCount();
+			// task->addChilds(1);
 			task->setIterationCount(reinterpret_cast<TaskiterMetadata *>(parentTask)->getIterationCount());
 		}
 
@@ -510,9 +514,17 @@ namespace DataAccessRegistration {
 			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(task);
 			TaskiterGraph &graph = taskiter->getGraph();
 
-			// taskiter->increasePredecessors(graph.getTasks());
-			graph.process();
-			graph.setTaskDegree();
+			if (graph.isProcessed()) {
+				// We are on the second barrier, let it go through
+			} else {
+				// Reset waiting
+				task->setDelayedRelease(true);
+				task->increaseReleaseCount();
+				task->addChilds(graph.getTasks() - 1);
+
+				graph.process();
+				graph.setTaskDegree();
+			}
 		}
 	}
 

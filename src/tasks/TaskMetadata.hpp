@@ -197,6 +197,11 @@ public:
 		_removalCount.fetch_add(1, std::memory_order_relaxed);
 	}
 
+	inline void addChilds(int amount)
+	{
+		_countdownToBeWokenUp.fetch_add(amount, std::memory_order_relaxed);
+	}
+
 	inline int getRemovalCount()
 	{
 		return _removalCount.load();

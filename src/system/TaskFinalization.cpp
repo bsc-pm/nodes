@@ -125,9 +125,13 @@ void TaskFinalization::taskFinished(TaskMetadata *task)
 					if (taskMetadata->decreaseRemovalBlockingCount()) {
 						TaskFinalization::disposeTask(taskMetadata);
 					}
+				} else if (taskMetadata->isTaskiter()) {
+					// This can only happen the first time a taskiter is released,
+					// which means that we have to stop the recursive process
+					break;
 				}
 
-				assert(!taskMetadata->mustDelayRelease());
+				// assert(!taskMetadata->mustDelayRelease());
 			}
 		} else {
 			// An ancestor in a taskwait that must be unblocked at this point
