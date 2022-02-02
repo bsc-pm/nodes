@@ -79,6 +79,7 @@ noinst_HEADERS = \
 	src/dependencies/discrete/TaskDataAccesses.hpp \
 	src/dependencies/discrete/TaskDataAccessesInfo.hpp \
 	src/dependencies/discrete/devices/HostReductionStorage.hpp \
+	src/dependencies/discrete/taskiter/TaskiterGraph.hpp \
 	src/hardware/HardwareInfo.hpp \
 	src/instrument/OVNIInstrumentation.hpp \
 	src/memory/MemoryAllocator.hpp \
@@ -87,6 +88,7 @@ noinst_HEADERS = \
 	src/system/TaskFinalization.hpp \
 	src/tasks/TaskInfo.hpp \
 	src/tasks/TaskMetadata.hpp \
+	src/tasks/TaskiterMetadata.hpp \
 	src/tasks/TaskloopMetadata.hpp \
 	tests/common/Atomic.hpp \
 	tests/common/Functors.hpp \
@@ -117,7 +119,8 @@ common_sources = \
 	src/tasks/Task.cpp \
 	src/tasks/TaskInfo.cpp \
 	src/tasks/TaskInfoAPI.cpp \
-	src/tasks/TaskloopMetadata.cpp
+	src/tasks/TaskloopMetadata.cpp \
+	src/tasks/TaskiterMetadata.cpp
 
 dependency_flags = -I$(srcdir)/src/dependencies -I$(srcdir)/src/dependencies/discrete
 

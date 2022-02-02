@@ -38,9 +38,10 @@ struct TaskiterGraphEdge {
 };
 
 struct TaskiterGraphAccessChain {
-	Container::vector<TaskMetadata *> *_lastChain;
-	Container::vector<TaskMetadata *> *_prevChain;
-	Container::vector<TaskMetadata *> _firstChain;
+	typedef Container::vector<TaskMetadata *> access_chain_t;
+	access_chain_t *_lastChain;
+	access_chain_t *_prevChain;
+	access_chain_t _firstChain;
 
 	DataAccessType _lastChainType;
 	DataAccessType _prevChainType;
@@ -81,9 +82,39 @@ private:
 			_edges.emplace(t, task, false);
 	}
 
+	inline void closeLoopWithControl(TaskMetadata *controlTask)
+	{
+		_tasks.push_back(controlTask);
+
+		controlTask->increasePredecessors();
+
+		for (std::pair<const access_address_t, TaskiterGraphAccessChain> &it : _bottomMap) {
+			TaskiterGraphAccessChain &chain = it.second;
+			assert(!chain._lastChain->empty());
+
+			// Register deps from the last tasks into the control task
+			for (TaskMetadata *from : *(chain._lastChain)) {
+				_edges.emplace(from, controlTask, false);
+				controlTask->incrementOriginalPredecessorCount();
+			}
+
+			assert(!chain._firstChain.empty());
+
+			// Register deps from the control task to the first tasks
+			for (TaskMetadata *to : chain._firstChain) {
+				_edges.emplace(controlTask, to, true);
+				to->incrementOriginalPredecessorCount();
+				// Block this task from starting until we check the condition for the first time
+				to->increasePredecessors();
+			}
+		}
+	}
+
 	inline void closeDependencyLoop()
 	{
 		// Close every dependency chain by simulating that we are registering the first accesses again
+
+		// TODO Is this wrong for a IN -> OUT -> IN chain for the (chain._firstChainType != chain._lastChainType) condition?
 
 		for (std::pair<const access_address_t, TaskiterGraphAccessChain> &it : _bottomMap) {
 			TaskiterGraphAccessChain &chain = it.second;
@@ -125,7 +156,7 @@ public:
 		return successorList;
 	}
 
-	void setTaskDegree()
+	void setTaskDegree(TaskMetadata *controlTask)
 	{
 		// First, increase predecessors for every task
 		for (TaskMetadata *t : _tasks)
@@ -137,7 +168,13 @@ public:
 			edge._to->incrementOriginalPredecessorCount();
 		}
 
-		closeDependencyLoop();
+		if (controlTask == nullptr) {
+			// Close the dependency loop normally
+			closeDependencyLoop();
+		} else {
+			// Insert a control dependency
+			closeLoopWithControl(controlTask);
+		}
 
 		// Now, decrease predecessors for every task
 		for (TaskMetadata *t : _tasks) {
@@ -196,9 +233,10 @@ public:
 				createEdges(task, *(chain._lastChain));
 				chain._lastChainType = WRITE_ACCESS_TYPE;
 				chain._lastChain->clear();
-				chain._lastChain->push_back(task);
 				chain._inFirst = false;
 			}
+
+			chain._lastChain->push_back(task);
 
 			if (chain._inFirst) {
 				chain._inFirst = false;
@@ -215,8 +253,14 @@ public:
 		return _tasks.size();
 	}
 
+	inline std::vector<TaskMetadata *> const &getTaskVector() const
+	{
+		return _tasks;
+	}
+
 	~TaskiterGraph()
 	{
+		// std::cout << "Destroy graph" << std::endl;
 	}
 };
 

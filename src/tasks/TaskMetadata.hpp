@@ -480,6 +480,11 @@ public:
 		assert(_parent->isTaskiter());
 		return (--_iterationCount > 1);
 	}
+
+	virtual ~TaskMetadata()
+	{
+		std::cout << "Destroy " << this << std::endl;
+	}
 };
 
 #endif // TASK_METADATA_HPP

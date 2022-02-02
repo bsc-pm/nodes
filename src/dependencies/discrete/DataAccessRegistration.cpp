@@ -360,9 +360,25 @@ namespace DataAccessRegistration {
 		TaskMetadata *parentTask = task->getParent();
 		const bool taskiterChild = parentTask && parentTask->isTaskiter();
 
+#ifndef NDEBUG
+		{
+			bool alreadyTaken = false;
+			assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, true));
+		}
+#endif
+
 		if (taskiterChild && task->getOriginalPrecessorCount() >= 0) {
+			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
+			TaskiterGraph &graph = taskiter->getGraph();
+
+			if (taskiter->cancelled()) {
+				// Nevermind, we cancelled the taskiter
+				return true;
+			}
+
 			bool keepIterating = task->keepIterating();
 			if (keepIterating) {
+				// std::cout << "Rest" << task << std::endl;
 				task->increasePredecessors(task->getOriginalPrecessorCount());
 				task->increaseReleaseCount();
 				task->increaseRemovalBlockingCount();
@@ -371,25 +387,26 @@ namespace DataAccessRegistration {
 				task->addChilds(1);
 			}
 
-			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
-			TaskiterGraph &graph = taskiter->getGraph();
+			std::vector<TaskMetadata *> successors = graph.getSuccessors(task, keepIterating);
 
 			// We cannot cross iteration boundaries if we don't keep iterating
-			for (TaskMetadata *successor : graph.getSuccessors(task, keepIterating))
+			for (TaskMetadata *successor : successors) {
+				// std::cout << "satis" << successor << std::endl;
 				satisfyTask(successor, hpDependencyData);
+			}
 
 			processSatisfiedOriginators(hpDependencyData);
+
+#ifndef NDEBUG
+			{
+				bool alreadyTaken = true;
+				assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, false));
+			}
+#endif
 
 			// return false;
 			return !keepIterating;
 		}
-
-#ifndef NDEBUG
-		{
-			bool alreadyTaken = false;
-			assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, true));
-		}
-#endif
 
 		if (accessStruct.hasDataAccesses()) {
 			// Release dependencies of all my accesses
@@ -460,11 +477,15 @@ namespace DataAccessRegistration {
 #endif
 
 		if (taskiterChild) {
-			task->increaseReleaseCount();
-			task->increaseRemovalBlockingCount();
-			task->incrementOriginalPredecessorCount();
-			// task->addChilds(1);
-			task->setIterationCount(reinterpret_cast<TaskiterMetadata *>(parentTask)->getIterationCount());
+			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
+			size_t iterationCount = taskiter->getIterationCount();
+			task->setIterationCount(iterationCount);
+
+			if (iterationCount > 1) {
+				task->increaseReleaseCount();
+				task->increaseRemovalBlockingCount();
+				task->incrementOriginalPredecessorCount();
+			}
 		}
 
 		Instrument::exitUnregisterAccesses();
@@ -504,6 +525,26 @@ namespace DataAccessRegistration {
 		closeBottomReductions(task);
 	}
 
+	static inline void processTaskIter(TaskiterMetadata *taskiter, TaskiterGraph &graph)
+	{
+		// Reset waiting
+		taskiter->setDelayedRelease(true);
+		taskiter->increaseReleaseCount();
+		taskiter->addChilds(graph.getTasks() - 1);
+
+		if (taskiter->isWhile()) {
+			// Create an implicit control task
+			TaskMetadata *controlTask = taskiter->generateControlTask();
+			graph.process();
+			graph.setTaskDegree(controlTask);
+			// Here the control task should have been scheduled already
+		} else {
+			// May need to add an extra task?
+			graph.process();
+			graph.setTaskDegree(nullptr);
+		}
+	}
+
 	void handleExitTaskwait(TaskMetadata *task)
 	{
 		if (task->hasFinished() && task->isTaskiter()) {
@@ -516,14 +557,8 @@ namespace DataAccessRegistration {
 
 			if (graph.isProcessed()) {
 				// We are on the second barrier, let it go through
-			} else {
-				// Reset waiting
-				task->setDelayedRelease(true);
-				task->increaseReleaseCount();
-				task->addChilds(graph.getTasks() - 1);
-
-				graph.process();
-				graph.setTaskDegree();
+			} else if(taskiter->getIterationCount() > 1) {
+				processTaskIter(taskiter, graph);
 			}
 		}
 	}
@@ -752,7 +787,7 @@ namespace DataAccessRegistration {
 		if (!accessStruct.hasDataAccesses())
 			return;
 
-		accessStruct.forAll([&](void *, DataAccess *access) -> bool {
+		accessStruct.forAll([task, cpuId](void *, DataAccess *access) -> bool {
 			// Skip if released
 			if (access->isReleased())
 				return true;

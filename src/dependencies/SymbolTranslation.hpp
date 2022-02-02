@@ -46,6 +46,7 @@ public:
 		} else {
 			tableSize = numSymbols * sizeof(nanos6_address_translation_entry_t);
 			table = (nanos6_address_translation_entry_t *) malloc(tableSize);
+			assert(table != nullptr);
 		}
 
 		DataAccessRegistration::translateReductionAddresses(TaskMetadata::getTaskMetadata(task), cpuId, table, numSymbols);
