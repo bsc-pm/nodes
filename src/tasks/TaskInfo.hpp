@@ -118,7 +118,8 @@ public:
 				&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
 				taskInfo->implementations->task_label,      /* Task label */
 				(void *) taskInfo,                          /* Metadata: Link to NODES' taskinfo */
-				NOSV_TYPE_INIT_NONE
+				NOSV_TYPE_INIT_NONE,
+				&(TaskInfo::getCostWrapper)
 			);
 			assert(!ret);
 
@@ -129,6 +130,28 @@ public:
 		}
 
 		_lock.unlock();
+	}
+
+	//! \brief Wrapper to obtain the cost of a task
+	static inline uint64_t getCostWrapper(nosv_task_t task)
+	{
+		assert(task != nullptr);
+
+		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task);
+		if (taskInfo != nullptr) {
+			if (taskInfo->implementations != nullptr) {
+				if (taskInfo->implementations->get_constraints != nullptr) {
+					TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
+					assert(taskMetadata != nullptr);
+
+					nanos6_task_constraints_t constraints;
+					taskInfo->implementations->get_constraints(taskMetadata->getArgsBlock(), &constraints);
+					return constraints.cost;
+				}
+			}
+		}
+
+		return 1;
 	}
 
 	//! \brief Register the taskinfo of a type of task
