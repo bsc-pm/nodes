@@ -43,9 +43,6 @@ void nanos6_shutdown(void)
 		// Wait for spawned functions to fully end
 	}
 
-	// Report of statistics before destroying types and others
-	nosv_report();
-
 	// Unregister any registered taskinfo from nOS-V
 	TaskInfo::shutdown();
 
