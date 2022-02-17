@@ -23,7 +23,7 @@ void nanos6_init(void)
 	// Create a dummy type and task to attach/wrap the "main" process
 	nosv_task_t task;
 	nosv_task_type_t type;
-	nosv_type_init(&type, NULL, NULL, NULL, "main", NULL, NOSV_TYPE_INIT_EXTERNAL, &(TaskInfo::getCostWrapper));
+	nosv_type_init(&type, NULL, NULL, NULL, "main", NULL, &(TaskInfo::getCostWrapper), NOSV_TYPE_INIT_EXTERNAL);
 	nosv_attach(&task, type, 0, NULL, NOSV_ATTACH_NONE);
 
 	// Gather hardware info

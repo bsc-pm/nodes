@@ -118,8 +118,8 @@ public:
 				&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
 				taskInfo->implementations->task_label,      /* Task label */
 				(void *) taskInfo,                          /* Metadata: Link to NODES' taskinfo */
-				NOSV_TYPE_INIT_NONE,
-				&(TaskInfo::getCostWrapper)
+				&(TaskInfo::getCostWrapper),
+				NOSV_TYPE_INIT_NONE
 			);
 			assert(!ret);
 
