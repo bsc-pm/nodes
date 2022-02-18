@@ -23,7 +23,7 @@ void nanos6_init(void)
 	// Create a dummy type and task to attach/wrap the "main" process
 	nosv_task_t task;
 	nosv_task_type_t type;
-	nosv_type_init(&type, NULL, NULL, NULL, "main", NULL, NOSV_TYPE_INIT_EXTERNAL, &(TaskInfo::getCostWrapper));
+	nosv_type_init(&type, NULL, NULL, NULL, "main", NULL, &(TaskInfo::getCostWrapper), NOSV_TYPE_INIT_EXTERNAL);
 	nosv_attach(&task, type, 0, NULL, NOSV_ATTACH_NONE);
 
 	// Gather hardware info
@@ -42,9 +42,6 @@ void nanos6_shutdown(void)
 	while (SpawnFunction::_pendingSpawnedFunctions > 0) {
 		// Wait for spawned functions to fully end
 	}
-
-	// Report of statistics before destroying types and others
-	nosv_report();
 
 	// Unregister any registered taskinfo from nOS-V
 	TaskInfo::shutdown();
