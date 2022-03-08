@@ -3,7 +3,7 @@
 
 #	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
-#	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+#	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 
 # NODES Version and Copyright
 
@@ -39,6 +39,7 @@ SSS_PREPARE_COMPILER_FLAGS
 AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX_11([], [mandatory])
 AX_PREPARE_CXX_FLAGS
+AC_CHECK_MAIN_WRAPPER_TYPE
 
 # Check for mercurium
 SSS_CHECK_MERCURIUM

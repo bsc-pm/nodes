@@ -1,6 +1,6 @@
 #	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
-#	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+#	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -138,9 +138,16 @@ lib_OBJECTS = nanos6-main-wrapper.o
 libnanos6_main_wrapper_a_SOURCES = \
 	src/bootstrap/intercept-main-common.c \
 	src/bootstrap/intercept-main-common.h \
-	src/bootstrap/intercept-main-glibc.c \
 	src/bootstrap/main-wrapper.c \
 	src/bootstrap/main-wrapper.h
+
+# Check which main interception signature we will use (see main_intercept.m4)
+if LINUX_POWERPC_GLIBC
+libnanos6_main_wrapper_a_SOURCES += src/bootstrap/intercept-main-glibc-powerpc.c
+endif
+if LINUX_GLIBC
+libnanos6_main_wrapper_a_SOURCES += src/bootstrap/intercept-main-glibc.c
+endif
 
 libnanos6_main_wrapper_a_CPPFLAGS = $(MCMODEL_FLAGS)
 

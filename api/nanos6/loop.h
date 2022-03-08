@@ -13,7 +13,7 @@
 
 #pragma GCC visibility push(default)
 
-enum nanos6_loop_api_t { nanos6_loop_api = 3 };
+enum nanos6_loop_api_t { nanos6_loop_api = 4 };
 
 #ifdef __cplusplus
 extern "C" {
