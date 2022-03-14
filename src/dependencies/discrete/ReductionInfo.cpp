@@ -18,14 +18,17 @@
 
 
 ReductionInfo::ReductionInfo(void *address, size_t length, reduction_type_and_operator_index_t typeAndOperatorIndex,
-	std::function<void(void *, void *, size_t)> initializationFunction, std::function<void(void *, void *, size_t)> combinationFunction) :
+	std::function<void(void *, void *, size_t)> initializationFunction, std::function<void(void *, void *, size_t)> combinationFunction,
+	bool inTaskiter) :
 	_address(address),
 	_length(length),
 	_paddedLength(((length + CACHELINE_SIZE - 1) / CACHELINE_SIZE) * CACHELINE_SIZE),
 	_typeAndOperatorIndex(typeAndOperatorIndex),
 	_initializationFunction(initializationFunction),
 	_combinationFunction(combinationFunction),
-	_registeredAccesses(2)
+	_registeredAccesses(2),
+	_originalAccesses(0),
+	_inTaskiter(inTaskiter)
 {
 	for (size_t i = 0; i < nanos6_device_type_num; ++i) {
 		_deviceStorages[i] = nullptr;

@@ -368,18 +368,29 @@ namespace DataAccessRegistration {
 #endif
 
 		if (taskiterChild && task->getOriginalPrecessorCount() >= 0) {
-			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
+			TaskiterMetadata *taskiter = dynamic_cast<TaskiterMetadata *>(parentTask);
 			TaskiterGraph &graph = taskiter->getGraph();
 
 			if (taskiter->cancelled()) {
 				// Nevermind, we cancelled the taskiter
+#ifndef NDEBUG
+				{
+					bool alreadyTaken = true;
+					assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, false));
+				}
+#endif
 				return true;
 			}
 
 			bool keepIterating = task->keepIterating();
 			if (keepIterating) {
-				// std::cout << "Rest" << task << std::endl;
-				task->increasePredecessors(task->getOriginalPrecessorCount());
+				if (task->getOriginalPrecessorCount() == 0) {
+					hpDependencyData.addSatisfiedOriginator(task);
+					assert(!hpDependencyData.full());
+				} else {
+					task->increasePredecessors(task->getOriginalPrecessorCount());
+				}
+
 				task->increaseReleaseCount();
 				task->increaseRemovalBlockingCount();
 			} else {
@@ -387,13 +398,12 @@ namespace DataAccessRegistration {
 				task->addChilds(1);
 			}
 
-			std::vector<TaskMetadata *> successors = graph.getSuccessors(task, keepIterating);
-
-			// We cannot cross iteration boundaries if we don't keep iterating
-			for (TaskMetadata *successor : successors) {
-				// std::cout << "satis" << successor << std::endl;
-				satisfyTask(successor, hpDependencyData);
-			}
+			graph.applySuccessors(task, keepIterating,
+				// Do this for each successor
+				[&](TaskMetadata *successor) {
+					satisfyTask(successor, hpDependencyData);
+				}
+			);
 
 			processSatisfiedOriginators(hpDependencyData);
 
@@ -477,7 +487,7 @@ namespace DataAccessRegistration {
 #endif
 
 		if (taskiterChild) {
-			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
+			TaskiterMetadata *taskiter = dynamic_cast<TaskiterMetadata *>(parentTask);
 			size_t iterationCount = taskiter->getIterationCount();
 			task->setIterationCount(iterationCount);
 
@@ -552,12 +562,12 @@ namespace DataAccessRegistration {
 			// hasn't been deleted.
 			// Thus, we can safely update their counters and dependencies, and re-launch them
 			// TODO: Support n=1 count
-			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(task);
+			TaskiterMetadata *taskiter = dynamic_cast<TaskiterMetadata *>(task);
 			TaskiterGraph &graph = taskiter->getGraph();
 
 			if (graph.isProcessed()) {
 				// We are on the second barrier, let it go through
-			} else if(taskiter->getIterationCount() > 1) {
+			} else if (taskiter->getIterationCount() > 1) {
 				processTaskIter(taskiter, graph);
 			}
 		}
@@ -581,12 +591,6 @@ namespace DataAccessRegistration {
 		// Default deletableCount of 1
 		accessStruct.increaseDeletableCount();
 
-		if (isTaskiterChild) {
-			TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
-			TaskiterGraph &graph = taskiter->getGraph();
-			graph.addTask(task);
-		}
-
 		// Get all seqs
 		accessStruct.forAll([&](void *address, DataAccess *access) -> bool {
 			DataAccessType accessType = access->getType();
@@ -602,12 +606,6 @@ namespace DataAccessRegistration {
 			std::pair<bottom_map_t::iterator, bool> result = addresses.emplace(std::piecewise_construct,
 				std::forward_as_tuple(address),
 				std::forward_as_tuple(access));
-
-			if (isTaskiterChild) {
-				TaskiterMetadata *taskiter = reinterpret_cast<TaskiterMetadata *>(parentTask);
-				TaskiterGraph &graph = taskiter->getGraph();
-				graph.addTaskAccess(task, address, accessType);
-			}
 
 			itMap = result.first;
 
@@ -724,6 +722,12 @@ namespace DataAccessRegistration {
 					releaseReductionInfo(reductionInfo);
 			}
 
+			if (isTaskiterChild) {
+				TaskiterMetadata *taskiter = dynamic_cast<TaskiterMetadata *>(parentTask);
+				TaskiterGraph &graph = taskiter->getGraph();
+				graph.addTaskAccess(task, access);
+			}
+
 			// Weaks and reductions always start
 			if (accessType == REDUCTION_ACCESS_TYPE || weak)
 				schedule = true;
@@ -743,7 +747,10 @@ namespace DataAccessRegistration {
 
 		info->combine();
 
-		ObjectAllocator<ReductionInfo>::deleteObject(info);
+		if (info->isInTaskiter())
+			info->reinitialize();
+		else
+			ObjectAllocator<ReductionInfo>::deleteObject(info);
 	}
 
 	static inline void decreaseDeletableCountOrDelete(TaskMetadata *originator,
@@ -768,11 +775,18 @@ namespace DataAccessRegistration {
 		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task.getTaskHandle());
 		assert(taskInfo != nullptr);
 
+		// Weakreductions are not supported enclosing a taskiter, but if they were, this may not
+		// detect correctly the reinitialize case
+		TaskMetadata *parentTask = task.getParent();
+		const bool isTaskiterChild = parentTask && parentTask->isTaskiter();
+
 		ReductionInfo *newReductionInfo = ObjectAllocator<ReductionInfo>::newObject(
 			address, length,
 			reductionTypeAndOpIndex,
 			taskInfo->reduction_initializers[reductionIndex],
-			taskInfo->reduction_combiners[reductionIndex]);
+			taskInfo->reduction_combiners[reductionIndex],
+			isTaskiterChild
+			);
 
 		return newReductionInfo;
 	}
@@ -787,9 +801,12 @@ namespace DataAccessRegistration {
 		if (!accessStruct.hasDataAccesses())
 			return;
 
-		accessStruct.forAll([task, cpuId](void *, DataAccess *access) -> bool {
+		TaskMetadata *parentTask = task->getParent();
+		const bool taskiterChild = parentTask && parentTask->isTaskiter();
+
+		accessStruct.forAll([task, cpuId, taskiterChild](void *, DataAccess *access) -> bool {
 			// Skip if released
-			if (access->isReleased())
+			if (!taskiterChild && access->isReleased())
 				return true;
 
 			if (access->getType() == REDUCTION_ACCESS_TYPE && !access->isWeak()) {
@@ -853,6 +870,9 @@ namespace DataAccessRegistration {
 			assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, true));
 		}
 #endif
+
+		// Partial release not supported inside a taskiter construct
+		assert(task->getParent() && !task->getParent()->isTaskiter());
 
 		if (accessStruct.hasDataAccesses()) {
 			// Release dependencies of all my accesses

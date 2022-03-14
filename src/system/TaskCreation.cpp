@@ -216,6 +216,14 @@ void nanos6_submit_task(void *taskHandle)
 		taskMetadata->setParent(parentTask);
 	}
 
+	TaskMetadata *parentTaskMetadata = taskMetadata->getParent();
+	const bool isTaskiterChild = (parentTaskMetadata != nullptr) && parentTaskMetadata->isTaskiter();
+	if (isTaskiterChild) {
+		TaskiterMetadata *taskiter = dynamic_cast<TaskiterMetadata *>(parentTaskMetadata);
+		TaskiterGraph &graph = taskiter->getGraph();
+		graph.addTask(taskMetadata);
+	}
+
 	// Register the accesses of the task to check whether it is ready to be executed
 	bool ready = true;
 	if (taskInfo->register_depinfo != nullptr) {

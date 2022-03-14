@@ -42,9 +42,6 @@ void TaskiterMetadata::cancel()
 		if (task == _controlTask)
 			continue;
 
-		__attribute__((unused)) bool ready = task->decreasePredecessors(task->getOriginalPrecessorCount());
-		assert(ready);
-
 		// As this is the second time this task will be finished, we have to do a little hack
 		task->addChilds(1);
 		TaskFinalization::taskFinished(task);

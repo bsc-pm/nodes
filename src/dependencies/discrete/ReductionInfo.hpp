@@ -45,6 +45,12 @@ private:
 	std::function<void(void *, void *, size_t)> _combinationFunction;
 
 	std::atomic<size_t> _registeredAccesses;
+
+	// Keep track of the originally registered accesses in case this reduction in re-used
+	std::atomic<size_t> _originalAccesses;
+
+	const bool _inTaskiter;
+
 	spinlock_t _lock;
 
 	DeviceReductionStorage *allocateDeviceStorage(nanos6_device_t deviceType);
@@ -53,7 +59,7 @@ public:
 
 	ReductionInfo(void *address, size_t length, reduction_type_and_operator_index_t typeAndOperatorIndex,
 		std::function<void(void *, void *, size_t)> initializationFunction,
-		std::function<void(void *, void *, size_t)> combinationFunction);
+		std::function<void(void *, void *, size_t)> combinationFunction, bool inTaskiter);
 
 	~ReductionInfo();
 
@@ -78,9 +84,24 @@ public:
 
 	void *getFreeSlot(TaskMetadata *task, size_t cpuId);
 
+	inline void reinitialize()
+	{
+		_registeredAccesses.store(_originalAccesses.load());
+	}
+
+	inline bool isInTaskiter()
+	{
+		return _inTaskiter;
+	}
+
 	inline void incrementRegisteredAccesses()
 	{
 		++_registeredAccesses;
+	}
+
+	inline void incrementOriginalRegisteredAccesses()
+	{
+		++_originalAccesses;
 	}
 
 	inline bool incrementUnregisteredAccesses()
