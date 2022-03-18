@@ -9,8 +9,13 @@
 
 #include <iostream>
 #include <memory>
+#include <numeric>
 
 #include <boost/variant.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/graph_utility.hpp>
+#include <boost/graph/graphviz.hpp>
+#include <boost/graph/transitive_reduction.hpp>
 
 #include <nosv.h>
 
@@ -36,7 +41,7 @@ struct TaskiterGraphEdge {
 	{
 	}
 
-	bool operator < (TaskiterGraphEdge const &other) const
+	bool operator<(TaskiterGraphEdge const &other) const
 	{
 		if (_from != other._from)
 			return (_from < other._from);
@@ -76,18 +81,40 @@ struct TaskiterGraphAccessChain {
 class TaskiterGraph {
 public:
 	typedef void *access_address_t;
+	typedef boost::property<boost::vertex_name_t, TaskiterGraphNode> VertexProperty;
+	typedef boost::property<boost::edge_name_t, bool> EdgeProperty;
+
+	typedef boost::adjacency_list<
+		boost::vecS,		// OutEdgeList
+		boost::vecS,		// VertexList
+		boost::directedS,	// Directed
+		VertexProperty,		// VertexProperties
+		EdgeProperty,		// EdgeProperties
+		boost::no_property, // GraphProperties
+		boost::listS		// EdgeList
+		>
+		graph_t;
+
+	typedef graph_t::vertex_descriptor graph_vertex_t;
 
 private:
 	Container::vector<TaskMetadata *> _tasks;
 	Container::vector<ReductionInfo *> _reductions;
-	Container::set<TaskiterGraphEdge> _edges;
+	Container::vector<TaskiterGraphEdge> _edges;
 	Container::unordered_map<access_address_t, TaskiterGraphAccessChain> _bottomMap;
+
+	graph_t _graph;
+	Container::unordered_map<TaskiterGraphNode, graph_vertex_t> _tasksToVertices;
+
 	bool _processed;
 
-	inline void createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain, bool crossIterationChain = false)
+	inline void createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain)
 	{
-		for (TaskiterGraphNode t : chain)
-			_edges.emplace(t, node, crossIterationChain);
+		EdgeProperty props(false);
+
+		for (TaskiterGraphNode t : chain) {
+			boost::add_edge(_tasksToVertices[t], _tasksToVertices[node], props, _graph);
+		}
 	}
 
 	inline void closeLoopWithControl(TaskMetadata *controlTask)
@@ -95,19 +122,30 @@ private:
 		controlTask->increasePredecessors();
 		VisitorSetDegree visitor;
 
+		EdgeProperty propsTrue(true);
+		EdgeProperty propsFalse(false);
+		VertexProperty propTask(controlTask);
+
+		const graph_vertex_t controlTaskVertex = boost::add_vertex(propTask, _graph);
+		_tasksToVertices.emplace(std::make_pair(controlTask, controlTaskVertex));
+		_tasks.push_back(controlTask);
+
 		// In theory, we don't have to worry for reductions, as they depend on all its
 		// participants to be combined, and then into the closing task to release the control
 
 		// Register deps from every task into the control task, and from the control task to every other task
 		for (TaskMetadata *task : _tasks) {
-			_edges.emplace(task, controlTask, false);
-			_edges.emplace(controlTask, task, true);
+			if (task == controlTask)
+				continue;
+
+			boost::add_edge(_tasksToVertices[task], controlTaskVertex, propsFalse, _graph);
+			boost::add_edge(controlTaskVertex, _tasksToVertices[task], propsTrue, _graph);
+			// _edges.emplace(task, controlTask, false);
+			// _edges.emplace(controlTask, task, true);
 			controlTask->incrementOriginalPredecessorCount();
 
 			boost::apply_visitor(visitor, TaskiterGraphNode(task));
 		}
-
-		_tasks.push_back(controlTask);
 	}
 
 	inline void closeDependencyLoop()
@@ -115,18 +153,17 @@ private:
 		// Close every dependency chain by simulating that we are registering the first accesses again
 		VisitorSetDegreeCross visitor;
 
+		EdgeProperty prop(true);
+
 		// TODO Is this wrong for a IN -> OUT -> IN chain for the (chain._firstChainType != chain._lastChainType) condition?
 		for (std::pair<const access_address_t, TaskiterGraphAccessChain> &it : _bottomMap) {
 			TaskiterGraphAccessChain &chain = it.second;
 
-			if (chain._firstChainType != chain._lastChainType ||
-				chain._firstChainType == WRITE_ACCESS_TYPE ||
-				chain._firstChainType == READWRITE_ACCESS_TYPE ||
-				chain._firstChainType == COMMUTATIVE_ACCESS_TYPE) {
-
+			if (chain._firstChainType != chain._lastChainType || chain._firstChainType == WRITE_ACCESS_TYPE || chain._firstChainType == READWRITE_ACCESS_TYPE || chain._firstChainType == COMMUTATIVE_ACCESS_TYPE) {
 				for (TaskiterGraphNode task : chain._firstChain) {
 					for (TaskiterGraphNode from : *(chain._lastChain)) {
-						_edges.emplace(from, task, true);
+						boost::add_edge(_tasksToVertices[from], _tasksToVertices[task], prop, _graph);
+						// _edges.emplace(from, task, true);
 						boost::apply_visitor(visitor, task);
 					}
 				}
@@ -134,7 +171,8 @@ private:
 		}
 	}
 
-	inline void addTaskToChain(TaskMetadata *task, DataAccessType type, TaskiterGraphAccessChain &chain) {
+	inline void addTaskToChain(TaskMetadata *task, DataAccessType type, TaskiterGraphAccessChain &chain)
+	{
 		chain._lastChain->push_back(task);
 		if (chain._inFirst) {
 			chain._firstChainType = type;
@@ -142,15 +180,19 @@ private:
 		}
 	}
 
-	inline void closeReductionChain(TaskMetadata *task, TaskiterGraphAccessChain &chain) {
+	inline void closeReductionChain(TaskMetadata *task, TaskiterGraphAccessChain &chain)
+	{
 		// Reduction combination depends on last chain
 		createEdges(chain._reductionInfo, *(chain._lastChain));
 		// And on all reduction accesses
 		createEdges(chain._reductionInfo, chain._reductionChain);
 
+		EdgeProperty prop(true);
+
 		// What's more, all reduction accesses must depend on last iteration's combination
 		for (TaskiterGraphNode &n : chain._reductionChain) {
-			_edges.emplace(chain._reductionInfo, n, true);
+			// boost::add_edge(_tasksToVertices[chain._reductionInfo], _tasksToVertices[n], prop, _graph);
+			_edges.emplace_back(chain._reductionInfo, n, true);
 		}
 
 		chain._reductionChain.clear();
@@ -160,8 +202,7 @@ private:
 		chain._reductionInfo = nullptr;
 	}
 
-	class VisitorSetDegreeCross : public boost::static_visitor<>
-	{
+	class VisitorSetDegreeCross : public boost::static_visitor<> {
 	public:
 		void operator()(TaskMetadata *t) const
 		{
@@ -174,8 +215,7 @@ private:
 		}
 	};
 
-	class VisitorSetDegree : public boost::static_visitor<>
-	{
+	class VisitorSetDegree : public boost::static_visitor<> {
 	public:
 		void operator()(TaskMetadata *t) const
 		{
@@ -190,21 +230,21 @@ private:
 		}
 	};
 
-	class VisitorApplySuccessor : public boost::static_visitor<>
-	{
+	class VisitorApplySuccessor : public boost::static_visitor<> {
 		TaskiterGraph *_graph;
 		std::function<void(TaskMetadata *)> _satisfyTask;
 		bool _crossIterationBoundary;
+
 	public:
 		VisitorApplySuccessor(
 			TaskiterGraph *graph,
 			std::function<void(TaskMetadata *)> satisfyTask,
-			bool crossIterationBoundary
-		) :
+			bool crossIterationBoundary) :
 			_graph(graph),
 			_satisfyTask(satisfyTask),
 			_crossIterationBoundary(crossIterationBoundary)
-		{ }
+		{
+		}
 
 		void operator()(TaskMetadata *t) const
 		{
@@ -232,17 +272,25 @@ public:
 	inline void applySuccessors(
 		TaskiterGraphNode node,
 		bool crossIterationBoundary,
-		std::function<void(TaskMetadata *)> satisfyTask
-	)
+		std::function<void(TaskMetadata *)> satisfyTask)
 	{
-		TaskiterGraphEdge search(node, (TaskMetadata *)nullptr, false);
-		Container::set<TaskiterGraphEdge>::iterator it = _edges.lower_bound(search);
+		graph_vertex_t vertex = _tasksToVertices[node];
 
 		VisitorApplySuccessor visitor(this, satisfyTask, crossIterationBoundary);
-		while (it != _edges.end() && it->_from == node) {
-			if (crossIterationBoundary || !it->_crossIterationBoundary)
-				boost::apply_visitor(visitor, it->_to);
-			++it;
+
+		graph_t::out_edge_iterator ei, eend;
+		boost::property_map<graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), _graph);
+		boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
+
+		// Travel through adjacent vertices
+		for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei) {
+			graph_t::edge_descriptor e = *ei;
+			graph_vertex_t to = boost::target(e, _graph);
+			TaskiterGraphNode node = boost::get(nodemap, to);
+			bool edgeCrossIteration = boost::get(edgemap, e);
+
+			if (crossIterationBoundary || !edgeCrossIteration)
+				boost::apply_visitor(visitor, node);
 		}
 	}
 
@@ -254,12 +302,22 @@ public:
 
 		VisitorSetDegree visitor;
 		VisitorSetDegreeCross crossIterationVisitor;
+
 		// Now, increment for each edge
-		for (const TaskiterGraphEdge &edge : _edges) {
-			if (!edge._crossIterationBoundary)
-				boost::apply_visitor(visitor, edge._to);
+		graph_t::edge_iterator ei, eend;
+		boost::property_map<graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), _graph);
+		boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
+
+		for (boost::tie(ei, eend) = boost::edges(_graph); ei != eend; ++ei) {
+			graph_t::edge_descriptor e = *ei;
+			graph_vertex_t to = boost::target(e, _graph);
+			TaskiterGraphNode node = boost::get(nodemap, to);
+			bool crossIterationBoundary = boost::get(edgemap, e);
+
+			if (!crossIterationBoundary)
+				boost::apply_visitor(visitor, node);
 			else
-				boost::apply_visitor(crossIterationVisitor, edge._to);
+				boost::apply_visitor(crossIterationVisitor, node);
 		}
 
 		if (controlTask == nullptr) {
@@ -269,10 +327,6 @@ public:
 			// Insert a control dependency
 			closeLoopWithControl(controlTask);
 		}
-
-		// for (ReductionInfo *r: _reductions) {
-		// 	r->reinitialize();
-		// }
 
 		// Now, decrease predecessors for every task
 		for (TaskMetadata *t : _tasks) {
@@ -284,6 +338,57 @@ public:
 
 	void process()
 	{
+		graph_t processedGraph;
+
+		// Try to reduce the dependency graph
+		// This *must* be done on a DAG, because it uses its topological sorting, so
+		// we prevent cycles up to this point
+		Container::map<graph_vertex_t, graph_vertex_t> gToTr;
+		Container::vector<size_t> vertexMap(boost::num_vertices(_graph));
+		std::iota(vertexMap.begin(), vertexMap.end(), (size_t)0);
+
+		boost::transitive_reduction(_graph, processedGraph, boost::make_assoc_property_map(gToTr), vertexMap.data());
+
+		// To print the graphs before and after, uncomment this code.
+		// {
+		// 	std::ofstream dot("g.dot");
+		// 	boost::write_graphviz(dot, _graph);
+		// }
+		// {
+		// 	std::ofstream dot("tr.dot");
+		// 	boost::write_graphviz(dot, processedGraph);
+		// }
+
+		// Annoyingly, the transitive reduction doesn't transfer the properties
+		boost::property_map<graph_t, boost::vertex_name_t>::type nodemapOriginal = boost::get(boost::vertex_name_t(), _graph);
+		boost::property_map<graph_t, boost::vertex_name_t>::type nodemapProcessed = boost::get(boost::vertex_name_t(), processedGraph);
+		boost::property_map<graph_t, boost::edge_name_t>::type edgemapProcessed = boost::get(boost::edge_name_t(), processedGraph);
+
+		graph_t::vertex_iterator vi, vend;
+		for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
+			graph_vertex_t originalVertex = *vi;
+			TaskiterGraphNode node = boost::get(nodemapOriginal, originalVertex);
+			boost::put(nodemapProcessed, gToTr[originalVertex], node);
+		}
+
+		for (auto& it : _tasksToVertices) {
+			it.second = gToTr[it.second];
+		}
+
+		graph_t::edge_iterator ei, eend;
+		for (boost::tie(ei, eend) = boost::edges(processedGraph); ei != eend; ei++) {
+			graph_t::edge_descriptor e = *ei;
+			boost::put(edgemapProcessed, e, false);
+		}
+
+		_graph = processedGraph;
+
+		EdgeProperty prop(true);
+		// Now, incorporate delayed edges for closing reductions
+		for (TaskiterGraphEdge &edge : _edges) {
+			boost::add_edge(_tasksToVertices[edge._from], _tasksToVertices[edge._to], prop, _graph);
+		}
+
 		_processed = true;
 	}
 
@@ -295,6 +400,10 @@ public:
 	void addTask(TaskMetadata *task)
 	{
 		_tasks.push_back(task);
+
+		VertexProperty prop(task);
+		graph_vertex_t vertex = boost::add_vertex(prop, _graph);
+		_tasksToVertices.emplace(std::make_pair(task, vertex));
 	}
 
 	void addTaskAccess(TaskMetadata *task, DataAccess *access)
@@ -352,6 +461,8 @@ public:
 			if (chain._reductionInfo == nullptr) {
 				chain._reductionInfo = reductionInfo;
 				_reductions.push_back(reductionInfo);
+				const graph_vertex_t reductionVertex = boost::add_vertex(VertexProperty(reductionInfo), _graph);
+				_tasksToVertices.emplace(std::make_pair(reductionInfo, reductionVertex));
 			}
 
 			assert(chain._reductionInfo == reductionInfo);
