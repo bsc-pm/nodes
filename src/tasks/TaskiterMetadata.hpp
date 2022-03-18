@@ -7,6 +7,7 @@
 #ifndef TASKITER_METADATA_HPP
 #define TASKITER_METADATA_HPP
 
+#include <cassert>
 #include <cmath>
 
 #include <nosv.h>
@@ -14,6 +15,7 @@
 #include <nanos6/loop.h>
 
 #include "TaskMetadata.hpp"
+#include "common/ErrorHandler.hpp"
 #include "common/MathSupport.hpp"
 #include "dependencies/discrete/taskiter/TaskiterGraph.hpp"
 
@@ -53,6 +55,21 @@ public:
 		_lowerBound = lowerBound;
 		_upperBound = upperBound;
 		_unroll = unroll;
+
+		// assert(unroll > 0);
+		// TODO: The compiler should deliver a default unroll of 1...
+		if (_unroll == 0)
+			_unroll = 1;
+
+		if (unroll > 1 && !iterationCondition) {
+			// Perform some sanity checks and adapt the number of iterations accordingly.
+			size_t cnt = upperBound - lowerBound;
+			ErrorHandler::failIf(unroll > cnt, "Cannot unroll taskiter more times than loop iterations");
+			ErrorHandler::failIf((cnt % unroll) != 0, "The number of taskiter iterations must be a multiple of its unroll factor");
+
+			_upperBound = lowerBound + cnt / unroll;
+		}
+
 		_iterationCondition = iterationCondition;
 
 		if (iterationCondition != nullptr) {
@@ -77,6 +94,14 @@ public:
 	{
 		return _iterationCondition != nullptr;
 	}
+
+	inline size_t getUnroll() const
+	{
+		return _unroll;
+	}
+
+	inline void unrolledOnce() const
+	{}
 
 	inline bool evaluateCondition()
 	{
