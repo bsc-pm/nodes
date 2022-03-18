@@ -85,13 +85,13 @@ public:
 	typedef boost::property<boost::edge_name_t, bool> EdgeProperty;
 
 	typedef boost::adjacency_list<
-		boost::vecS,		// OutEdgeList
-		boost::vecS,		// VertexList
-		boost::directedS,	// Directed
-		VertexProperty,		// VertexProperties
-		EdgeProperty,		// EdgeProperties
-		boost::no_property, // GraphProperties
-		boost::listS		// EdgeList
+		boost::vecS,			// OutEdgeList
+		boost::vecS,			// VertexList
+		boost::bidirectionalS,	// Directed with access to in_edges
+		VertexProperty,			// VertexProperties
+		EdgeProperty,			// EdgeProperties
+		boost::no_property, 	// GraphProperties
+		boost::listS			// EdgeList
 		>
 		graph_t;
 
@@ -133,18 +133,29 @@ private:
 		// In theory, we don't have to worry for reductions, as they depend on all its
 		// participants to be combined, and then into the closing task to release the control
 
-		// Register deps from every task into the control task, and from the control task to every other task
-		for (TaskMetadata *task : _tasks) {
-			if (task == controlTask)
-				continue;
+		// A smart way to do this is:
+		// - Pass through every vertex. If the vertex has no out-edges, it means it is a leaf, and then
+		// we place a dependency Leaf -> Control task.
+		// - If the vertex has no in-edges, it means it is a root, and then we place a cross-iteration
+		// dependency Control task ->(i+1) Root
 
-			boost::add_edge(_tasksToVertices[task], controlTaskVertex, propsFalse, _graph);
-			boost::add_edge(controlTaskVertex, _tasksToVertices[task], propsTrue, _graph);
-			// _edges.emplace(task, controlTask, false);
-			// _edges.emplace(controlTask, task, true);
-			controlTask->incrementOriginalPredecessorCount();
+		boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
+		graph_t::vertex_iterator vi, vend;
+		for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
+			graph_vertex_t vertex = *vi;
 
-			boost::apply_visitor(visitor, TaskiterGraphNode(task));
+			if (boost::out_degree(vertex, _graph) == 0) {
+				// Leaf
+				boost::add_edge(vertex, controlTaskVertex, propsFalse, _graph);
+				controlTask->incrementOriginalPredecessorCount();
+			}
+
+			if (boost::in_degree(vertex, _graph) == 0) {
+				// Root
+				boost::add_edge(controlTaskVertex, vertex, propsTrue, _graph);
+				TaskiterGraphNode node = boost::get(nodemap, vertex);
+				boost::apply_visitor(visitor, TaskiterGraphNode(node));
+			}
 		}
 	}
 
@@ -328,6 +339,13 @@ public:
 			closeLoopWithControl(controlTask);
 		}
 
+		EdgeProperty prop(true);
+		// Now, incorporate delayed edges for closing reductions
+		for (TaskiterGraphEdge &edge : _edges) {
+			boost::add_edge(_tasksToVertices[edge._from], _tasksToVertices[edge._to], prop, _graph);
+			boost::apply_visitor(crossIterationVisitor, edge._to);
+		}
+
 		// Now, decrease predecessors for every task
 		for (TaskMetadata *t : _tasks) {
 			if (t->decreasePredecessors()) {
@@ -382,12 +400,6 @@ public:
 		}
 
 		_graph = processedGraph;
-
-		EdgeProperty prop(true);
-		// Now, incorporate delayed edges for closing reductions
-		for (TaskiterGraphEdge &edge : _edges) {
-			boost::add_edge(_tasksToVertices[edge._from], _tasksToVertices[edge._to], prop, _graph);
-		}
 
 		_processed = true;
 	}
