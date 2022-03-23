@@ -18,40 +18,42 @@ struct TaskiterArgsBlock {
 void TaskiterMetadata::controlCallback(void *args, void *, nanos6_address_translation_entry_t *)
 {
 	TaskiterArgsBlock *argsBlock = (TaskiterArgsBlock *) args;
+	TaskiterMetadata *taskiter = argsBlock->taskiter;
 	uint8_t evaluation = 0;
-	argsBlock->taskiter->_iterationCondition(argsBlock->taskiter->getArgsBlock(), &evaluation);
+	taskiter->_iterationCondition(argsBlock->taskiter->getArgsBlock(), &evaluation);
 
 	if (!evaluation) {
-		// Stop the execution of the taskgraph
-		// This is a safe place, as no other taskgraph tasks are executing.
+		// Stop the execution of the taskiter
+		// However, we have to delay its cancellation if we're unrolling a taskiter
 
-		TaskiterMetadata *parent = argsBlock->taskiter;
-		parent->cancel();
+		taskiter->activateDelayedCancellation();
+	}
+
+	if (taskiter->shouldCancel()) {
+		taskiter->cancel();
 	}
 }
 
 void TaskiterMetadata::cancel()
 {
-	assert(_controlTask != nullptr);
 	assert(isWhile());
 
 	_stop = true;
 
-	const std::vector<TaskMetadata *> &tasks = _graph.getTaskVector();
-	for (TaskMetadata *task : tasks) {
-		if (task == _controlTask)
-			continue;
+	_graph.forEach(
+		[](TaskMetadata *task) {
+			// As this is the second time this task will be finished, we have to do a little hack
+			task->addChilds(1);
+			TaskFinalization::taskFinished(task);
 
-		// As this is the second time this task will be finished, we have to do a little hack
-		task->addChilds(1);
-		TaskFinalization::taskFinished(task);
-
-		__attribute__((unused)) bool deletable = task->decreaseRemovalBlockingCount();
-		// assert(deletable);
-		if (deletable) {
-			TaskFinalization::disposeTask(task);
-		}
-	}
+			__attribute__((unused)) bool deletable = task->decreaseRemovalBlockingCount();
+			// assert(deletable);
+			if (deletable) {
+				TaskFinalization::disposeTask(task);
+			}
+		},
+		true
+	);
 }
 
 TaskMetadata *TaskiterMetadata::generateControlTask()
@@ -98,8 +100,7 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	metadata->setParent(this->getTaskHandle());
 	metadata->incrementOriginalPredecessorCount();
 	metadata->setIterationCount(getIterationCount() + 1);
-
-	_controlTask = metadata;
+	metadata->markAsBlocked();
 
 	return metadata;
 }

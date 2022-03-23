@@ -77,7 +77,7 @@ private:
 				}
 			} else if (taskMetadata->isTaskiter()) {
 				TaskiterMetadata *taskiterMetadata = dynamic_cast<TaskiterMetadata *>(taskMetadata);
-				for (int i = 0; i < taskiterMetadata->getUnroll(); ++i) {
+				for (size_t i = 0; i < taskiterMetadata->getUnroll(); ++i) {
 					if (i > 0)
 						taskiterMetadata->unrolledOnce();
 

@@ -402,7 +402,8 @@ namespace DataAccessRegistration {
 				// Do this for each successor
 				[&](TaskMetadata *successor) {
 					satisfyTask(successor, hpDependencyData);
-				}
+				},
+				taskiter->isCancellationDelayed()
 			);
 
 			processSatisfiedOriginators(hpDependencyData);
@@ -540,9 +541,16 @@ namespace DataAccessRegistration {
 		// Reset waiting
 		taskiter->setDelayedRelease(true);
 		taskiter->increaseReleaseCount();
+
+		// We need to set the child count to the number of tasks.
+		// We add 1 for each child task, but then remove one because the count
+		// is increased always when leaving the handleEnterTaskwait
 		taskiter->addChilds(graph.getTasks() - 1);
 
 		if (taskiter->isWhile()) {
+			// Add count for the control tasks, except one, as it is implicitly added when
+			// we generate the last control task
+			taskiter->addChilds(taskiter->getUnroll() - 1);
 			// Create an implicit control task
 			TaskMetadata *controlTask = taskiter->generateControlTask();
 			graph.process();

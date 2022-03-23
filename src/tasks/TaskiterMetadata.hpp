@@ -25,7 +25,8 @@ class TaskiterMetadata : public TaskMetadata {
 	size_t _unroll;
 	std::function<void(void *, uint8_t *)> _iterationCondition;
 	TaskiterGraph _graph;
-	TaskMetadata *_controlTask;
+	size_t _delayedCancelCountdown;
+	bool _delayedCancel;
 	bool _stop;
 
 public:
@@ -43,7 +44,8 @@ public:
 		_lowerBound(0),
 		_upperBound(0),
 		_unroll(1),
-		_controlTask(nullptr),
+		_delayedCancelCountdown(0),
+		_delayedCancel(false),
 		_stop(false)
 	{
 		// Delay dependency release
@@ -100,8 +102,17 @@ public:
 		return _unroll;
 	}
 
-	inline void unrolledOnce() const
-	{}
+	inline void unrolledOnce()
+	{
+		// If we have a condition, this is a strided taskiter
+		// Hence, we will have to notify the graph that a logical "iteration" has happenned to
+		// insert a control task
+
+		if (isWhile()) {
+			_graph.insertControlInUnrolledLoop(generateControlTask());
+			this->finishChild();
+		}
+	}
 
 	inline bool evaluateCondition()
 	{
@@ -125,6 +136,25 @@ public:
 	inline bool cancelled() const
 	{
 		return _stop;
+	}
+
+	inline void activateDelayedCancellation()
+	{
+		if (_delayedCancel)
+			return;
+
+		_delayedCancel = true;
+		_delayedCancelCountdown = _unroll;
+	}
+
+	inline bool shouldCancel()
+	{
+		return _delayedCancel && (--_delayedCancelCountdown) == 0;
+	}
+
+	inline bool isCancellationDelayed() const
+	{
+		return _delayedCancel;
 	}
 };
 
