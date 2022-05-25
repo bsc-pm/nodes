@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef NANOS6_TASK_INSTANTIATION_H
@@ -16,8 +16,8 @@
 
 enum nanos6_task_execution_api_t { nanos6_task_execution_api = 1 };
 enum nanos6_task_constraints_api_t { nanos6_task_constraints_api = 1 };
-enum nanos6_task_info_contents_t { nanos6_task_info_contents = 3 };
-enum nanos6_instantiation_api_t { nanos6_instantiation_api = 4 };
+enum nanos6_task_info_contents_t { nanos6_task_info_contents = 4 };
+enum nanos6_instantiation_api_t { nanos6_instantiation_api = 5 };
 
 #ifdef __cplusplus
 extern "C" {
@@ -67,7 +67,7 @@ typedef struct
 	void (*get_constraints)(void *args_block, nanos6_task_constraints_t *constraints);
 
 	//! \brief A string that identifies the type of task
-	char const *task_label;
+	char const *task_type_label;
 
 	//! \brief A string that identifies the source location of the definition of the task
 	char const *declaration_source;
@@ -184,6 +184,7 @@ typedef enum {
 //!
 //! \param[in] task_info a pointer to the nanos6_task_info_t structure
 //! \param[in] task_invocation_info a pointer to the nanos6_task_invocation_info_t structure
+//! \param[in] task_label a string that identifies the task
 //! \param[in] args_block_size size needed to store the parameters passed to the task call
 //! \param[in,out] args_block_pointer a pointer to a location to store the
 //! pointer to the block of data that will contain the parameters of the task
@@ -194,6 +195,7 @@ typedef enum {
 void nanos6_create_task(
 	nanos6_task_info_t *task_info,
 	nanos6_task_invocation_info_t *task_invocation_info,
+	char const *task_label,
 	size_t args_block_size,
 	void **args_block_pointer,
 	void **task_pointer,

@@ -111,7 +111,7 @@ void SpawnFunction::spawnFunction(
 			taskInfo->destroy_args_block = SpawnFunction::spawnedFunctionDestructor;
 
 			// Use a copy since we do not know the actual lifetime of label
-			taskInfo->implementations[0].task_label = it->first.second.c_str();
+			taskInfo->implementations[0].task_type_label = it->first.second.c_str();
 			taskInfo->implementations[0].declaration_source = "Spawned Task";
 			taskInfo->implementations[0].get_constraints = nullptr;
 		}
@@ -124,7 +124,7 @@ void SpawnFunction::spawnFunction(
 	void *task = nullptr;
 	SpawnedFunctionArgsBlock *argsBlock = nullptr;
 	nanos6_create_task(
-		taskInfo, &_spawnedFunctionInvocationInfo,
+		taskInfo, &_spawnedFunctionInvocationInfo, nullptr,
 		sizeof(SpawnedFunctionArgsBlock),
 		(void **) &argsBlock, &task, nanos6_waiting_task, 0
 	);

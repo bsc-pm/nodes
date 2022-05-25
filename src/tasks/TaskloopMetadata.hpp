@@ -144,6 +144,7 @@ namespace Taskloop {
 		nanos6_create_task(
 			parentTaskInfo,
 			nullptr,
+			nullptr,
 			originalArgsBlockSize,
 			&argsBlock,
 			&taskPointer,
