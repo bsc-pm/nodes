@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef NANOS6_LOOP_H
@@ -13,7 +13,7 @@
 
 #pragma GCC visibility push(default)
 
-enum nanos6_loop_api_t { nanos6_loop_api = 4 };
+enum nanos6_loop_api_t { nanos6_loop_api = 5 };
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +34,7 @@ typedef struct {
 //!
 //! \param[in] task_info a pointer to the nanos6_task_info_t structure
 //! \param[in] task_invocation_info a pointer to the nanos6_task_invocation_info_t structure
+//! \param[in] task_label a string that identifies the task
 //! \param[in] args_block_size size needed to store the parameters passed to the task call
 //! \param[in,out] args_block_pointer a pointer to a location to store the pointer to the block of data that will contain the parameters of the task call. Input if flags contains nanos6_preallocated_args_block, out otherwise
 //! \param[out] task_pointer a pointer to a location to store the task handler
@@ -46,6 +47,7 @@ typedef struct {
 void nanos6_create_loop(
 	nanos6_task_info_t *task_info,
 	nanos6_task_invocation_info_t *task_invocation_info,
+	char const *task_label,
 	size_t args_block_size,
 	/* OUT */ void **args_block_pointer,
 	/* OUT */ void **task_pointer,

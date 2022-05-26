@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
@@ -34,7 +34,7 @@ void TaskInfo::registerTaskInfo(nanos6_task_info_t *taskInfo)
 			&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
 			&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
 			&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
-			taskInfo->implementations->task_label,      /* Task label */
+			taskInfo->implementations->task_type_label, /* Task type label */
 			(void *) taskInfo,                          /* Metadata: Link to NODES' taskinfo */
 			&(TaskInfo::getCostWrapper),
 			NOSV_TYPE_INIT_NONE

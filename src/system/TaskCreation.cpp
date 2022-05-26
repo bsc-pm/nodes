@@ -26,6 +26,7 @@
 void nanos6_create_task(
 	nanos6_task_info_t *taskInfo,
 	nanos6_task_invocation_info_t *,
+	char const *,
 	size_t argsBlockSize,
 	void **argsBlockPointer,
 	void **taskPointer,
@@ -128,6 +129,7 @@ void nanos6_create_task(
 void nanos6_create_loop(
 	nanos6_task_info_t *task_info,
 	nanos6_task_invocation_info_t *task_invocation_info,
+	char const *task_label,
 	size_t args_block_size,
 	/* OUT */ void **args_block_pointer,
 	/* OUT */ void **task_pointer,
@@ -151,7 +153,7 @@ void nanos6_create_loop(
 	}
 
 	nanos6_create_task(
-		task_info, task_invocation_info, args_block_size,
+		task_info, task_invocation_info, task_label, args_block_size,
 		args_block_pointer, task_pointer, flags, num_deps
 	);
 
