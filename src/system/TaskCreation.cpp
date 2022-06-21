@@ -121,9 +121,12 @@ void nanos6_create_task(
 	size_t flags,
 	size_t numDeps
 ) {
-	assert(!(flags & nanos6_taskloop_task));
 	assert(!(flags & nanos6_taskiter_task));
-	createTask<TaskMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+
+	if (flags & nanos6_taskloop_task)
+		createTask<TaskloopMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	else
+		createTask<TaskMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
 }
 
 void nanos6_create_loop(
