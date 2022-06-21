@@ -14,8 +14,8 @@ AC_DEFUN([AX_CHECK_OVNI],
 		AC_MSG_CHECKING([the ovni installation prefix])
 		if test x"${ac_use_ovni_prefix}" != x"" ; then
 			AC_MSG_RESULT([${ac_use_ovni_prefix}])
-			ovni_LIBS="-L${ac_use_ovni_prefix}"
-			ovni_CPPFLAGS="-I${ac_use_ovni_prefix} -DENABLE_OVNI_INSTRUMENTATION"
+			ovni_LIBS="-L${ac_use_ovni_prefix}/lib"
+			ovni_CPPFLAGS="-I${ac_use_ovni_prefix}/include -DENABLE_OVNI_INSTRUMENTATION"
 
 			ac_save_CPPFLAGS="${CPPFLAGS}"
 			ac_save_LIBS="${LIBS}"

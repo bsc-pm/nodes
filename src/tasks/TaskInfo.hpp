@@ -20,9 +20,9 @@
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "memory/MemoryAllocator.hpp"
 #include "system/TaskFinalization.hpp"
+#include "tasks/TaskiterMetadata.hpp"
 #include "tasks/TaskMetadata.hpp"
 #include "tasks/TaskloopMetadata.hpp"
-#include "tasks/TaskiterMetadata.hpp"
 
 
 class TaskInfo {
@@ -76,7 +76,7 @@ private:
 					}
 				}
 			} else if (taskMetadata->isTaskiter()) {
-				TaskiterMetadata *taskiterMetadata = dynamic_cast<TaskiterMetadata *>(taskMetadata);
+				TaskiterMetadata *taskiterMetadata = (TaskiterMetadata *)taskMetadata;
 				for (size_t i = 0; i < taskiterMetadata->getUnroll(); ++i) {
 					if (i > 0)
 						taskiterMetadata->unrolledOnce();

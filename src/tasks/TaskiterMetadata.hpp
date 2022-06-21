@@ -1,7 +1,7 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2022 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef TASKITER_METADATA_HPP
@@ -64,7 +64,7 @@ public:
 			_unroll = 1;
 
 		if (unroll > 1 && !iterationCondition) {
-			// Perform some sanity checks and adapt the number of iterations accordingly.
+			// Perform some sanity checks and adapt the number of iterations accordingly
 			size_t cnt = upperBound - lowerBound;
 			ErrorHandler::failIf(unroll > cnt, "Cannot unroll taskiter more times than loop iterations");
 			ErrorHandler::failIf((cnt % unroll) != 0, "The number of taskiter iterations must be a multiple of its unroll factor");

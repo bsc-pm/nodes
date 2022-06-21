@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef TASK_METADATA_HPP
@@ -474,17 +474,14 @@ public:
 		_iterationCount = count;
 	}
 
-	inline bool keepIterating()
+	inline bool decreaseIterations()
 	{
 		assert(_parent);
 		assert(_parent->isTaskiter());
 		return (--_iterationCount > 1);
 	}
 
-	virtual ~TaskMetadata()
-	{
-		std::cout << "Destroy " << this << std::endl;
-	}
+	virtual ~TaskMetadata() {}
 };
 
 #endif // TASK_METADATA_HPP

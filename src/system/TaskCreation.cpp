@@ -19,8 +19,8 @@
 #include "instrument/OVNIInstrumentation.hpp"
 #include "memory/MemoryAllocator.hpp"
 #include "hardware/HardwareInfo.hpp"
-#include "tasks/TaskloopMetadata.hpp"
 #include "tasks/TaskiterMetadata.hpp"
+#include "tasks/TaskloopMetadata.hpp"
 #include "tasks/TaskMetadata.hpp"
 
 
@@ -114,18 +114,16 @@ static inline void createTask(nanos6_task_info_t *taskInfo,
 void nanos6_create_task(
 	nanos6_task_info_t *taskInfo,
 	nanos6_task_invocation_info_t *,
+	char const *task_label,
 	size_t argsBlockSize,
 	void **argsBlockPointer,
 	void **taskPointer,
 	size_t flags,
 	size_t numDeps
 ) {
-	if (flags & nanos6_taskloop_task)
-		createTask<TaskloopMetadata>(taskInfo, NULL, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
-	else if (flags & nanos6_taskiter_task)
-		createTask<TaskiterMetadata>(taskInfo, NULL, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
-	else
-		createTask<TaskMetadata>(taskInfo, NULL, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	assert(!(flags & nanos6_taskloop_task));
+	assert(!(flags & nanos6_taskiter_task));
+	createTask<TaskMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
 }
 
 void nanos6_create_loop(
@@ -154,10 +152,7 @@ void nanos6_create_loop(
 		num_deps *= numTasks;
 	}
 
-	nanos6_create_task(
-		task_info, task_invocation_info, task_label, args_block_size,
-		args_block_pointer, task_pointer, flags, num_deps
-	);
+	createTask<TaskloopMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
 
 	TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
 	assert(*task_pointer != nullptr);
@@ -184,10 +179,7 @@ void nanos6_create_iter(
 	assert(task_info->implementation_count == 1);
 	assert(flags & nanos6_taskiter_task);
 
-	nanos6_create_task(
-		task_info, task_invocation_info, args_block_size,
-		args_block_pointer, task_pointer, flags, num_deps
-	);
+	createTask<TaskiterMetadata>(task_info, task_invocation_info, NULL, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
 
 	TaskiterMetadata *taskiterMetadata = (TaskiterMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
 	assert(*task_pointer != nullptr);
@@ -219,7 +211,7 @@ void nanos6_submit_task(void *taskHandle)
 	TaskMetadata *parentTaskMetadata = taskMetadata->getParent();
 	const bool isTaskiterChild = (parentTaskMetadata != nullptr) && parentTaskMetadata->isTaskiter();
 	if (isTaskiterChild) {
-		TaskiterMetadata *taskiter = dynamic_cast<TaskiterMetadata *>(parentTaskMetadata);
+		TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTaskMetadata;
 		TaskiterGraph &graph = taskiter->getGraph();
 		graph.addTask(taskMetadata);
 	}

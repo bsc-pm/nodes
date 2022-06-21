@@ -119,8 +119,8 @@ common_sources = \
 	src/tasks/Task.cpp \
 	src/tasks/TaskInfo.cpp \
 	src/tasks/TaskInfoAPI.cpp \
-	src/tasks/TaskloopMetadata.cpp \
-	src/tasks/TaskiterMetadata.cpp
+	src/tasks/TaskiterMetadata.cpp \
+	src/tasks/TaskloopMetadata.cpp
 
 dependency_flags = -I$(srcdir)/src/dependencies -I$(srcdir)/src/dependencies/discrete
 

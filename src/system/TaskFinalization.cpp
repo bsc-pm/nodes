@@ -76,6 +76,7 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 		}
 
 		if (taskMetadata->decreaseRemovalBlockingCount()) {
+			assert(finish);
 			TaskFinalization::disposeTask(taskMetadata);
 		}
 	}
@@ -123,6 +124,7 @@ void TaskFinalization::taskFinished(TaskMetadata *task)
 					}
 
 					if (taskMetadata->decreaseRemovalBlockingCount()) {
+						assert(finish);
 						TaskFinalization::disposeTask(taskMetadata);
 					}
 				} else if (taskMetadata->isTaskiter()) {
@@ -130,8 +132,6 @@ void TaskFinalization::taskFinished(TaskMetadata *task)
 					// which means that we have to stop the recursive process
 					break;
 				}
-
-				// assert(!taskMetadata->mustDelayRelease());
 			}
 		} else {
 			// An ancestor in a taskwait that must be unblocked at this point

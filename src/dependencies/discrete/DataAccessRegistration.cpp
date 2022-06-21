@@ -18,8 +18,8 @@
 #include "memory/ObjectAllocator.hpp"
 #include "system/TaskFinalization.hpp"
 #include "taskiter/TaskiterGraph.hpp"
-#include "tasks/TaskMetadata.hpp"
 #include "tasks/TaskiterMetadata.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 #define __unused __attribute__((unused))
@@ -368,7 +368,7 @@ namespace DataAccessRegistration {
 #endif
 
 		if (taskiterChild && task->getOriginalPrecessorCount() >= 0) {
-			TaskiterMetadata *taskiter = dynamic_cast<TaskiterMetadata *>(parentTask);
+			TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTask;
 			TaskiterGraph &graph = taskiter->getGraph();
 
 			if (taskiter->cancelled()) {
@@ -382,7 +382,7 @@ namespace DataAccessRegistration {
 				return true;
 			}
 
-			bool keepIterating = task->keepIterating();
+			bool keepIterating = task->decreaseIterations();
 			if (keepIterating) {
 				if (task->getOriginalPrecessorCount() == 0) {
 					hpDependencyData.addSatisfiedOriginator(task);
@@ -488,7 +488,7 @@ namespace DataAccessRegistration {
 #endif
 
 		if (taskiterChild) {
-			TaskiterMetadata *taskiter = dynamic_cast<TaskiterMetadata *>(parentTask);
+			TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTask;
 			size_t iterationCount = taskiter->getIterationCount();
 			task->setIterationCount(iterationCount);
 
@@ -545,7 +545,7 @@ namespace DataAccessRegistration {
 		// We need to set the child count to the number of tasks.
 		// We add 1 for each child task, but then remove one because the count
 		// is increased always when leaving the handleEnterTaskwait
-		taskiter->addChilds(graph.getTasks() - 1);
+		taskiter->addChilds(graph.getNumTasks() - 1);
 
 		if (taskiter->isWhile()) {
 			// Add count for the control tasks, except one, as it is implicitly added when
@@ -570,7 +570,7 @@ namespace DataAccessRegistration {
 			// hasn't been deleted.
 			// Thus, we can safely update their counters and dependencies, and re-launch them
 			// TODO: Support n=1 count
-			TaskiterMetadata *taskiter = dynamic_cast<TaskiterMetadata *>(task);
+			TaskiterMetadata *taskiter = (TaskiterMetadata *)task;
 			TaskiterGraph &graph = taskiter->getGraph();
 
 			if (graph.isProcessed()) {
@@ -731,7 +731,7 @@ namespace DataAccessRegistration {
 			}
 
 			if (isTaskiterChild) {
-				TaskiterMetadata *taskiter = dynamic_cast<TaskiterMetadata *>(parentTask);
+				TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTask;
 				TaskiterGraph &graph = taskiter->getGraph();
 				graph.addTaskAccess(task, access);
 			}

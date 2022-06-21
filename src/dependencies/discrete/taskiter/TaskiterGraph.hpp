@@ -14,22 +14,23 @@
 #include <memory>
 #include <numeric>
 
-#include <boost/variant.hpp>
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/transitive_reduction.hpp>
+#include <boost/variant.hpp>
+
 #ifdef PRINT_TASKITER_GRAPH
 #include <boost/graph/graph_utility.hpp>
 #include <boost/graph/graphviz.hpp>
 #endif
-#include <boost/graph/transitive_reduction.hpp>
 
 #include <nosv.h>
 
-#include "dependencies/DataAccessType.hpp"
 #include "common/Containers.hpp"
-#include "tasks/TaskMetadata.hpp"
+#include "dependencies/DataAccessType.hpp"
 #include "dependencies/discrete/CPUDependencyData.hpp"
 #include "dependencies/discrete/DataAccess.hpp"
 #include "dependencies/discrete/ReductionInfo.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 // A node of the TaskiterGraph may contain either a Task or a ReductionInfo
 typedef boost::variant<TaskMetadata *, ReductionInfo *> TaskiterGraphNode;
@@ -232,7 +233,7 @@ private:
 		}
 	}
 
-	inline void closeReductionChain(TaskMetadata *task, TaskiterGraphAccessChain &chain)
+	inline void closeReductionChain(TaskMetadata *, TaskiterGraphAccessChain &chain)
 	{
 		// Reduction combination depends on last chain
 		createEdges(chain._reductionInfo, *(chain._lastChain));
@@ -554,7 +555,7 @@ public:
 		}
 	}
 
-	inline size_t getTasks() const
+	inline size_t getNumTasks() const
 	{
 		size_t tasks = 0;
 		for (Container::vector<TaskMetadata *> const &taskList : _tasks)

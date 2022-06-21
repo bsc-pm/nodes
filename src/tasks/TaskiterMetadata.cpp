@@ -1,5 +1,5 @@
 /*
-	This file is part of Nanos6-Lite and is licensed under the terms contained in the COPYING file.
+	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
 	Copyright (C) 2022 Barcelona Supercomputing Center (BSC)
 */
@@ -77,7 +77,7 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	taskInfo->destroy_args_block = nullptr;
 
 	// Use a copy since we do not know the actual lifetime of label
-	taskInfo->implementations[0].task_label = "Taskiter Control";
+	taskInfo->implementations[0].task_type_label = "Taskiter Control";
 	taskInfo->implementations[0].declaration_source = "Taskiter Control";
 	taskInfo->implementations[0].get_constraints = nullptr;
 
@@ -89,7 +89,7 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	TaskiterArgsBlock *argsBlock = nullptr;
 	nanos6_create_task(
 		taskInfo, &functionInvocationInfo,
-		sizeof(TaskiterArgsBlock),
+		"Taskiter Control", sizeof(TaskiterArgsBlock),
 		(void **)&argsBlock, &task, 0, 0);
 	assert(task != nullptr);
 	assert(argsBlock != nullptr);
