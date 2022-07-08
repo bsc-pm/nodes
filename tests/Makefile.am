@@ -4,9 +4,9 @@
 
 .NOTPARALLEL:
 
-AM_CXXFLAGS = -I$(top_srcdir)/tests/common $(PTHREAD_CFLAGS) -I$(top_srcdir)/api -I$(top_builddir) -include nanos6.h
+AM_CXXFLAGS = -fdo-not-use-nanos6 -I$(top_srcdir)/tests/common $(PTHREAD_CFLAGS) -I$(top_srcdir)/api -I$(top_builddir) -include nanos6.h
 AM_LDFLAGS  = -L$(top_builddir)/.libs -rpath $(abs_top_builddir)/.libs
-LDADD = -ldl
+LDADD = $(top_builddir)/nanos6-main-wrapper.o $(top_builddir)/.libs/libnanos6.so -ldl
 
 CXX = $(NODES_CLANGXX)
 CC = $(NODES_CLANG)
@@ -32,6 +32,9 @@ correctness_tests = \
 	red-nonest.test \
 	red-nqueens.test \
 	red-stress.test \
+	taskiter-for.test \
+	taskiter-while.test \
+	taskiter-unroll.test \
 	taskloop-dep-multiaxpy.test \
 	taskloop-multiaxpy.test \
 	taskloop-nested-dep-multiaxpy.test \
@@ -122,6 +125,18 @@ red_nqueens_test_LDFLAGS  = $(AM_LDFLAGS)
 red_stress_test_SOURCES  = correctness/reductions/red-stress.cpp
 red_stress_test_CXXFLAGS = $(AM_CXXFLAGS)
 red_stress_test_LDFLAGS  = $(AM_LDFLAGS)
+
+taskiter_for_test_SOURCES  = correctness/taskiter/taskiter-for.cpp
+taskiter_for_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskiter_for_test_LDFLAGS  = $(AM_LDFLAGS)
+
+taskiter_while_test_SOURCES  = correctness/taskiter/taskiter-while.cpp
+taskiter_while_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskiter_while_test_LDFLAGS  = $(AM_LDFLAGS)
+
+taskiter_unroll_test_SOURCES  = correctness/taskiter/taskiter-unroll.cpp
+taskiter_unroll_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskiter_unroll_test_LDFLAGS  = $(AM_LDFLAGS)
 
 taskloop_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-multiaxpy.cpp
 taskloop_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)
