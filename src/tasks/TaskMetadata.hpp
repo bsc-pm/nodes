@@ -84,6 +84,7 @@ private:
 	//! Whether the task's metadata was locally allocated (not allocd from nOS-V)
 	bool _locallyAllocated;
 
+	//! Special fields for tasks inside a taskiter
 	//! Original precedessor count
 	int _originalPredecessorCount;
 
@@ -197,7 +198,7 @@ public:
 		_removalCount.fetch_add(1, std::memory_order_relaxed);
 	}
 
-	inline void addChilds(int amount)
+	inline void increaseWakeUpCount(int amount)
 	{
 		_countdownToBeWokenUp.fetch_add(amount, std::memory_order_relaxed);
 	}

@@ -43,11 +43,11 @@ void TaskiterMetadata::cancel()
 	_graph.forEach(
 		[](TaskMetadata *task) {
 			// As this is the second time this task will be finished, we have to do a little hack
-			task->addChilds(1);
+			task->increaseWakeUpCount(1);
 			TaskFinalization::taskFinished(task);
 
 			__attribute__((unused)) bool deletable = task->decreaseRemovalBlockingCount();
-			// assert(deletable);
+
 			if (deletable) {
 				TaskFinalization::disposeTask(task);
 			}

@@ -56,6 +56,8 @@ struct TaskiterGraphEdge {
 	}
 };
 
+// This struct stores the needed information for a chain of DataAccesses in a single address
+// We store enough to draw the edges between tasks containing an access to this address
 struct TaskiterGraphAccessChain {
 	typedef Container::vector<TaskiterGraphNode> access_chain_t;
 	std::unique_ptr<access_chain_t> _lastChain;
@@ -78,6 +80,7 @@ struct TaskiterGraphAccessChain {
 		_firstChainType(WRITE_ACCESS_TYPE),
 		_inFirst(true)
 	{
+		// Unique ptrs are automatically destructed in ~TaskiterGraphAccessChain()
 		_lastChain = std::make_unique<Container::vector<TaskiterGraphNode>>();
 		_prevChain = std::make_unique<Container::vector<TaskiterGraphNode>>();
 	}
@@ -90,6 +93,9 @@ public:
 	typedef boost::property<boost::vertex_name_t, TaskiterGraphNode> VertexProperty;
 	typedef boost::property<boost::edge_name_t, bool> EdgeProperty;
 
+	// This is the actual graph type
+	// We have to choose the containers for edges and vertices, as well as the properties
+	// that edges and vertices have (which is just stored information in them)
 	typedef boost::adjacency_list<
 		boost::vecS,		   // OutEdgeList
 		boost::vecS,		   // VertexList
@@ -116,6 +122,7 @@ private:
 
 	bool _processed;
 
+	// Creates edges from chain to node and inserts them into the graph
 	inline void createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain)
 	{
 		EdgeProperty props(false);
@@ -125,6 +132,9 @@ private:
 		}
 	}
 
+	// Inserts a "control task" for taskiter while. This closes every single access chain
+	// and makes the control task depend on it, in order to be executed the last task of every
+	// iteration. We create all the corresponding edges as well
 	inline void insertControlTask(TaskMetadata *controlTask, bool last)
 	{
 		controlTask->increasePredecessors();
@@ -156,6 +166,9 @@ private:
 		}
 	}
 
+	// Closes the taskiter with a control task. This function inserts the control task, closing
+	// all chains onto it, and then created the dependency loop where every single root of the graph
+	// for the next iteration depends on the control task
 	inline void closeLoopWithControl(TaskMetadata *controlTask)
 	{
 		insertControlTask(controlTask, true);
@@ -199,6 +212,7 @@ private:
 		}
 	}
 
+	// Closes the dependency loop *without* a control task. All "open" dependency chains will be matched to the next.
 	inline void closeDependencyLoop()
 	{
 		// Close every dependency chain by simulating that we are registering the first accesses again
@@ -224,6 +238,7 @@ private:
 		}
 	}
 
+	// Adds a task to a specific dependency chain
 	inline void addTaskToChain(TaskMetadata *task, DataAccessType type, TaskiterGraphAccessChain &chain)
 	{
 		chain._lastChain->push_back(task);
@@ -233,6 +248,7 @@ private:
 		}
 	}
 
+	// Marks the end of reduction accesses in a grain, placing the relevant edges
 	inline void closeReductionChain(TaskMetadata *, TaskiterGraphAccessChain &chain)
 	{
 		// Reduction combination depends on last chain
@@ -327,6 +343,11 @@ public:
 		_tasks.emplace_back();
 	}
 
+	// Applies the function satisfyTask to every successor of node
+	// There are two special cases: sometimes we cannot cross the iteration boundary, which implies
+	// only satisfying tasks from the current iteration, and in other cases (delayedCancellation)
+	// if the task is a control task, it will only satisfy other control tasks. This second case
+	// is used when a taskiter while is on its cancellation process
 	inline void applySuccessors(
 		TaskiterGraphNode node,
 		bool crossIterationBoundary,
@@ -368,6 +389,8 @@ public:
 		}
 	}
 
+	// For all tasks, determine the number of prececessors they have. Block the ones with > 0,
+	// and schedule the rest
 	void setTaskDegree(TaskMetadata *controlTask)
 	{
 		// First, increase predecessors for every task
@@ -426,6 +449,9 @@ public:
 		}
 	}
 
+	// Process the taskiter to optimize away redundant edges
+	// this passes through a process called "transitive reduction", which derives
+	// the minimal graph which still mantains all the dependencies of the original one
 	void process()
 	{
 		graph_t processedGraph;
@@ -483,6 +509,7 @@ public:
 		return _processed;
 	}
 
+	// Add a task to the graph as a vertex
 	void addTask(TaskMetadata *task)
 	{
 		_tasks[_currentUnroll].push_back(task);
@@ -492,6 +519,8 @@ public:
 		_tasksToVertices.emplace(std::make_pair(task, vertex));
 	}
 
+	// Adds an access to the graph, creating the relevant vertices between tasks
+	// This function contains the "meat" of solving dependencies
 	void addTaskAccess(TaskMetadata *task, DataAccess *access)
 	{
 		const access_address_t address = access->getAccessRegion().getStartAddress();
@@ -564,6 +593,7 @@ public:
 		return tasks;
 	}
 
+	// Do something for each task in the graph
 	inline void forEach(std::function<void(TaskMetadata *)> fn, bool includeControl = false) const
 	{
 		for (Container::vector<TaskMetadata *> const &taskVector : _tasks)
@@ -576,9 +606,10 @@ public:
 		}
 	}
 
+	// Inserts a control task but not in the end of a taskiter, but in the middle
+	// This happens in unrolled taskiter while loops, which have intermediate control tasks
 	inline void insertControlInUnrolledLoop(TaskMetadata *controlTask)
 	{
-		// _controlTasks.push_back(controlTask);
 		insertControlTask(controlTask, false);
 
 		_tasks.emplace_back();

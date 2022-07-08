@@ -76,6 +76,8 @@ public:
 
 		if (iterationCondition != nullptr) {
 			// Registering a taskiter + while
+			// We set _upperBound to size_t's max. This simplifies the condition checking for the taskiter while
+			// As we can do (--_iterationCount > 0) and it will never reach 0.
 			assert(_lowerBound == 0);
 			assert(_upperBound == 1);
 			_upperBound = (size_t)-1;
@@ -110,7 +112,8 @@ public:
 
 		if (isWhile()) {
 			_graph.insertControlInUnrolledLoop(generateControlTask());
-			this->finishChild();
+			__attribute__((unused)) bool finished = this->finishChild();
+			assert(!finished);
 		}
 	}
 
