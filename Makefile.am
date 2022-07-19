@@ -87,8 +87,8 @@ noinst_HEADERS = \
 	src/system/SpawnFunction.hpp \
 	src/system/TaskFinalization.hpp \
 	src/tasks/TaskInfo.hpp \
-	src/tasks/TaskMetadata.hpp \
 	src/tasks/TaskiterMetadata.hpp \
+	src/tasks/TaskMetadata.hpp \
 	src/tasks/TaskloopMetadata.hpp \
 	tests/common/Atomic.hpp \
 	tests/common/Functors.hpp \

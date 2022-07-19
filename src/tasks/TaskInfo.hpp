@@ -21,8 +21,8 @@
 #include "memory/MemoryAllocator.hpp"
 #include "system/TaskFinalization.hpp"
 #include "tasks/TaskiterMetadata.hpp"
-#include "tasks/TaskMetadata.hpp"
 #include "tasks/TaskloopMetadata.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 class TaskInfo {

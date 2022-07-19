@@ -33,8 +33,8 @@ correctness_tests = \
 	red-nqueens.test \
 	red-stress.test \
 	taskiter-for.test \
-	taskiter-while.test \
 	taskiter-unroll.test \
+	taskiter-while.test \
 	taskloop-dep-multiaxpy.test \
 	taskloop-multiaxpy.test \
 	taskloop-nested-dep-multiaxpy.test \
@@ -130,13 +130,13 @@ taskiter_for_test_SOURCES  = correctness/taskiter/taskiter-for.cpp
 taskiter_for_test_CXXFLAGS = $(AM_CXXFLAGS)
 taskiter_for_test_LDFLAGS  = $(AM_LDFLAGS)
 
-taskiter_while_test_SOURCES  = correctness/taskiter/taskiter-while.cpp
-taskiter_while_test_CXXFLAGS = $(AM_CXXFLAGS)
-taskiter_while_test_LDFLAGS  = $(AM_LDFLAGS)
-
 taskiter_unroll_test_SOURCES  = correctness/taskiter/taskiter-unroll.cpp
 taskiter_unroll_test_CXXFLAGS = $(AM_CXXFLAGS)
 taskiter_unroll_test_LDFLAGS  = $(AM_LDFLAGS)
+
+taskiter_while_test_SOURCES  = correctness/taskiter/taskiter-while.cpp
+taskiter_while_test_CXXFLAGS = $(AM_CXXFLAGS)
+taskiter_while_test_LDFLAGS  = $(AM_LDFLAGS)
 
 taskloop_multiaxpy_test_SOURCES  = correctness/taskloop/taskloop-multiaxpy.cpp
 taskloop_multiaxpy_test_CXXFLAGS = $(AM_CXXFLAGS)

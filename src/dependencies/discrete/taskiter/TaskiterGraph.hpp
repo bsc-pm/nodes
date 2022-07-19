@@ -97,13 +97,13 @@ public:
 	// We have to choose the containers for edges and vertices, as well as the properties
 	// that edges and vertices have (which is just stored information in them)
 	typedef boost::adjacency_list<
-		boost::vecS,		   // OutEdgeList
-		boost::vecS,		   // VertexList
+		boost::vecS,           // OutEdgeList
+		boost::vecS,           // VertexList
 		boost::bidirectionalS, // Directed with access to in_edges
-		VertexProperty,		   // VertexProperties
-		EdgeProperty,		   // EdgeProperties
-		boost::no_property,	   // GraphProperties
-		boost::listS		   // EdgeList
+		VertexProperty,        // VertexProperties
+		EdgeProperty,          // EdgeProperties
+		boost::no_property,    // GraphProperties
+		boost::listS           // EdgeList
 		>
 		graph_t;
 
@@ -152,7 +152,7 @@ private:
 		// participants to be combined, and then into the closing task to release the control
 		// A smart way to do this is:
 		// - Pass through every vertex. If the vertex has no out-edges, it means it is a leaf, and then
-		// we place a dependency Leaf -> Control task.
+		// we place a dependency Leaf -> Control task
 
 		for (TaskMetadata *task : _tasks[_currentUnroll]) {
 			graph_vertex_t vertex = _tasksToVertices[task];
@@ -178,7 +178,7 @@ private:
 			closeDependencyLoop();
 
 		// At this point, we have n control tasks, each of one depending on tasks from their respective iterations.
-		// Now, we have to add cross-iteration edges.
+		// Now, we have to add cross-iteration edges
 
 		boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
 		EdgeProperty propsTrue(true);
@@ -212,7 +212,7 @@ private:
 		}
 	}
 
-	// Closes the dependency loop *without* a control task. All "open" dependency chains will be matched to the next.
+	// Closes the dependency loop *without* a control task. All "open" dependency chains will be matched to the next
 	inline void closeDependencyLoop()
 	{
 		// Close every dependency chain by simulating that we are registering the first accesses again
@@ -357,11 +357,11 @@ public:
 		VisitorApplySuccessor visitor(this, satisfyTask, crossIterationBoundary, delayedCancellationMode);
 
 		if (delayedCancellationMode && boost::get<TaskMetadata *>(&node)) {
-			// In this mode, control tasks can only pass satisfiability to other control tasks.
+			// In this mode, control tasks can only pass satisfiability to other control tasks
 			TaskMetadata *task = boost::get<TaskMetadata *>(node);
 			Container::vector<TaskMetadata *>::iterator it = std::find(_controlTasks.begin(), _controlTasks.end(), task);
 			if (it != _controlTasks.end()) {
-				// Now, we're a control task, so we only satisfy the next control task in the chain.
+				// Now, we're a control task, so we only satisfy the next control task in the chain
 				// Advance one:
 				if (++it == _controlTasks.end())
 					it = _controlTasks.begin();
