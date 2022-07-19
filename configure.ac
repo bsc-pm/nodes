@@ -61,7 +61,7 @@ AC_CHECK_EXTRACT_FIRST_COMPILER_FLAG([MCMODEL_FLAGS], [-mcmodel=large -mcmodel=m
 AC_CONFIG_FILES([Makefile tests/Makefile])
 AC_OUTPUT
 
-if test x"${ac_have_nanos6_clang}" = x"no" ; then
+if test x"${ac_have_nodes_clang}" = x"no" ; then
 	AC_MSG_WARN([the directive based tests will not be checked since there is no Clang compiler available])
 fi
 
