@@ -17,6 +17,8 @@
 #include "instrument/OVNIInstrumentation.hpp"
 #include "memory/ObjectAllocator.hpp"
 #include "system/TaskFinalization.hpp"
+#include "taskiter/TaskiterGraph.hpp"
+#include "tasks/TaskiterMetadata.hpp"
 #include "tasks/TaskMetadata.hpp"
 
 
@@ -345,7 +347,7 @@ namespace DataAccessRegistration {
 		return ready;
 	}
 
-	void unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
+	bool unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
 	{
 		Instrument::enterUnregisterAccesses();
 
@@ -355,12 +357,67 @@ namespace DataAccessRegistration {
 		assert(!accessStruct.hasBeenDeleted());
 		assert(hpDependencyData._mailBox.empty());
 
+		TaskMetadata *parentTask = task->getParent();
+		const bool taskiterChild = parentTask && parentTask->isTaskiter();
+
 #ifndef NDEBUG
 		{
 			bool alreadyTaken = false;
 			assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, true));
 		}
 #endif
+
+		if (taskiterChild && task->getOriginalPrecessorCount() >= 0) {
+			TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTask;
+			TaskiterGraph &graph = taskiter->getGraph();
+
+			if (taskiter->cancelled()) {
+				// Nevermind, we cancelled the taskiter
+#ifndef NDEBUG
+				{
+					bool alreadyTaken = true;
+					assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, false));
+				}
+#endif
+				return true;
+			}
+
+			bool keepIterating = task->decreaseIterations();
+			if (keepIterating) {
+				if (task->getOriginalPrecessorCount() == 0) {
+					hpDependencyData.addSatisfiedOriginator(task);
+					assert(!hpDependencyData.full());
+				} else {
+					task->increasePredecessors(task->getOriginalPrecessorCount());
+				}
+
+				task->increaseReleaseCount();
+				task->increaseRemovalBlockingCount();
+			} else {
+				// Prepare this task so it can be re-finished
+				task->increaseWakeUpCount(1);
+			}
+
+			graph.applySuccessors(task, keepIterating,
+				// Do this for each successor
+				[&](TaskMetadata *successor) {
+					satisfyTask(successor, hpDependencyData);
+				},
+				taskiter->isCancellationDelayed()
+			);
+
+			processSatisfiedOriginators(hpDependencyData);
+
+#ifndef NDEBUG
+			{
+				bool alreadyTaken = true;
+				assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, false));
+			}
+#endif
+
+			// return false;
+			return !keepIterating;
+		}
 
 		if (accessStruct.hasDataAccesses()) {
 			// Release dependencies of all my accesses
@@ -430,13 +487,25 @@ namespace DataAccessRegistration {
 		}
 #endif
 
+		if (taskiterChild) {
+			TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTask;
+			size_t iterationCount = taskiter->getIterationCount();
+			task->setIterationCount(iterationCount);
+
+			if (iterationCount > 1) {
+				task->increaseReleaseCount();
+				task->increaseRemovalBlockingCount();
+				task->incrementOriginalPredecessorCount();
+			}
+		}
+
 		Instrument::exitUnregisterAccesses();
+
+		return true;
 	}
 
-	void handleEnterTaskwait(TaskMetadata *task)
+	static inline void closeBottomReductions(TaskMetadata *task)
 	{
-		assert(task != nullptr);
-
 		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 		assert(!accessStruct.hasBeenDeleted());
 
@@ -460,8 +529,56 @@ namespace DataAccessRegistration {
 		}
 	}
 
-	void handleExitTaskwait(TaskMetadata *)
+	void handleEnterTaskwait(TaskMetadata *task)
 	{
+		assert(task != nullptr);
+
+		closeBottomReductions(task);
+	}
+
+	static inline void processTaskIter(TaskiterMetadata *taskiter, TaskiterGraph &graph)
+	{
+		// Reset waiting
+		taskiter->setDelayedRelease(true);
+		taskiter->increaseReleaseCount();
+
+		// We need to set the child count to the number of tasks.
+		// We add 1 for each child task, but then remove one because the count
+		// is increased always when leaving the handleEnterTaskwait
+		taskiter->increaseWakeUpCount(graph.getNumTasks() - 1);
+
+		if (taskiter->isWhile()) {
+			// Add count for the control tasks, except one, as it is implicitly added when
+			// we generate the last control task
+			taskiter->increaseWakeUpCount(taskiter->getUnroll() - 1);
+			// Create an implicit control task
+			TaskMetadata *controlTask = taskiter->generateControlTask();
+			graph.process();
+			graph.setTaskDegree(controlTask);
+			// Here the control task should have been scheduled already
+		} else {
+			// May need to add an extra task?
+			graph.process();
+			graph.setTaskDegree(nullptr);
+		}
+	}
+
+	void handleExitTaskwait(TaskMetadata *task)
+	{
+		if (task->hasFinished() && task->isTaskiter()) {
+			// At this point, as we have delayed dependency release, every child task has executed once, but
+			// hasn't been deleted.
+			// Thus, we can safely update their counters and dependencies, and re-launch them
+			// TODO: Support n=1 count
+			TaskiterMetadata *taskiter = (TaskiterMetadata *)task;
+			TaskiterGraph &graph = taskiter->getGraph();
+
+			if (graph.isProcessed()) {
+				// We are on the second barrier, let it go through
+			} else if (taskiter->getIterationCount() > 1) {
+				processTaskIter(taskiter, graph);
+			}
+		}
 	}
 
 	static inline void insertAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
@@ -470,8 +587,11 @@ namespace DataAccessRegistration {
 		assert(!accessStruct.hasBeenDeleted());
 
 		TaskMetadata *parentTask = task->getParent();
+		assert(parentTask);
 		TaskDataAccesses &parentAccessStruct = parentTask->getTaskDataAccesses();
 		assert(!parentAccessStruct.hasBeenDeleted());
+
+		const bool isTaskiterChild = parentTask->isTaskiter();
 
 		mailbox_t &mailBox = hpDependencyData._mailBox;
 		assert(mailBox.empty());
@@ -610,6 +730,12 @@ namespace DataAccessRegistration {
 					releaseReductionInfo(reductionInfo);
 			}
 
+			if (isTaskiterChild) {
+				TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTask;
+				TaskiterGraph &graph = taskiter->getGraph();
+				graph.addTaskAccess(task, access);
+			}
+
 			// Weaks and reductions always start
 			if (accessType == REDUCTION_ACCESS_TYPE || weak)
 				schedule = true;
@@ -629,7 +755,10 @@ namespace DataAccessRegistration {
 
 		info->combine();
 
-		ObjectAllocator<ReductionInfo>::deleteObject(info);
+		if (info->isInTaskiter())
+			info->reinitialize();
+		else
+			ObjectAllocator<ReductionInfo>::deleteObject(info);
 	}
 
 	static inline void decreaseDeletableCountOrDelete(TaskMetadata *originator,
@@ -654,11 +783,18 @@ namespace DataAccessRegistration {
 		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task.getTaskHandle());
 		assert(taskInfo != nullptr);
 
+		// Weakreductions are not supported enclosing a taskiter, but if they were, this may not
+		// detect correctly the reinitialize case
+		TaskMetadata *parentTask = task.getParent();
+		const bool isTaskiterChild = parentTask && parentTask->isTaskiter();
+
 		ReductionInfo *newReductionInfo = ObjectAllocator<ReductionInfo>::newObject(
 			address, length,
 			reductionTypeAndOpIndex,
 			taskInfo->reduction_initializers[reductionIndex],
-			taskInfo->reduction_combiners[reductionIndex]);
+			taskInfo->reduction_combiners[reductionIndex],
+			isTaskiterChild
+			);
 
 		return newReductionInfo;
 	}
@@ -673,9 +809,12 @@ namespace DataAccessRegistration {
 		if (!accessStruct.hasDataAccesses())
 			return;
 
-		accessStruct.forAll([&](void *, DataAccess *access) -> bool {
+		TaskMetadata *parentTask = task->getParent();
+		const bool taskiterChild = parentTask && parentTask->isTaskiter();
+
+		accessStruct.forAll([task, cpuId, taskiterChild](void *, DataAccess *access) -> bool {
 			// Skip if released
-			if (access->isReleased())
+			if (!taskiterChild && access->isReleased())
 				return true;
 
 			if (access->getType() == REDUCTION_ACCESS_TYPE && !access->isWeak()) {
@@ -739,6 +878,9 @@ namespace DataAccessRegistration {
 			assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, true));
 		}
 #endif
+
+		// Partial release not supported inside a taskiter construct
+		assert(task->getParent() && !task->getParent()->isTaskiter());
 
 		if (accessStruct.hasDataAccesses()) {
 			// Release dependencies of all my accesses

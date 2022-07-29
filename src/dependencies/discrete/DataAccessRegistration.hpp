@@ -43,7 +43,7 @@ namespace DataAccessRegistration {
 	//! \returns true if the task is already ready
 	bool registerTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData);
 
-	void unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData);
+	bool unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData);
 
 	void releaseAccessRegion(
 		TaskMetadata *task, void * address,

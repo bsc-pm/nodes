@@ -20,8 +20,9 @@
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "memory/MemoryAllocator.hpp"
 #include "system/TaskFinalization.hpp"
-#include "tasks/TaskMetadata.hpp"
+#include "tasks/TaskiterMetadata.hpp"
 #include "tasks/TaskloopMetadata.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 
 class TaskInfo {
@@ -73,6 +74,18 @@ private:
 					while (taskloopMetadata->getIterationCount() > 0) {
 						Taskloop::createTaskloopExecutor(task, taskloopMetadata, taskloopMetadata->getBounds());
 					}
+				}
+			} else if (taskMetadata->isTaskiter()) {
+				TaskiterMetadata *taskiterMetadata = (TaskiterMetadata *)taskMetadata;
+				for (size_t i = 0; i < taskiterMetadata->getUnroll(); ++i) {
+					if (i > 0)
+						taskiterMetadata->unrolledOnce();
+
+					taskInfo->implementations->run(
+						taskMetadata->getArgsBlock(),
+						nullptr, /* deviceEnvironment */
+						translationTable
+					);
 				}
 			} else {
 				taskInfo->implementations->run(

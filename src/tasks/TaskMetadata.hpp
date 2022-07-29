@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef TASK_METADATA_HPP
@@ -33,6 +33,8 @@ public:
 		wait_flag,
 		preallocated_args_block_flag,
 		lint_verified_flag,
+		taskiter_flag,
+		taskiter_update_flag,
 		//! Flags added by the NODES runtime. Note that
 		//! these flags must be always declared after the
 		//! Mercurium flags
@@ -82,6 +84,13 @@ private:
 	//! Whether the task's metadata was locally allocated (not allocd from nOS-V)
 	bool _locallyAllocated;
 
+	//! Special fields for tasks inside a taskiter
+	//! Original precedessor count
+	int _originalPredecessorCount;
+
+	//! Iteration count
+	size_t _iterationCount;
+
 protected:
 
 	//! A pointer to the original task that wraps this metadata
@@ -115,6 +124,8 @@ public:
 		_if0Inlined(true),
 		_metadataSize(taskMetadataSize),
 		_locallyAllocated(locallyAllocated),
+		_originalPredecessorCount(-1),
+		_iterationCount(0),
 		_task(taskPointer),
 		_dataAccesses(taskAccessInfo),
 		_flags(flags)
@@ -187,6 +198,11 @@ public:
 		_removalCount.fetch_add(1, std::memory_order_relaxed);
 	}
 
+	inline void increaseWakeUpCount(int amount)
+	{
+		_countdownToBeWokenUp.fetch_add(amount, std::memory_order_relaxed);
+	}
+
 	inline int getRemovalCount()
 	{
 		return _removalCount.load();
@@ -236,7 +252,7 @@ public:
 	//! \brief Increase the counter of events
 	inline void increaseReleaseCount(int amount = 1)
 	{
-		assert(_countdownToRelease > 0);
+		assert(_countdownToRelease >= 0);
 
 		_countdownToRelease += amount;
 	}
@@ -439,6 +455,34 @@ public:
 		return (nanos6_task_info_t *) nosv_get_task_type_metadata(type);
 	}
 
+	virtual inline bool isTaskiter() const
+	{
+		return false;
+	}
+
+	inline int getOriginalPrecessorCount() const
+	{
+		return _originalPredecessorCount;
+	}
+
+	inline void incrementOriginalPredecessorCount()
+	{
+		_originalPredecessorCount++;
+	}
+
+	inline void setIterationCount(size_t count)
+	{
+		_iterationCount = count;
+	}
+
+	inline bool decreaseIterations()
+	{
+		assert(_parent);
+		assert(_parent->isTaskiter());
+		return (--_iterationCount > 1);
+	}
+
+	virtual ~TaskMetadata() {}
 };
 
 #endif // TASK_METADATA_HPP

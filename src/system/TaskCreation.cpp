@@ -19,12 +19,13 @@
 #include "instrument/OVNIInstrumentation.hpp"
 #include "memory/MemoryAllocator.hpp"
 #include "hardware/HardwareInfo.hpp"
+#include "tasks/TaskiterMetadata.hpp"
 #include "tasks/TaskloopMetadata.hpp"
 #include "tasks/TaskMetadata.hpp"
 
 
-void nanos6_create_task(
-	nanos6_task_info_t *taskInfo,
+template <typename T>
+static inline void createTask(nanos6_task_info_t *taskInfo,
 	nanos6_task_invocation_info_t *,
 	char const *,
 	size_t argsBlockSize,
@@ -38,13 +39,7 @@ void nanos6_create_task(
 	size_t originalArgsBlockSize = argsBlockSize;
 
 	// Get the necessary size to create the task
-	size_t taskSize = 0;
-	bool isTaskloop = (flags & nanos6_taskloop_task);
-	if (isTaskloop) {
-		taskSize += sizeof(TaskloopMetadata);
-	} else {
-		taskSize += sizeof(TaskMetadata);
-	}
+	size_t taskSize = sizeof(T);
 
 	// Get the necessary size for the task's dependencies
 	TaskDataAccessesInfo taskAccesses(numDeps);
@@ -101,29 +96,37 @@ void nanos6_create_task(
 	assert(metadata != nullptr);
 
 	if (!hasPreallocatedArgsBlock) {
-		if (isTaskloop) {
-			// Skip sizeof(TaskloopMetadata) to assign the pointer
-			*argsBlockPointer = (void *) ((char *) metadata + sizeof(TaskloopMetadata));
-		} else {
-			// Skip sizeof(TaskMetadata) to assign the pointer
-			*argsBlockPointer = (void *) ((char *) metadata + sizeof(TaskMetadata));
-		}
+		*argsBlockPointer = (void *) ((char *) metadata + sizeof(T));
 	}
 
 	// Compute the correct address for the task's accesses
 	taskAccesses.setAllocationAddress((char *) *argsBlockPointer + argsBlockSize);
 
 	// Retreive and construct the task's metadata
-	if (isTaskloop) {
-		new (metadata) TaskloopMetadata(*argsBlockPointer, originalArgsBlockSize, task, flags, taskAccesses, taskSize, locallyAllocated);
-	} else {
-		new (metadata) TaskMetadata(*argsBlockPointer, originalArgsBlockSize, task, flags, taskAccesses, taskSize, locallyAllocated);
-	}
+	new (metadata) T(*argsBlockPointer, originalArgsBlockSize, task, flags, taskAccesses, taskSize, locallyAllocated);
 
 	// Assign the nOS-V task pointer for a future submit
 	*taskPointer = (void *) task;
 
 	Instrument::exitCreateTask();
+}
+
+void nanos6_create_task(
+	nanos6_task_info_t *taskInfo,
+	nanos6_task_invocation_info_t *,
+	char const *task_label,
+	size_t argsBlockSize,
+	void **argsBlockPointer,
+	void **taskPointer,
+	size_t flags,
+	size_t numDeps
+) {
+	assert(!(flags & nanos6_taskiter_task));
+
+	if (flags & nanos6_taskloop_task)
+		createTask<TaskloopMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	else
+		createTask<TaskMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
 }
 
 void nanos6_create_loop(
@@ -152,10 +155,7 @@ void nanos6_create_loop(
 		num_deps *= numTasks;
 	}
 
-	nanos6_create_task(
-		task_info, task_invocation_info, task_label, args_block_size,
-		args_block_pointer, task_pointer, flags, num_deps
-	);
+	createTask<TaskloopMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
 
 	TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
 	assert(*task_pointer != nullptr);
@@ -165,6 +165,32 @@ void nanos6_create_loop(
 	taskloopMetadata->initialize(lower_bound, upper_bound, grainsize, chunksize);
 
 	Instrument::exitCreateTask();
+}
+
+void nanos6_create_iter(
+	nanos6_task_info_t *task_info,
+	nanos6_task_invocation_info_t *task_invocation_info,
+	char const *task_label,
+	size_t args_block_size,
+	/* OUT */ void **args_block_pointer,
+	/* OUT */ void **task_pointer,
+	size_t flags,
+	size_t num_deps,
+	size_t lower_bound,
+	size_t upper_bound,
+	size_t unroll
+) {
+	assert(task_info->implementation_count == 1);
+	assert(flags & nanos6_taskiter_task);
+
+	createTask<TaskiterMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
+
+	TaskiterMetadata *taskiterMetadata = (TaskiterMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
+	assert(*task_pointer != nullptr);
+	assert(taskiterMetadata != nullptr);
+	assert(taskiterMetadata->isTaskiter());
+
+	taskiterMetadata->initialize(lower_bound, upper_bound, unroll, task_info->iter_condition);
 }
 
 //! Public API function to submit tasks
@@ -184,6 +210,14 @@ void nanos6_submit_task(void *taskHandle)
 	nosv_task_t parentTask = nosv_self();
 	if (parentTask != nullptr) {
 		taskMetadata->setParent(parentTask);
+	}
+
+	TaskMetadata *parentTaskMetadata = taskMetadata->getParent();
+	const bool isTaskiterChild = (parentTaskMetadata != nullptr) && parentTaskMetadata->isTaskiter();
+	if (isTaskiterChild) {
+		TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTaskMetadata;
+		TaskiterGraph &graph = taskiter->getGraph();
+		graph.addTask(taskMetadata);
 	}
 
 	// Register the accesses of the task to check whether it is ready to be executed

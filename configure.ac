@@ -41,11 +41,8 @@ AX_CXX_COMPILE_STDCXX_11([], [mandatory])
 AX_PREPARE_CXX_FLAGS
 AC_CHECK_MAIN_WRAPPER_TYPE
 
-# Check for mercurium
-SSS_CHECK_MERCURIUM
-SSS_PUSH_NODES_MERCURIUM
-SSS_CHECK_MERCURIUM_ACCEPTS_EXTERNAL_INSTALLATION
-SSS_POP_NODES_MERCURIUM
+# Check for clang++
+SSS_CHECK_NODES_CLANG
 
 # Checks for libraries
 AX_BOOST_BASE([1.59], [], [ AC_MSG_ERROR([Boost library not found]) ])
@@ -57,11 +54,6 @@ AX_CHECK_OVNI
 AC_CHECK_HEADER_STDBOOL
 AC_TYPE_SIZE_T
 
-if test x"${ac_have_nodes_mercurium}" = x"yes" ; then
-	NODES_MCXX="${NODES_MCXX} -std=c++03"
-fi
-
-
 SSS_FIXUP_COMPILER_FLAGS
 AC_CHECK_EXTRACT_FIRST_COMPILER_FLAG([FALIGNED_NEW_FLAG], [-faligned-new])
 AC_CHECK_EXTRACT_FIRST_COMPILER_FLAG([MCMODEL_FLAGS], [-mcmodel=large -mcmodel=medium])
@@ -69,8 +61,8 @@ AC_CHECK_EXTRACT_FIRST_COMPILER_FLAG([MCMODEL_FLAGS], [-mcmodel=large -mcmodel=m
 AC_CONFIG_FILES([Makefile tests/Makefile])
 AC_OUTPUT
 
-if test x"${ac_have_nodes_mercurium}" = x"no" ; then
-	AC_MSG_WARN([the directive based tests will not be checked since there is no Mercurium compiler available])
+if test x"${ac_have_nodes_clang}" = x"no" ; then
+	AC_MSG_WARN([the directive based tests will not be checked since there is no Clang compiler available])
 fi
 
 echo ""
