@@ -54,10 +54,6 @@ commutative_test_SOURCES  = correctness/commutative/commutative.cpp
 commutative_test_CXXFLAGS = $(AM_CXXFLAGS)
 commutative_test_LDFLAGS  = $(AM_LDFLAGS)
 
-critical_test_SOURCES  = correctness/critical/critical.cpp
-critical_test_CXXFLAGS = $(AM_CXXFLAGS)
-critical_test_LDFLAGS  = $(AM_LDFLAGS)
-
 deadline_test_SOURCES  = correctness/deadline/deadline.cpp
 deadline_test_CXXFLAGS = $(AM_CXXFLAGS)
 deadline_test_LDFLAGS  = $(AM_LDFLAGS)
