@@ -30,11 +30,11 @@ public:
 		if0_flag,
 		taskloop_flag,
 		taskfor_flag,
-		taskiter_flag,
 		wait_flag,
 		preallocated_args_block_flag,
 		lint_verified_flag,
-		update_flag,
+		taskiter_flag,
+		taskiter_update_flag,
 		//! Flags added by the NODES runtime. Note that
 		//! these flags must be always declared after the
 		//! Mercurium flags

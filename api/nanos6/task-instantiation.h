@@ -18,7 +18,7 @@
 enum nanos6_task_execution_api_t { nanos6_task_execution_api = 1 };
 enum nanos6_task_constraints_api_t { nanos6_task_constraints_api = 1 };
 enum nanos6_task_info_contents_t { nanos6_task_info_contents = 4 };
-enum nanos6_instantiation_api_t { nanos6_instantiation_api = 5 };
+enum nanos6_instantiation_api_t { nanos6_instantiation_api = 6 };
 
 #ifdef __cplusplus
 extern "C" {
@@ -175,14 +175,14 @@ typedef enum {
 	nanos6_taskloop_task = (1 << 2),
 	//! Specifies that the task is really a taskfor
 	nanos6_taskfor_task = (1 << 3),
-	//! Specifies that the task is really a taskiter
-	nanos6_taskiter_task = (1 << 4),
 	//! Specifies that the task has the "wait" clause
-	nanos6_waiting_task = (1 << 5),
+	nanos6_waiting_task = (1 << 4),
 	//! Specifies that the args_block is preallocated from user side
-	nanos6_preallocated_args_block = (1 << 6),
+	nanos6_preallocated_args_block = (1 << 5),
 	//! Specifies that the task has been verified by the user, hence it doesn't need runtime linting
-	nanos6_verified_task = (1 << 7),
+	nanos6_verified_task = (1 << 6),
+	//! Specifies that the task is really a taskiter
+	nanos6_taskiter_task = (1 << 7),
 	//! Specifies that the task has the "update" clause
 	nanos6_update_task = (1 << 8)
 } nanos6_task_flag_t;
