@@ -186,7 +186,7 @@ public:
 		}
 	}
 
-	friend std::ostream & ::operator<<(std::ostream &o, DataAccessRegion const &region);
+	friend std::ostream & operator<<(std::ostream &o, DataAccessRegion const &region);
 };
 
 inline std::ostream & operator<<(std::ostream &o, const DataAccessRegion& region)

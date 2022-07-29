@@ -169,15 +169,19 @@ AC_DEFUN([_AX_BOOST_BASE_RUNDETECT],[
 
     AC_MSG_CHECKING([for boostlib >= $1 ($WANT_BOOST_VERSION)])
 
-    if test x"${BOOST_CPPFLAGS}" = x"/usr/include" \
-        || test x"${BOOST_CPPFLAGS}" = x"/usr/local/include" \
-        || test x"${BOOST_CPPFLAGS}" = x"/opt/include" \
-        || test x"${BOOST_CPPFLAGS}" = x"/opt/local/include" ;
-    then
-        BOOST_CPPFLAGS="-I${BOOST_CPPFLAGS}"
-    else
+#
+# NOTE: Commented this due to Boost producing unrelated warnings.
+#       Default to always using -isystem to avoid warnings
+#
+#    if test x"${BOOST_CPPFLAGS}" = x"/usr/include" \
+#        || test x"${BOOST_CPPFLAGS}" = x"/usr/local/include" \
+#        || test x"${BOOST_CPPFLAGS}" = x"/opt/include" \
+#        || test x"${BOOST_CPPFLAGS}" = x"/opt/local/include" ;
+#    then
+#        BOOST_CPPFLAGS="-I${BOOST_CPPFLAGS}"
+#    else
         BOOST_CPPFLAGS="-isystem${BOOST_CPPFLAGS}"
-    fi
+#    fi
 
     CPPFLAGS_SAVED="$CPPFLAGS"
     CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
