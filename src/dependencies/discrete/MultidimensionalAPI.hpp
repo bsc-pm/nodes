@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef MULTIDIMENSIONAL_API_HPP
@@ -141,11 +141,20 @@ static _AI_ void register_data_access(
 	_UU_ long currentDimSize, long currentDimStart, _UU_ long currentDimEnd,
 	TS... otherDimensions)
 {
-	size_t stride = getStride<>(otherDimensions...);
-	char *currentBaseAddress = (char *) baseAddress;
-	currentBaseAddress += currentDimStart * stride;
+	if (currentDimensionIsContinuous(otherDimensions...)) {
+		register_data_access_skip_next<ACCESS_TYPE, WEAK>(handler, symbolIndex, regionText, baseAddress,
+			currentDimSize  * getCurrentDimensionSize(otherDimensions...),
+			currentDimStart * getCurrentDimensionSize(otherDimensions...),
+			currentDimEnd   * getCurrentDimensionSize(otherDimensions...),
+			otherDimensions...
+		);
+	} else {
+		size_t stride = getStride<>(otherDimensions...);
+		char *currentBaseAddress = (char *) baseAddress;
+		currentBaseAddress += currentDimStart * stride;
 
-	register_data_access<ACCESS_TYPE, WEAK>(handler, symbolIndex, regionText, currentBaseAddress, otherDimensions...);
+		register_data_access<ACCESS_TYPE, WEAK>(handler, symbolIndex, regionText, currentBaseAddress, otherDimensions...);
+	}
 }
 
 
