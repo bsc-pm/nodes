@@ -26,6 +26,7 @@
 #include <nosv.h>
 
 #include "common/Containers.hpp"
+#include "common/EnvironmentVariable.hpp"
 #include "dependencies/DataAccessType.hpp"
 #include "dependencies/discrete/CPUDependencyData.hpp"
 #include "dependencies/discrete/DataAccess.hpp"
@@ -121,6 +122,9 @@ private:
 	Container::unordered_map<TaskiterGraphNode, graph_vertex_t> _tasksToVertices;
 
 	bool _processed;
+
+	static EnvironmentVariable<bool> _graphOptimizationEnabled;
+	static EnvironmentVariable<bool> _criticalPathTrackingEnabled;
 
 	// Creates edges from chain to node and inserts them into the graph
 	inline void createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain)
@@ -335,6 +339,8 @@ private:
 		}
 	};
 
+	void prioritizeCriticalPath();
+
 public:
 	TaskiterGraph() :
 		_currentUnroll(0),
@@ -454,52 +460,59 @@ public:
 	// the minimal graph which still mantains all the dependencies of the original one
 	void process()
 	{
-		graph_t processedGraph;
+		// Remove redundant edges
+		if (_graphOptimizationEnabled) {
+			graph_t processedGraph;
 
-		// Try to reduce the dependency graph
-		// This *must* be done on a DAG, because it uses its topological sorting, so
-		// we prevent cycles up to this point
-		Container::map<graph_vertex_t, graph_vertex_t> gToTr;
-		Container::vector<size_t> vertexMap(boost::num_vertices(_graph));
-		std::iota(vertexMap.begin(), vertexMap.end(), (size_t)0);
+			// Try to reduce the dependency graph
+			// This *must* be done on a DAG, because it uses its topological sorting, so
+			// we prevent cycles up to this point
+			Container::map<graph_vertex_t, graph_vertex_t> gToTr;
+			Container::vector<size_t> vertexMap(boost::num_vertices(_graph));
+			std::iota(vertexMap.begin(), vertexMap.end(), (size_t)0);
 
-		boost::transitive_reduction(_graph, processedGraph, boost::make_assoc_property_map(gToTr), vertexMap.data());
+			boost::transitive_reduction(_graph, processedGraph, boost::make_assoc_property_map(gToTr), vertexMap.data());
 
 
 #ifdef 	PRINT_TASKITER_GRAPH
-		{
-			std::ofstream dot("g.dot");
-			boost::write_graphviz(dot, _graph);
-		}
-		{
-			std::ofstream dot("tr.dot");
-			boost::write_graphviz(dot, processedGraph);
-		}
+			{
+				std::ofstream dot("g.dot");
+				boost::write_graphviz(dot, _graph);
+			}
+			{
+				std::ofstream dot("tr.dot");
+				boost::write_graphviz(dot, processedGraph);
+			}
 #endif
 
-		// Annoyingly, the transitive reduction doesn't transfer the properties
-		boost::property_map<graph_t, boost::vertex_name_t>::type nodemapOriginal = boost::get(boost::vertex_name_t(), _graph);
-		boost::property_map<graph_t, boost::vertex_name_t>::type nodemapProcessed = boost::get(boost::vertex_name_t(), processedGraph);
-		boost::property_map<graph_t, boost::edge_name_t>::type edgemapProcessed = boost::get(boost::edge_name_t(), processedGraph);
+			// Annoyingly, the transitive reduction doesn't transfer the properties
+			boost::property_map<graph_t, boost::vertex_name_t>::type nodemapOriginal = boost::get(boost::vertex_name_t(), _graph);
+			boost::property_map<graph_t, boost::vertex_name_t>::type nodemapProcessed = boost::get(boost::vertex_name_t(), processedGraph);
+			boost::property_map<graph_t, boost::edge_name_t>::type edgemapProcessed = boost::get(boost::edge_name_t(), processedGraph);
 
-		graph_t::vertex_iterator vi, vend;
-		for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
-			graph_vertex_t originalVertex = *vi;
-			TaskiterGraphNode node = boost::get(nodemapOriginal, originalVertex);
-			boost::put(nodemapProcessed, gToTr[originalVertex], node);
+			graph_t::vertex_iterator vi, vend;
+			for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
+				graph_vertex_t originalVertex = *vi;
+				TaskiterGraphNode node = boost::get(nodemapOriginal, originalVertex);
+				boost::put(nodemapProcessed, gToTr[originalVertex], node);
+			}
+
+			for (auto &it : _tasksToVertices) {
+				it.second = gToTr[it.second];
+			}
+
+			graph_t::edge_iterator ei, eend;
+			for (boost::tie(ei, eend) = boost::edges(processedGraph); ei != eend; ei++) {
+				graph_t::edge_descriptor e = *ei;
+				boost::put(edgemapProcessed, e, false);
+			}
+
+			_graph = processedGraph;
 		}
 
-		for (auto &it : _tasksToVertices) {
-			it.second = gToTr[it.second];
-		}
-
-		graph_t::edge_iterator ei, eend;
-		for (boost::tie(ei, eend) = boost::edges(processedGraph); ei != eend; ei++) {
-			graph_t::edge_descriptor e = *ei;
-			boost::put(edgemapProcessed, e, false);
-		}
-
-		_graph = processedGraph;
+		// Prioritize tasks in the critical path
+		if (_criticalPathTrackingEnabled.getValue())
+			prioritizeCriticalPath();
 
 		_processed = true;
 	}

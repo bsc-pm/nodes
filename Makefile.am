@@ -51,6 +51,7 @@ noinst_HEADERS = \
 	src/common/AtomicBitset.hpp \
 	src/common/Chrono.hpp \
 	src/common/Containers.hpp \
+	src/common/EnvironmentVariable.hpp \
 	src/common/ErrorHandler.hpp \
 	src/common/MathSupport.hpp \
 	src/common/PaddedSpinLock.hpp \
@@ -58,6 +59,7 @@ noinst_HEADERS = \
 	src/common/Padding.hpp \
 	src/common/SpinLock.hpp \
 	src/common/SpinWait.hpp \
+	src/common/StringSupport.hpp \
 	src/common/TicketSpinLock.hpp \
 	src/common/UserMutex.hpp \
 	src/dependencies/DataAccessBase.hpp \
@@ -109,6 +111,7 @@ common_sources = \
 	src/dependencies/discrete/RegisterDependencies.cpp \
 	src/dependencies/discrete/ReleaseDirective.cpp \
 	src/dependencies/discrete/devices/HostReductionStorage.cpp \
+	src/dependencies/discrete/taskiter/TaskiterGraph.cpp \
 	src/hardware/HardwareInfo.cpp \
 	src/system/DebugAPI.cpp \
 	src/system/EventsAPI.cpp \

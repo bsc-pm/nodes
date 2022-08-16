@@ -485,6 +485,16 @@ public:
 		return (--_iterationCount > 1);
 	}
 
+	inline void setPriority(int priority)
+	{
+		nosv_set_task_priority(getTaskHandle(), priority);
+	}
+
+	inline int getPriority()
+	{
+		return nosv_get_task_priority(getTaskHandle());
+	}
+
 	virtual ~TaskMetadata() {}
 };
 
