@@ -8,6 +8,7 @@
 #define TASK_INFO_HPP
 
 #include <cassert>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -52,6 +53,8 @@ private:
 		assert(taskInfo != nullptr);
 		assert(taskInfo->implementation_count == 1);
 		assert(taskInfo->implementations != nullptr);
+
+		std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
 
 		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 		if (taskMetadata->hasCode()) {
@@ -100,6 +103,9 @@ private:
 				MemoryAllocator::free(translationTable, tableSize);
 			}
 		}
+
+		std::chrono::time_point<std::chrono::steady_clock> end = std::chrono::steady_clock::now();
+		taskMetadata->setElapsedTime(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
 
 		if (!taskMetadata->isIf0Inlined()) {
 			assert(taskMetadata->getParent() != nullptr);

@@ -473,7 +473,6 @@ public:
 
 			boost::transitive_reduction(_graph, processedGraph, boost::make_assoc_property_map(gToTr), vertexMap.data());
 
-
 #ifdef 	PRINT_TASKITER_GRAPH
 			{
 				std::ofstream dot("g.dot");

@@ -94,6 +94,9 @@ private:
 	//! Iteration count
 	size_t _iterationCount;
 
+	//! Elapsed time
+	uint64_t _elapsedTime;
+
 protected:
 
 	//! A pointer to the original task that wraps this metadata
@@ -129,6 +132,7 @@ public:
 		_locallyAllocated(locallyAllocated),
 		_originalPredecessorCount(-1),
 		_iterationCount(0),
+		_elapsedTime(0),
 		_task(taskPointer),
 		_dataAccesses(taskAccessInfo),
 		_flags(flags)
@@ -490,9 +494,19 @@ public:
 		nosv_set_task_priority(getTaskHandle(), priority);
 	}
 
-	inline int getPriority()
+	inline int getPriority() const
 	{
 		return nosv_get_task_priority(getTaskHandle());
+	}
+
+	inline void setElapsedTime(uint64_t elapsed)
+	{
+		_elapsedTime = elapsed;
+	}
+
+	inline uint64_t getElapsedTime() const
+	{
+		return _elapsedTime;
 	}
 
 	virtual ~TaskMetadata() {}

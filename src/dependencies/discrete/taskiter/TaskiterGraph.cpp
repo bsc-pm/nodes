@@ -13,9 +13,6 @@ EnvironmentVariable<bool> TaskiterGraph::_criticalPathTrackingEnabled("NODES_ITE
 
 void TaskiterGraph::prioritizeCriticalPath()
 {
-	if (!_criticalPathTrackingEnabled.getValue())
-		return;
-
 	// Analyze the graph to figure out the critical task path.
 	// The first version just assumes every task takes one second.
 	// Then, we will add time tracking and take that into account.
@@ -39,13 +36,18 @@ void TaskiterGraph::prioritizeCriticalPath()
 				maxPriority = successorPriority;
 		}
 
-		maxPriority++;
-		priorityMap[vertex] = maxPriority;
-
-		// Now assign it to the node if it is a task
 		TaskiterGraphNode node = boost::get(nodemap, vertex);
 		TaskMetadata **task = boost::get<TaskMetadata *>(&node);
-		if (task)
+
+		if (task) {
+			// This is adding uint64_t to the int maxPriority, which has a potential to overflow
+			// when iterations are very large
+			maxPriority += (*task)->getElapsedTime();
 			(*task)->setPriority(maxPriority);
+		} else {
+			maxPriority++;
+		}
+
+		priorityMap[vertex] = maxPriority;
 	}
 }
