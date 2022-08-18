@@ -64,6 +64,7 @@ struct TaskiterGraphAccessChain {
 	std::unique_ptr<access_chain_t> _lastChain;
 	std::unique_ptr<access_chain_t> _prevChain;
 	access_chain_t _firstChain;
+	access_chain_t _secondChain;
 	access_chain_t _reductionChain;
 
 	ReductionInfo *_reductionInfo;
@@ -71,15 +72,14 @@ struct TaskiterGraphAccessChain {
 	DataAccessType _lastChainType;
 	DataAccessType _prevChainType;
 	DataAccessType _firstChainType;
-
-	bool _inFirst;
+	DataAccessType _secondChainType;
 
 	TaskiterGraphAccessChain() :
 		_reductionInfo(nullptr),
 		_lastChainType(WRITE_ACCESS_TYPE),
 		_prevChainType(WRITE_ACCESS_TYPE),
 		_firstChainType(WRITE_ACCESS_TYPE),
-		_inFirst(true)
+		_secondChainType(WRITE_ACCESS_TYPE)
 	{
 		// Unique ptrs are automatically destructed in ~TaskiterGraphAccessChain()
 		_lastChain = std::make_unique<Container::vector<TaskiterGraphNode>>();
@@ -221,12 +221,30 @@ private:
 	{
 		// Close every dependency chain by simulating that we are registering the first accesses again
 		VisitorSetDegreeCross visitor;
-
 		EdgeProperty prop(true);
 
-		// TODO Is this wrong for a IN -> OUT -> IN chain for the (chain._firstChainType != chain._lastChainType) condition?
 		for (std::pair<const access_address_t, TaskiterGraphAccessChain> &it : _bottomMap) {
 			TaskiterGraphAccessChain &chain = it.second;
+
+			// If there is no first/second chain, fill them
+			if (chain._firstChain.empty()) {
+				assert(chain._prevChain->empty());
+				assert(!chain._lastChain->empty());
+				chain._firstChain = *chain._lastChain;
+				chain._firstChainType = chain._lastChainType;
+			} else if (chain._secondChain.empty()) {
+				assert(!chain._lastChain->empty());
+				chain._secondChain = *chain._lastChain;
+				chain._secondChainType = chain._lastChainType;
+			}
+
+			// The idea is to "simulate" the first accesses being registered again.
+			// There is a special case, where the first and last accesses are IN or CONCURRENT (but are equal)
+			// In that case, we have to try and match them with the first non-IN and the last non-IN.
+			// Note that if chain._secondChain.empty(), the first and last chains are the same, and in the case for
+			// IN / CONCURRENT, this means no dependencies.
+
+			// TODO: Does this correctly work with reductions?
 
 			if (chain._firstChainType != chain._lastChainType ||
 				chain._firstChainType == WRITE_ACCESS_TYPE ||
@@ -238,18 +256,33 @@ private:
 						boost::apply_visitor(visitor, task);
 					}
 				}
+			} else if (!chain._secondChain.empty()) {
+				assert(chain._firstChainType == READ_ACCESS_TYPE || chain._firstChainType == CONCURRENT_ACCESS_TYPE);
+				assert(chain._firstChainType == chain._lastChainType);
+
+				// From the last chain to the second one
+				for (TaskiterGraphNode task : chain._secondChain) {
+					for (TaskiterGraphNode from : *(chain._lastChain)) {
+						boost::add_edge(_tasksToVertices[from], _tasksToVertices[task], prop, _graph);
+						boost::apply_visitor(visitor, task);
+					}
+				}
+
+				// Now from the previous to the first
+				for (TaskiterGraphNode task : chain._firstChain) {
+					for (TaskiterGraphNode from : *(chain._prevChain)) {
+						boost::add_edge(_tasksToVertices[from], _tasksToVertices[task], prop, _graph);
+						boost::apply_visitor(visitor, task);
+					}
+				}
 			}
 		}
 	}
 
 	// Adds a task to a specific dependency chain
-	inline void addTaskToChain(TaskMetadata *task, DataAccessType type, TaskiterGraphAccessChain &chain)
+	inline void addTaskToChain(TaskMetadata *task, TaskiterGraphAccessChain &chain)
 	{
 		chain._lastChain->push_back(task);
-		if (chain._inFirst) {
-			chain._firstChainType = type;
-			chain._firstChain.push_back(task);
-		}
 	}
 
 	// Marks the end of reduction accesses in a grain, placing the relevant edges
@@ -273,6 +306,25 @@ private:
 		chain._lastChainType = REDUCTION_ACCESS_TYPE;
 		chain._lastChain->push_back(chain._reductionInfo);
 		chain._reductionInfo = nullptr;
+	}
+
+	// Swap the last and previous chains
+	inline void swapChains(TaskiterGraphAccessChain &chain)
+	{
+		std::swap(chain._prevChain, chain._lastChain);
+		chain._prevChainType = chain._lastChainType;
+		chain._lastChain->clear();
+
+		// If the previous chain was not empty, maybe it was the first or the second
+		if (!chain._prevChain->empty()) {
+			if (chain._firstChain.empty()) {
+				chain._firstChain = *chain._prevChain;
+				chain._firstChainType = chain._prevChainType;
+			} else if (chain._secondChain.empty()) {
+				chain._secondChain = *chain._prevChain;
+				chain._secondChainType = chain._prevChainType;
+			}
+		}
 	}
 
 	class VisitorSetDegreeCross : public boost::static_visitor<> {
@@ -439,6 +491,13 @@ public:
 			boost::apply_visitor(crossIterationVisitor, edge._to);
 		}
 
+// #if PRINT_TASKITER_GRAPH
+// 		{
+// 			std::ofstream dot("g.dot");
+// 			boost::write_graphviz(dot, _graph);
+// 		}
+// #endif
+
 		// Now, decrease predecessors for every task
 		forEach([](TaskMetadata *t) {
 			if (t->decreasePredecessors()) {
@@ -473,16 +532,16 @@ public:
 
 			boost::transitive_reduction(_graph, processedGraph, boost::make_assoc_property_map(gToTr), vertexMap.data());
 
-#ifdef 	PRINT_TASKITER_GRAPH
-			{
-				std::ofstream dot("g.dot");
-				boost::write_graphviz(dot, _graph);
-			}
-			{
-				std::ofstream dot("tr.dot");
-				boost::write_graphviz(dot, processedGraph);
-			}
-#endif
+// #ifdef 	PRINT_TASKITER_GRAPH
+// 			{
+// 				std::ofstream dot("g.dot");
+// 				boost::write_graphviz(dot, _graph);
+// 			}
+// 			{
+// 				std::ofstream dot("tr.dot");
+// 				boost::write_graphviz(dot, processedGraph);
+// 			}
+// #endif
 
 			// Annoyingly, the transitive reduction doesn't transfer the properties
 			boost::property_map<graph_t, boost::vertex_name_t>::type nodemapOriginal = boost::get(boost::vertex_name_t(), _graph);
@@ -552,17 +611,11 @@ public:
 			}
 
 			if (type != chain._lastChainType) {
-				// chain._prevChainType = chain._lastChainType;
-				std::swap(chain._lastChain, chain._prevChain);
-				chain._lastChain->clear();
+				swapChains(chain);
 				chain._lastChainType = type;
-
-				if (!chain._prevChain->empty()) {
-					chain._inFirst = false;
-				}
 			}
 
-			addTaskToChain(task, type, chain);
+			addTaskToChain(task, chain);
 			createEdges(task, *(chain._prevChain));
 		} else if (type == WRITE_ACCESS_TYPE || type == READWRITE_ACCESS_TYPE || type == COMMUTATIVE_ACCESS_TYPE) {
 			if (chain._reductionInfo) {
@@ -570,16 +623,15 @@ public:
 				// Close the reduction
 			}
 
+			swapChains(chain);
+			chain._lastChainType = WRITE_ACCESS_TYPE;
+
 			// TODO: Handle commutative well
-			if (!chain._lastChain->empty()) {
-				createEdges(task, *(chain._lastChain));
-				chain._lastChainType = WRITE_ACCESS_TYPE;
-				chain._lastChain->clear();
-				chain._inFirst = false;
+			if (!chain._prevChain->empty()) {
+				createEdges(task, *(chain._prevChain));
 			}
 
-			addTaskToChain(task, type, chain);
-			chain._inFirst = false;
+			addTaskToChain(task, chain);
 		} else if (type == REDUCTION_ACCESS_TYPE) {
 			ReductionInfo *reductionInfo = access->getReductionInfo();
 			assert(reductionInfo != nullptr);
