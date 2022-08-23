@@ -4,7 +4,9 @@
 	Copyright (C) 2022 Barcelona Supercomputing Center (BSC)
 */
 
+#include <algorithm>
 #include <boost/graph/topological_sort.hpp>
+#include <deque>
 #include <unordered_set>
 
 #include "TaskiterGraph.hpp"
@@ -12,6 +14,7 @@
 EnvironmentVariable<std::string> TaskiterGraph::_graphOptimization("NODES_ITER_OPTIMIZE", "basic");
 EnvironmentVariable<bool> TaskiterGraph::_criticalPathTrackingEnabled("NODES_ITER_TRACK_CRITICAL", true);
 EnvironmentVariable<bool> TaskiterGraph::_printGraphStatistics("NODES_ITER_PRINT_STATISTICS", false);
+EnvironmentVariable<bool> TaskiterGraph::_tentativeNumaScheduling("NOSV_ITER_NUMA", true);
 // EnvironmentVariable<bool> TaskiterGraph::_criticalPathTrackingEnabled("NODES_ITER_TRACK_CRITICAL", true);
 
 void TaskiterGraph::prioritizeCriticalPath()
@@ -117,4 +120,158 @@ void TaskiterGraph::basicReduction()
 		std::pair<EdgeSet::iterator, bool> element = edgeSet.insert(e);
 		return !element.second;
 	}, _graph);
+}
+
+// static inline std::vector<int> kernighanLinBiPartition(std::vector<graph_vertex_t> &subgraph, std::vector<int> &assignedPartitions, int partitionTags[2])
+// {
+// 	int vertices = subgraph.size();
+
+// 	// Start with a balanced partition
+// 	for (int i = 0; i < vertices; ++i)
+// 		assignedPartitions[subgraph[i]] = partitionTags[(i >= vertices/2)];
+
+// 	std::vector<size_t> d(vertices);
+// 	std::vector<size_t> a(vertices);
+// 	std::vector<size_t> b(vertices);
+
+// 	size_t g_max;
+
+// 	do {
+// 		for (int i = 0; i < vertices; ++i) {
+// 			size_t localE = 0;
+// 			size_t localI = 0;
+// 			graph_vertex_t vertex = subgraph[i];
+// 			int assignedPartition = assignedPartitions[vertex];
+
+// 			for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei)
+// 			{
+// 				graph_vertex_t other = boost::target(*ei);
+// 				if (assignedPartitions[other] == assignedPartition)
+// 					localI++;
+// 				else
+// 					localE++;
+// 			}
+// 		}
+
+// 	} while (g_max > 0);
+
+// 	return assignedPartitions;
+// }
+
+// static inline void kernighanLin(int partitions)
+// {
+// 	int vertices = boost::num_vertices(_graph);
+
+// 	// Save where each vertex is assigned
+// 	std::vector<int> assignedPartitions(vertices);
+
+// 	// Start with a balanced partition
+// 	for (int i = 0; i < vertices; ++i)
+// 		assignedPartitions[i] = (i >= vertices/2);
+
+// 	// Now,
+// }
+
+
+void TaskiterGraph::localityScheduling()
+{
+	// Simulate AMD-Rome with L3 partitioned: total of 16 L3 complexes
+	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
+	int vertices = boost::num_vertices(_graph);
+	int clusters = 16;
+	int slotsPerCluster = 4;
+	int initialPriority = vertices;
+
+	std::vector<uint64_t> coreDeadlines(clusters * slotsPerCluster, 0);
+	std::vector<int> predecessors(vertices);
+	std::vector<TaskMetadata *> assignedTasks(clusters * slotsPerCluster, nullptr);
+	std::deque<graph_vertex_t> readyTasks;
+
+	// Initialize precedessors
+	graph_t::vertex_iterator vi, vend;
+	for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
+		graph_vertex_t v = *vi;
+		predecessors[v] = boost::in_degree(v, _graph);
+		if (!predecessors[v])
+			readyTasks.push_back(v);
+	}
+
+	assert(!readyTasks.empty() || !vertices);
+
+	// Well-defined number of iterations
+	for (int i = 0; i < vertices; ++i) {
+		std::vector<uint64_t>::iterator earliestCore = std::min_element(coreDeadlines.begin(), coreDeadlines.end());
+
+		// Find best candidate task for core
+		int coreIdx = std::distance(coreDeadlines.begin(), earliestCore);
+		int clusterIdx = coreIdx / slotsPerCluster;
+
+		// Map current accesses in cluster
+		// Take into account previously assigned tasks as well, for data reuse
+		std::unordered_map<void *, int> accessCount;
+		int total = 0;
+		for (int j = 0; j < slotsPerCluster; ++j) {
+			TaskMetadata *task = assignedTasks[clusterIdx * slotsPerCluster + j];
+			if (task) {
+				task->getTaskDataAccesses().forAll([&accessCount, &total](void *address, DataAccess *) -> bool {
+					accessCount[address]++;
+					total++;
+					return true;
+				});
+			}
+		}
+
+		TaskMetadata *bestSuccessor = nullptr;
+		std::deque<graph_vertex_t>::iterator bestSuccessorIt;
+		int matches = -1;
+
+		for (std::deque<graph_vertex_t>::iterator vIterator = readyTasks.begin(); vIterator != readyTasks.end(); ) {
+			graph_vertex_t v = *vIterator;
+			TaskiterGraphNode node = boost::get(nodemap, v);
+			TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+
+			if (!task) {
+				// Node is a ReductionInfo
+				// "Release" accesses
+				assert(false);
+				vIterator = readyTasks.erase(vIterator);
+			} else {
+				// Calculate score
+				int score = 0;
+				(*task)->getTaskDataAccesses().forAll([&accessCount, &score](void *address, DataAccess *) -> bool {
+					score += accessCount[address];
+					return true;
+				});
+
+				if (score > matches) {
+					matches = score;
+					bestSuccessor = *task;
+					bestSuccessorIt = vIterator;
+					if (score == total)
+						break;
+				}
+
+				vIterator++;
+			}
+		}
+
+		assert(bestSuccessor);
+		assignedTasks[coreIdx] = bestSuccessor;
+		coreDeadlines[coreIdx] += bestSuccessor->getElapsedTime();
+		bestSuccessor->setAffinity(coreIdx, NOSV_AFFINITY_LEVEL_CPU, NOSV_AFFINITY_TYPE_PREFERRED);
+		bestSuccessor->setPriority(initialPriority--);
+		graph_vertex_t v = *bestSuccessorIt;
+		readyTasks.erase(bestSuccessorIt);
+
+		// Now, "release" deps
+		graph_t::out_edge_iterator ei, eend;
+		for (boost::tie(ei, eend) = boost::out_edges(v, _graph); ei != eend; ei++) {
+			graph_vertex_t target = boost::target(*ei, _graph);
+			int remaining = --predecessors[target];
+			assert(remaining >= 0);
+
+			if (remaining == 0)
+				readyTasks.push_back(target);
+		}
+	}
 }

@@ -12,6 +12,7 @@
 #include <cassert>
 
 #include <nosv.h>
+#include <nosv/affinity.h>
 
 #include "dependencies/discrete/TaskDataAccesses.hpp"
 
@@ -507,6 +508,12 @@ public:
 	inline uint64_t getElapsedTime() const
 	{
 		return _elapsedTime;
+	}
+
+	inline void setAffinity(uint32_t index, nosv_affinity_level_t level, nosv_affinity_type_t type)
+	{
+		nosv_affinity_t affinity = nosv_affinity_get(index, level, type);
+		nosv_set_task_affinity(getTaskHandle(), &affinity);
 	}
 
 	virtual ~TaskMetadata() {}
