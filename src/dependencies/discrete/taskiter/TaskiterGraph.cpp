@@ -258,7 +258,7 @@ void TaskiterGraph::localityScheduling()
 		assert(bestSuccessor);
 		assignedTasks[coreIdx] = bestSuccessor;
 		coreDeadlines[coreIdx] += bestSuccessor->getElapsedTime();
-		bestSuccessor->setAffinity(coreIdx, NOSV_AFFINITY_LEVEL_CPU, NOSV_AFFINITY_TYPE_PREFERRED);
+		bestSuccessor->setAffinity(coreIdx / slotsPerCluster, NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
 		bestSuccessor->setPriority(initialPriority--);
 		graph_vertex_t v = *bestSuccessorIt;
 		readyTasks.erase(bestSuccessorIt);
