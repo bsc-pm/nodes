@@ -255,6 +255,8 @@ void TaskiterGraph::localityScheduling()
 			}
 		}
 
+		TaskMetadata *oldTask = assignedTasks[coreIdx];
+
 		assert(bestSuccessor);
 		assignedTasks[coreIdx] = bestSuccessor;
 		coreDeadlines[coreIdx] += bestSuccessor->getElapsedTime();
@@ -263,15 +265,19 @@ void TaskiterGraph::localityScheduling()
 		graph_vertex_t v = *bestSuccessorIt;
 		readyTasks.erase(bestSuccessorIt);
 
-		// Now, "release" deps
-		graph_t::out_edge_iterator ei, eend;
-		for (boost::tie(ei, eend) = boost::out_edges(v, _graph); ei != eend; ei++) {
-			graph_vertex_t target = boost::target(*ei, _graph);
-			int remaining = --predecessors[target];
-			assert(remaining >= 0);
 
-			if (remaining == 0)
-				readyTasks.push_back(target);
+		if (oldTask) {
+			// Now, "release" deps
+			graph_vertex_t v = _tasksToVertices[oldTask];
+			graph_t::out_edge_iterator ei, eend;
+			for (boost::tie(ei, eend) = boost::out_edges(v, _graph); ei != eend; ei++) {
+				graph_vertex_t target = boost::target(*ei, _graph);
+				int remaining = --predecessors[target];
+				assert(remaining >= 0);
+
+				if (remaining == 0)
+					readyTasks.push_back(target);
+			}
 		}
 	}
 }
