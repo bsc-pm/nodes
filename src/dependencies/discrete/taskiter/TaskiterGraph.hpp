@@ -126,7 +126,7 @@ private:
 	static EnvironmentVariable<std::string> _graphOptimization;
 	static EnvironmentVariable<bool> _criticalPathTrackingEnabled;
 	static EnvironmentVariable<bool> _printGraphStatistics;
-	static EnvironmentVariable<bool> _tentativeNumaScheduling;
+	static EnvironmentVariable<std::string> _tentativeNumaScheduling;
 
 	// Creates edges from chain to node and inserts them into the graph
 	inline void createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain)
@@ -400,6 +400,8 @@ private:
 	void transitiveReduction();
 	void basicReduction();
 	void localityScheduling();
+	void localitySchedulingBitset();
+	void localitySchedulingSimhash();
 
 public:
 	TaskiterGraph() :
@@ -530,9 +532,12 @@ public:
 		if (_printGraphStatistics.getValue())
 			std::cerr << "Edges before reduction: " << boost::num_edges(_graph) << std::endl;
 
-		if (_tentativeNumaScheduling) {
+		if (_tentativeNumaScheduling.getValue() == "naive")
 			localityScheduling();
-		}
+		else if (_tentativeNumaScheduling.getValue() == "bitset")
+			localitySchedulingBitset();
+		else if (_tentativeNumaScheduling.getValue() == "simhash")
+			localitySchedulingSimhash();
 
 		// Remove redundant edges
 		if (_graphOptimization.getValue() == "transitive")

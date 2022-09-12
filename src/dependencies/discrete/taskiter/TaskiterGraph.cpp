@@ -9,12 +9,13 @@
 #include <deque>
 #include <unordered_set>
 
+#include "common/MathSupport.hpp"
 #include "TaskiterGraph.hpp"
 
 EnvironmentVariable<std::string> TaskiterGraph::_graphOptimization("NODES_ITER_OPTIMIZE", "basic");
 EnvironmentVariable<bool> TaskiterGraph::_criticalPathTrackingEnabled("NODES_ITER_TRACK_CRITICAL", true);
 EnvironmentVariable<bool> TaskiterGraph::_printGraphStatistics("NODES_ITER_PRINT_STATISTICS", false);
-EnvironmentVariable<bool> TaskiterGraph::_tentativeNumaScheduling("NOSV_ITER_NUMA", true);
+EnvironmentVariable<std::string> TaskiterGraph::_tentativeNumaScheduling("NODES_ITER_NUMA", "naive");
 // EnvironmentVariable<bool> TaskiterGraph::_criticalPathTrackingEnabled("NODES_ITER_TRACK_CRITICAL", true);
 
 void TaskiterGraph::prioritizeCriticalPath()
@@ -178,8 +179,8 @@ void TaskiterGraph::localityScheduling()
 	// Simulate AMD-Rome with L3 partitioned: total of 16 L3 complexes
 	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
 	int vertices = boost::num_vertices(_graph);
-	int clusters = 16;
-	int slotsPerCluster = 4;
+	int clusters = 2;
+	int slotsPerCluster = 24;
 	int initialPriority = vertices;
 
 	std::vector<uint64_t> coreDeadlines(clusters * slotsPerCluster, 0);
@@ -256,16 +257,23 @@ void TaskiterGraph::localityScheduling()
 		}
 
 		TaskMetadata *oldTask = assignedTasks[coreIdx];
+		bool noSuccessor = false;
 
-		assert(bestSuccessor);
-		assignedTasks[coreIdx] = bestSuccessor;
-		coreDeadlines[coreIdx] += bestSuccessor->getElapsedTime();
-		bestSuccessor->setAffinity(coreIdx / slotsPerCluster, NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
-		bestSuccessor->setPriority(initialPriority--);
-		graph_vertex_t v = *bestSuccessorIt;
-		readyTasks.erase(bestSuccessorIt);
+		// There may not be a successor, in a case where there are not enough tasks to feed every core
+		if (bestSuccessor) {
+			assignedTasks[coreIdx] = bestSuccessor;
+			coreDeadlines[coreIdx] += bestSuccessor->getElapsedTime();
+			bestSuccessor->setAffinity(coreIdx / slotsPerCluster, NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+			bestSuccessor->setPriority(initialPriority--);
+			graph_vertex_t v = *bestSuccessorIt;
+			readyTasks.erase(bestSuccessorIt);
+		} else {
+			assignedTasks[coreIdx] = nullptr;
+			noSuccessor = true;
+			// TODO In this case, not all tasks will be scheduled
+		}
 
-
+		bool foundTask = false;
 		if (oldTask) {
 			// Now, "release" deps
 			graph_vertex_t v = _tasksToVertices[oldTask];
@@ -275,9 +283,151 @@ void TaskiterGraph::localityScheduling()
 				int remaining = --predecessors[target];
 				assert(remaining >= 0);
 
-				if (remaining == 0)
+				if (remaining == 0) {
 					readyTasks.push_back(target);
+					foundTask = true;
+				}
 			}
 		}
+
+		if (noSuccessor && !foundTask) {
+			// Push back the deadline of the current core so other tasks can finish as well
+			coreDeadlines[coreIdx] = UINT64_MAX;
+			uint64_t earliestDeadline = *std::min_element(coreDeadlines.begin(), coreDeadlines.end());
+			coreDeadlines[coreIdx] = earliestDeadline + 1;
+		}
 	}
+}
+
+void TaskiterGraph::localitySchedulingBitset()
+{
+	const int differentAddresses = _bottomMap.size();
+	const int bitsetWords = MathSupport::ceil(differentAddresses, sizeof(uint32_t) * 8);
+	const int vertices = boost::num_vertices(_graph);
+	const int clusters = 2;
+	const int slotsPerCluster = 24;
+	const graph_vertex_t NO_TASK = (graph_vertex_t)-1;
+	int initialPriority = vertices;
+
+	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
+
+	std::unique_ptr<uint32_t[]> bitset = std::make_unique<uint32_t[]>(bitsetWords * vertices);
+	std::unique_ptr<uint32_t[]> tmpBitset = std::make_unique<uint32_t[]>(bitsetWords);
+	// uint32_t *bitset = new uint32_t[bitsetWords * vertices];
+	// uint32_t *tmpBitset = new uint32_t[bitsetWords];
+
+	std::vector<uint64_t> coreDeadlines(clusters * slotsPerCluster, 0);
+	std::vector<int> predecessors(vertices);
+	std::vector<graph_vertex_t> assignedTasks(clusters * slotsPerCluster, NO_TASK);
+	std::deque<graph_vertex_t> readyTasks;
+
+	graph_t::vertex_iterator vi, vend;
+	for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
+		graph_vertex_t v = *vi;
+		TaskiterGraphNode node = boost::get(nodemap, v);
+		TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+
+		if (task) {
+			(*task)->getTaskDataAccesses().forAll([&bitset, &v, bitsetWords, this](void *address, DataAccess *) -> bool {
+				Container::unordered_map<access_address_t, TaskiterGraphAccessChain>::iterator mapIterator = _bottomMap.find(address);
+				assert(mapIterator != _bottomMap.end());
+				int index = std::distance(_bottomMap.begin(), mapIterator);
+
+				uint32_t &currentBitsetLocation = bitset[v * bitsetWords + index / 32];
+				int bit = index % 32;
+				currentBitsetLocation |= (1 << bit);
+
+				return true;
+			});
+		}
+
+		predecessors[v] = boost::in_degree(v, _graph);
+		if (!predecessors[v])
+			readyTasks.push_back(v);
+	}
+
+	assert(!readyTasks.empty() || !vertices);
+	int emptyCPUs = clusters * slotsPerCluster;
+	int scheduledTasks = 0;
+	uint64_t now = 0;
+
+	while (scheduledTasks < vertices) {
+		while (emptyCPUs && !readyTasks.empty()) {
+			int cpu = std::distance(assignedTasks.begin(), std::find(assignedTasks.begin(), assignedTasks.end(), NO_TASK));
+			int clusterIdx = cpu / slotsPerCluster;
+
+			// Check assigned tasks in cluster
+			for (int i = 0; i < bitsetWords; ++i)
+				tmpBitset[i] = 0;
+
+			for (int j = 0; j < slotsPerCluster; ++j) {
+				graph_vertex_t task = assignedTasks[clusterIdx * slotsPerCluster + j];
+
+				if (task != NO_TASK) {
+					for (int i = 0; i < bitsetWords; ++i)
+						tmpBitset[i] |= bitset[task * bitsetWords + i];
+				}
+			}
+
+			TaskMetadata *bestSuccessor = nullptr;
+			std::deque<graph_vertex_t>::iterator bestSuccessorIt;
+			int matches = -1;
+
+			for (std::deque<graph_vertex_t>::iterator vIterator = readyTasks.begin(); vIterator != readyTasks.end(); vIterator++) {
+				graph_vertex_t v = *vIterator;
+				TaskiterGraphNode node = boost::get(nodemap, v);
+				TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+
+				int score = 0;
+				for (int i = 0; i < bitsetWords; ++i)
+					score += __builtin_popcountl(tmpBitset[i] & bitset[v * bitsetWords + i]);
+
+				if (score > matches) {
+					matches = score;
+					bestSuccessor = *task;
+					bestSuccessorIt = vIterator;
+				}
+			}
+
+			assignedTasks[cpu] = *bestSuccessorIt;
+			coreDeadlines[cpu] += now + bestSuccessor->getElapsedTime();
+			bestSuccessor->setAffinity(clusterIdx, NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+			bestSuccessor->setPriority(initialPriority--);
+			readyTasks.erase(bestSuccessorIt);
+			scheduledTasks++;
+			emptyCPUs--;
+		}
+
+		do {
+			// Find next task to finish
+			std::vector<uint64_t>::iterator earliestCore = std::min_element(coreDeadlines.begin(), coreDeadlines.end());
+			int coreIdx = std::distance(coreDeadlines.begin(), earliestCore);
+
+			now = *earliestCore;
+			*earliestCore = UINT64_MAX;
+			graph_vertex_t v = assignedTasks[coreIdx];
+			assignedTasks[coreIdx] = NO_TASK;
+			emptyCPUs++;
+
+			// Now, "release" deps
+			graph_t::out_edge_iterator ei, eend;
+			for (boost::tie(ei, eend) = boost::out_edges(v, _graph); ei != eend; ei++) {
+				graph_vertex_t target = boost::target(*ei, _graph);
+				int remaining = --predecessors[target];
+				assert(remaining >= 0);
+
+				if (remaining == 0) {
+					readyTasks.push_back(target);
+				}
+			}
+		} while (readyTasks.empty() && scheduledTasks < vertices);
+	}
+
+	// delete[] bitset;
+	// delete[] tmpBitset;
+}
+
+void TaskiterGraph::localitySchedulingSimhash()
+{
+
 }
