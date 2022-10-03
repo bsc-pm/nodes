@@ -5,6 +5,7 @@
 */
 
 #include <nosv.h>
+#include <nosv/affinity.h>
 
 #include <nodes/bootstrap.h>
 #include <nodes/taskwait.h>
@@ -26,7 +27,13 @@ void nanos6_init(void)
 
 	// Create a dummy type and task to attach/wrap the "main" process
 	nosv_task_t task;
-	nosv_attach(&task, NULL, "main task", NOSV_ATTACH_NONE);
+
+	// Keep the default affinity, but make it strict for NUMA reasons
+	nosv_affinity_t defaultAffinity = nosv_get_default_affinity();
+	if (defaultAffinity.level)
+		defaultAffinity.type = NOSV_AFFINITY_TYPE_STRICT;
+
+	nosv_attach(&task, &defaultAffinity, "main task", NOSV_ATTACH_NONE);
 
 	// Gather hardware info
 	HardwareInfo::initialize();
