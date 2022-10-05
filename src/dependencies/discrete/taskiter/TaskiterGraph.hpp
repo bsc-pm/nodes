@@ -31,6 +31,8 @@
 #include "dependencies/discrete/CPUDependencyData.hpp"
 #include "dependencies/discrete/DataAccess.hpp"
 #include "dependencies/discrete/ReductionInfo.hpp"
+#include "system/TaskFinalization.hpp"
+#include "system/SpawnFunction.hpp"
 #include "tasks/TaskMetadata.hpp"
 
 // A node of the TaskiterGraph may contain either a Task or a ReductionInfo
@@ -119,6 +121,7 @@ private:
 	Container::unordered_map<access_address_t, TaskiterGraphAccessChain> _bottomMap;
 
 	graph_t _graph;
+	graph_t _graphCpy;
 	Container::unordered_map<TaskiterGraphNode, graph_vertex_t> _tasksToVertices;
 
 	bool _processed;
@@ -529,28 +532,42 @@ public:
 	// the minimal graph which still mantains all the dependencies of the original one
 	void process()
 	{
-		if (_printGraphStatistics.getValue())
-			std::cerr << "Edges before reduction: " << boost::num_edges(_graph) << std::endl;
-
-		if (_tentativeNumaScheduling.getValue() == "naive")
-			localityScheduling();
-		else if (_tentativeNumaScheduling.getValue() == "bitset")
-			localitySchedulingBitset();
-		else if (_tentativeNumaScheduling.getValue() == "simhash")
-			localitySchedulingSimhash();
-
-		// Remove redundant edges
+		// First, optimize edges. This is done here, as it will affect next steps and the overall closing of the graph
 		if (_graphOptimization.getValue() == "transitive")
 			transitiveReduction();
 		else if (_graphOptimization.getValue() == "basic")
 			basicReduction();
 
-		if (_printGraphStatistics.getValue())
-			std::cerr << "Edges after reduction: " << boost::num_edges(_graph) << std::endl;
+		if (_tentativeNumaScheduling.getValue() != "none" || _criticalPathTrackingEnabled.getValue()) {
+			// Copy the graph for optimization
+			// Iterators pointing to the graph may change when adding attributes, etc.
+			// Operating on a copy will ensure this doesn't become an issue for the delayed optimization.
+			_graphCpy = _graph;
 
-		// Prioritize tasks in the critical path
-		if (_criticalPathTrackingEnabled.getValue())
-			prioritizeCriticalPath();
+			// We'll do the optimization in an offloaded task, but we need to block the existing
+			// taskiter tasks from disappearing while we optimize.
+			forEach([](TaskMetadata *t) {
+				t->increaseRemovalBlockingCount();
+			});
+
+			SpawnFunction::spawnLambda([this]() {
+				if (_tentativeNumaScheduling.getValue() == "naive")
+					localityScheduling();
+				else if (_tentativeNumaScheduling.getValue() == "bitset")
+					localitySchedulingBitset();
+				else if (_tentativeNumaScheduling.getValue() == "simhash")
+					localitySchedulingSimhash();
+
+				// Prioritize tasks in the critical path
+				if (_criticalPathTrackingEnabled.getValue())
+					prioritizeCriticalPath();
+
+				forEach([](TaskMetadata *t) {
+					if (t->decreaseRemovalBlockingCount())
+						TaskFinalization::disposeTask(t);
+				});
+			}, []() {}, "Taskiter processing", true);
+		}
 
 		_processed = true;
 	}

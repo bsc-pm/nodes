@@ -98,6 +98,12 @@ private:
 	//! Elapsed time
 	uint64_t _elapsedTime;
 
+	//! Delayed priority setting
+	int _delayedPriority;
+
+	//! Dealyed affinity setting
+	nosv_affinity_t _delayedAffinity;
+
 protected:
 
 	//! A pointer to the original task that wraps this metadata
@@ -134,6 +140,8 @@ public:
 		_originalPredecessorCount(-1),
 		_iterationCount(0),
 		_elapsedTime(0),
+		_delayedPriority(INT_MIN),
+		_delayedAffinity(),
 		_task(taskPointer),
 		_dataAccesses(taskAccessInfo),
 		_flags(flags)
@@ -512,8 +520,23 @@ public:
 
 	inline void setAffinity(uint32_t index, nosv_affinity_level_t level, nosv_affinity_type_t type)
 	{
-		nosv_affinity_t affinity = nosv_affinity_get(index, level, type);
-		nosv_set_task_affinity(getTaskHandle(), &affinity);
+		assert(level);
+		_delayedAffinity = nosv_affinity_get(index, level, type);
+	}
+
+	inline void applyDelayedChanges()
+	{
+		// A limitation we have is we only apply affinity changes if there is actual affinity, but we cannot detect
+		// a restoration to *no* affinity.
+		if (_delayedAffinity.level) {
+			nosv_set_task_affinity(getTaskHandle(), &_delayedAffinity);
+			_delayedAffinity.level = NOSV_AFFINITY_LEVEL_NONE;
+		}
+
+		if (_delayedPriority != INT_MIN) {
+			nosv_set_task_priority(getTaskHandle(), _delayedPriority);
+			_delayedPriority = INT_MIN;
+		}
 	}
 
 	virtual ~TaskMetadata() {}

@@ -12,6 +12,7 @@
 
 #include "SpawnFunction.hpp"
 #include "instrument/OVNIInstrumentation.hpp"
+#include "system/TaskCreation.hpp"
 #include "tasks/TaskInfo.hpp"
 
 
@@ -37,7 +38,6 @@ struct SpawnedFunctionArgsBlock {
 	{
 	}
 };
-
 
 void nanos6_spawn_function(
 	void (*function)(void *),
@@ -149,8 +149,46 @@ void SpawnFunction::spawnFunction(
 	taskMetadata->setSpawned(true);
 
 	// Submit the task
-	nanos6_submit_task(task);
+	TaskCreation::submitTask((nosv_task_t) task);
 
 	Instrument::exitSpawnFunction();
 }
 
+//! Args block of spawned lambdas
+struct SpawnedLambdaArgsBlock {
+	std::function<void()> _function;
+	std::function<void()> _completionCallback;
+
+	SpawnedLambdaArgsBlock() :
+		_function(),
+		_completionCallback()
+	{
+	}
+};
+
+static void spawnedLambdaWrapper(void *args)
+{
+ 	SpawnedLambdaArgsBlock *block = (SpawnedLambdaArgsBlock *) args;
+	block->_function();
+}
+
+static void spawnedLambdaCompletion(void *args)
+{
+	SpawnedLambdaArgsBlock *block = (SpawnedLambdaArgsBlock *) args;
+	block->_completionCallback();
+	delete block;
+}
+
+void SpawnFunction::spawnLambda(
+	std::function<void()> function,
+	std::function<void()> completionCallback,
+	char const *label,
+	bool fromUserCode
+) {
+	// This could be more efficient if we use the pre-allocated argsblock, but should do for now
+	SpawnedLambdaArgsBlock *args = new SpawnedLambdaArgsBlock();
+	args->_function = function;
+	args->_completionCallback = completionCallback;
+
+	SpawnFunction::spawnFunction(spawnedLambdaWrapper, (void *)args, spawnedLambdaCompletion, (void *)args, label, fromUserCode);
+}

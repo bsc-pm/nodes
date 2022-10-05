@@ -24,19 +24,19 @@ void TaskiterGraph::prioritizeCriticalPath()
 	// The first version just assumes every task takes one second.
 	// Then, we will add time tracking and take that into account.
 
-	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
+	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graphCpy);
 	std::unordered_map<graph_vertex_t, int> priorityMap;
 	std::vector<graph_vertex_t> reverseTopological;
 	graph_t::out_edge_iterator ei, eend;
 
-	boost::topological_sort(_graph, std::back_inserter(reverseTopological));
+	boost::topological_sort(_graphCpy, std::back_inserter(reverseTopological));
 
 	for (graph_vertex_t vertex : reverseTopological) {
 		int maxPriority = -1;
 
-		for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei) {
+		for (boost::tie(ei, eend) = boost::out_edges(vertex, _graphCpy); ei != eend; ++ei) {
 			graph_t::edge_descriptor e = *ei;
-			graph_vertex_t to = boost::target(e, _graph);
+			graph_vertex_t to = boost::target(e, _graphCpy);
 
 			int successorPriority = priorityMap.at(to);
 			if (successorPriority > maxPriority)
@@ -177,8 +177,8 @@ void TaskiterGraph::basicReduction()
 void TaskiterGraph::localityScheduling()
 {
 	// Simulate AMD-Rome with L3 partitioned: total of 16 L3 complexes
-	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
-	int vertices = boost::num_vertices(_graph);
+	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graphCpy);
+	int vertices = boost::num_vertices(_graphCpy);
 	int clusters = 2;
 	int slotsPerCluster = 24;
 	int initialPriority = vertices;
@@ -190,9 +190,9 @@ void TaskiterGraph::localityScheduling()
 
 	// Initialize precedessors
 	graph_t::vertex_iterator vi, vend;
-	for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
+	for (boost::tie(vi, vend) = boost::vertices(_graphCpy); vi != vend; vi++) {
 		graph_vertex_t v = *vi;
-		predecessors[v] = boost::in_degree(v, _graph);
+		predecessors[v] = boost::in_degree(v, _graphCpy);
 		if (!predecessors[v])
 			readyTasks.push_back(v);
 	}
@@ -278,8 +278,8 @@ void TaskiterGraph::localityScheduling()
 			// Now, "release" deps
 			graph_vertex_t v = _tasksToVertices[oldTask];
 			graph_t::out_edge_iterator ei, eend;
-			for (boost::tie(ei, eend) = boost::out_edges(v, _graph); ei != eend; ei++) {
-				graph_vertex_t target = boost::target(*ei, _graph);
+			for (boost::tie(ei, eend) = boost::out_edges(v, _graphCpy); ei != eend; ei++) {
+				graph_vertex_t target = boost::target(*ei, _graphCpy);
 				int remaining = --predecessors[target];
 				assert(remaining >= 0);
 
@@ -303,13 +303,13 @@ void TaskiterGraph::localitySchedulingBitset()
 {
 	const int differentAddresses = _bottomMap.size();
 	const int bitsetWords = MathSupport::ceil(differentAddresses, sizeof(uint32_t) * 8);
-	const int vertices = boost::num_vertices(_graph);
+	const int vertices = boost::num_vertices(_graphCpy);
 	const int clusters = 2;
 	const int slotsPerCluster = 24;
 	const graph_vertex_t NO_TASK = (graph_vertex_t)-1;
 	int initialPriority = vertices;
 
-	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
+	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graphCpy);
 
 	std::unique_ptr<uint32_t[]> bitset = std::make_unique<uint32_t[]>(bitsetWords * vertices);
 	std::unique_ptr<uint32_t[]> tmpBitset = std::make_unique<uint32_t[]>(bitsetWords);
@@ -322,7 +322,7 @@ void TaskiterGraph::localitySchedulingBitset()
 	std::deque<graph_vertex_t> readyTasks;
 
 	graph_t::vertex_iterator vi, vend;
-	for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
+	for (boost::tie(vi, vend) = boost::vertices(_graphCpy); vi != vend; vi++) {
 		graph_vertex_t v = *vi;
 		TaskiterGraphNode node = boost::get(nodemap, v);
 		TaskMetadata **task = boost::get<TaskMetadata *>(&node);
@@ -341,7 +341,7 @@ void TaskiterGraph::localitySchedulingBitset()
 			});
 		}
 
-		predecessors[v] = boost::in_degree(v, _graph);
+		predecessors[v] = boost::in_degree(v, _graphCpy);
 		if (!predecessors[v])
 			readyTasks.push_back(v);
 	}
@@ -406,13 +406,17 @@ void TaskiterGraph::localitySchedulingBitset()
 			now = *earliestCore;
 			*earliestCore = UINT64_MAX;
 			graph_vertex_t v = assignedTasks[coreIdx];
+
+			if (v == NO_TASK)
+				break;
+
 			assignedTasks[coreIdx] = NO_TASK;
 			emptyCPUs++;
 
 			// Now, "release" deps
 			graph_t::out_edge_iterator ei, eend;
-			for (boost::tie(ei, eend) = boost::out_edges(v, _graph); ei != eend; ei++) {
-				graph_vertex_t target = boost::target(*ei, _graph);
+			for (boost::tie(ei, eend) = boost::out_edges(v, _graphCpy); ei != eend; ei++) {
+				graph_vertex_t target = boost::target(*ei, _graphCpy);
 				int remaining = --predecessors[target];
 				assert(remaining >= 0);
 

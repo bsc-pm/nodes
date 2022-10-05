@@ -397,6 +397,8 @@ namespace DataAccessRegistration {
 
 				task->increaseReleaseCount();
 				task->increaseRemovalBlockingCount();
+
+				task->applyDelayedChanges();
 			} else {
 				// Prepare this task so it can be re-finished
 				task->increaseWakeUpCount(1);
