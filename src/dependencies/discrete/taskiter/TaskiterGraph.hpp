@@ -404,6 +404,7 @@ private:
 	void basicReduction();
 	void localityScheduling();
 	void localitySchedulingBitset();
+	void localitySchedulingMovePages();
 	void localitySchedulingSimhash();
 
 public:
@@ -555,6 +556,8 @@ public:
 					localityScheduling();
 				else if (_tentativeNumaScheduling.getValue() == "bitset")
 					localitySchedulingBitset();
+				else if (_tentativeNumaScheduling.getValue() == "move_pages")
+					localitySchedulingMovePages();
 				else if (_tentativeNumaScheduling.getValue() == "simhash")
 					localitySchedulingSimhash();
 
