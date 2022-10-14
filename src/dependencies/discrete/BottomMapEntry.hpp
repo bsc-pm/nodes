@@ -22,6 +22,12 @@ struct BottomMapEntry {
 		_reductionInfo(nullptr)
 	{
 	}
+
+	BottomMapEntry() :
+		_access(nullptr),
+		_reductionInfo(nullptr)
+	{
+	}
 };
 
 #endif // BOTTOM_MAP_ENTRY_HPP
