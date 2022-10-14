@@ -132,7 +132,8 @@ private:
 	static EnvironmentVariable<std::string> _tentativeNumaScheduling;
 
 	// Creates edges from chain to node and inserts them into the graph
-	inline void createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain)
+	inline void
+	createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain)
 	{
 		EdgeProperty props(false);
 
@@ -405,6 +406,7 @@ private:
 	void localityScheduling();
 	void localitySchedulingBitset();
 	void localitySchedulingMovePages();
+	void localitySchedulingMovePagesSimple();
 	void localitySchedulingSimhash();
 
 public:
@@ -556,6 +558,8 @@ public:
 					localityScheduling();
 				else if (_tentativeNumaScheduling.getValue() == "bitset")
 					localitySchedulingBitset();
+				else if (_tentativeNumaScheduling.getValue() == "move_pages_simple")
+					localitySchedulingMovePagesSimple();
 				else if (_tentativeNumaScheduling.getValue() == "move_pages")
 					localitySchedulingMovePages();
 				else if (_tentativeNumaScheduling.getValue() == "simhash")

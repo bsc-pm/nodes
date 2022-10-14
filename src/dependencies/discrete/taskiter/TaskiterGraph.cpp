@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <boost/graph/topological_sort.hpp>
 #include <deque>
+#include <nosv/hwinfo.h>
 #include <numaif.h>
 #include <unistd.h>
 #include <unordered_set>
@@ -304,8 +305,22 @@ void TaskiterGraph::localitySchedulingBitset()
 	const int differentAddresses = _bottomMap.size();
 	const int bitsetWords = MathSupport::ceil(differentAddresses, sizeof(uint32_t) * 8);
 	const int vertices = boost::num_vertices(_graphCpy);
-	const int clusters = 2;
-	const int slotsPerCluster = 24;
+	int clusters = nosv_get_num_numa_nodes();
+	assert(clusters > 0);
+
+	std::vector<int> clustersToSystemNuma(clusters);
+	for (int i = 0; i < clusters; ++i)
+		clustersToSystemNuma[i] = nosv_get_system_numa_id(i);
+
+	// Filter out clusters without CPUs assigned
+	clustersToSystemNuma.erase(
+		std::remove_if(clustersToSystemNuma.begin(), clustersToSystemNuma.end(),
+			[](const int &i) { return nosv_get_num_cpus_in_numa(i) == 0; }),
+		clustersToSystemNuma.end()
+	);
+	clusters = clustersToSystemNuma.size();
+
+	const int slotsPerCluster = nosv_get_num_cpus_in_numa(clustersToSystemNuma[0]);
 	const graph_vertex_t NO_TASK = (graph_vertex_t)-1;
 	int initialPriority = vertices;
 
@@ -388,7 +403,7 @@ void TaskiterGraph::localitySchedulingBitset()
 
 			assignedTasks[cpu] = *bestSuccessorIt;
 			coreDeadlines[cpu] += now + bestSuccessor->getElapsedTime();
-			bestSuccessor->setAffinity(clusterIdx, NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+			bestSuccessor->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
 			bestSuccessor->setPriority(initialPriority--);
 			readyTasks.erase(bestSuccessorIt);
 			scheduledTasks++;
@@ -432,20 +447,45 @@ static inline void *alignToPageBoundary(void *address, size_t pageSize)
 
 void TaskiterGraph::localitySchedulingMovePages()
 {
+	// Set up data structures
 	const int vertices = boost::num_vertices(_graphCpy);
-	const int clusters = 2;
-	const int slotsPerCluster = 24;
+	int clusters = nosv_get_num_numa_nodes();
+	assert(clusters > 0);
+
+	std::vector<int> clustersToSystemNuma(clusters);
+	int maxSystemNuma = 0;
+	for (int i = 0; i < clusters; ++i) {
+		clustersToSystemNuma[i] = nosv_get_system_numa_id(i);
+
+		if (clustersToSystemNuma[i] > maxSystemNuma)
+			maxSystemNuma = clustersToSystemNuma[i];
+	}
+
+	std::vector<int> systemNumaToClusters(maxSystemNuma + 1);
+	for (int i = 0; i < clusters; ++i)
+		systemNumaToClusters[clustersToSystemNuma[i]] = i;
+
+	// Filter out clusters without CPUs assigned
+	clustersToSystemNuma.erase(
+		std::remove_if(clustersToSystemNuma.begin(), clustersToSystemNuma.end(),
+			[](const int &i) { return nosv_get_num_cpus_in_numa(i) == 0; }),
+		clustersToSystemNuma.end()
+	);
+	clusters = clustersToSystemNuma.size();
+
+	const int slotsPerCluster = nosv_get_num_cpus_in_numa(clustersToSystemNuma[0]);
 	const graph_vertex_t NO_TASK = (graph_vertex_t)-1;
 	int initialPriority = vertices;
 
 	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graphCpy);
 
-	std::vector<std::vector<uint8_t>> numaScores(vertices, std::vector<uint8_t>(clusters));
+	std::vector<std::vector<uint64_t>> numaScores(vertices, std::vector<uint64_t>(clusters));
 
 	std::vector<uint64_t> coreDeadlines(clusters * slotsPerCluster, 0);
 	std::vector<int> predecessors(vertices);
 	std::vector<graph_vertex_t> assignedTasks(clusters * slotsPerCluster, NO_TASK);
-	std::deque<graph_vertex_t> readyTasks;
+	std::vector<std::deque<graph_vertex_t>> readyTasks(clusters);
+	int nReadyTasks = 0;
 
 	Container::unordered_map<void *, int> pagesToNodes;
 
@@ -467,6 +507,16 @@ void TaskiterGraph::localitySchedulingMovePages()
 	__attribute__((unused)) long ret = move_pages(0, pages.size(), pages.data(), nullptr, nodes.data(), 0);
 	assert(ret >= 0);
 
+	// Pass back to map
+	for (size_t i = 0; i < pages.size(); ++i) {
+		if (nodes[i] < 0) {
+			// Probably un-allocated memory. Assign random cluster
+			pagesToNodes[pages[i]] = i % clusters;
+		} else {
+			pagesToNodes[pages[i]] = systemNumaToClusters[nodes[i]];
+		}
+	}
+
 	graph_t::vertex_iterator vi, vend;
 	for (boost::tie(vi, vend) = boost::vertices(_graphCpy); vi != vend; vi++) {
 		graph_vertex_t v = *vi;
@@ -474,23 +524,28 @@ void TaskiterGraph::localitySchedulingMovePages()
 		TaskMetadata **task = boost::get<TaskMetadata *>(&node);
 
 		if (task) {
-			(*task)->getTaskDataAccesses().forAll([&pagesToNodes, &numaScores, &v, this, &pageSize](void *address, DataAccess *) -> bool {
+			(*task)->getTaskDataAccesses().forAll([&pagesToNodes, &numaScores, &v, this, &pageSize](void *address, DataAccess *access) -> bool {
 				void *page = alignToPageBoundary(address, pageSize);
 				int numaNode = pagesToNodes[page];
 
 				// This is very simplistic, because we don't care how many bytes are on each node
 				// Maybe the best way would be to count bytes _and_ then relativize the scores
 				if (numaNode >= 0)
-					numaScores[v][numaNode]++;
+					numaScores[v][numaNode] += access->getAccessRegion().getSize();
 
 				return true;
 			});
 		}
 
+		int bestNumaNode = std::distance(numaScores[v].begin(), std::max_element(numaScores[v].begin(), numaScores[v].end()));
 		predecessors[v] = boost::in_degree(v, _graphCpy);
-		if (!predecessors[v])
-			readyTasks.push_back(v);
+		if (!predecessors[v]) {
+			readyTasks[bestNumaNode].push_back(v);
+			nReadyTasks++;
+		}
 	}
+
+	// Main scheduling
 
 	assert(!readyTasks.empty() || !vertices);
 	int emptyCPUs = clusters * slotsPerCluster;
@@ -498,34 +553,53 @@ void TaskiterGraph::localitySchedulingMovePages()
 	uint64_t now = 0;
 
 	while (scheduledTasks < vertices) {
-		while (emptyCPUs && !readyTasks.empty()) {
+		// First scheduling pass
+		if (nReadyTasks > 0 && emptyCPUs) {
+			for (size_t cpu = 0; cpu < assignedTasks.size(); ++cpu) {
+				int clusterIdx = cpu / slotsPerCluster;
+				if (assignedTasks[cpu] == NO_TASK && !readyTasks[clusterIdx].empty()) {
+					graph_vertex_t v = readyTasks[clusterIdx].front();
+					readyTasks[clusterIdx].pop_front();
+					assignedTasks[cpu] = v;
+					nReadyTasks--;
+					emptyCPUs--;
+					scheduledTasks++;
+
+					TaskiterGraphNode node = boost::get(nodemap, v);
+					TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+					(*task)->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+					(*task)->setPriority(initialPriority--);
+
+					coreDeadlines[cpu] = now + (*task)->getElapsedTime();
+				}
+			}
+		}
+
+		// Second pass
+		while (emptyCPUs && nReadyTasks) {
 			int cpu = std::distance(assignedTasks.begin(), std::find(assignedTasks.begin(), assignedTasks.end(), NO_TASK));
-			int clusterIdx = cpu / slotsPerCluster;
+			graph_vertex_t v = 0;
+			int clusterIdx;
 
-			std::deque<graph_vertex_t>::iterator bestSuccessorIt;
-			TaskMetadata *bestSuccessor = nullptr;
-			int matches = -1;
-			for (std::deque<graph_vertex_t>::iterator vIterator = readyTasks.begin(); vIterator != readyTasks.end(); vIterator++) {
-				graph_vertex_t v = *vIterator;
-				TaskiterGraphNode node = boost::get(nodemap, v);
-				TaskMetadata **task = boost::get<TaskMetadata *>(&node);
-
-				const int score = numaScores[v][clusterIdx];
-
-				if (score > matches) {
-					matches = score;
-					bestSuccessor = *task;
-					bestSuccessorIt = vIterator;
+			for (clusterIdx = 0; clusterIdx < clusters; ++clusterIdx) {
+				if (!readyTasks[clusterIdx].empty()) {
+					v = readyTasks[clusterIdx].front();
+					readyTasks[clusterIdx].pop_front();
+					break;
 				}
 			}
 
-			assignedTasks[cpu] = *bestSuccessorIt;
-			coreDeadlines[cpu] += now + bestSuccessor->getElapsedTime();
-			bestSuccessor->setAffinity(clusterIdx, NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
-			bestSuccessor->setPriority(initialPriority--);
-			readyTasks.erase(bestSuccessorIt);
-			scheduledTasks++;
+			assignedTasks[cpu] = v;
+			nReadyTasks--;
 			emptyCPUs--;
+			scheduledTasks++;
+
+			TaskiterGraphNode node = boost::get(nodemap, v);
+			TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+			(*task)->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+			(*task)->setPriority(initialPriority--);
+
+			coreDeadlines[cpu] = now + (*task)->getElapsedTime();
 		}
 
 		do {
@@ -551,10 +625,96 @@ void TaskiterGraph::localitySchedulingMovePages()
 				assert(remaining >= 0);
 
 				if (remaining == 0) {
-					readyTasks.push_back(target);
+					int bestNumaNode = std::distance(numaScores[target].begin(), std::max_element(numaScores[target].begin(), numaScores[target].end()));
+					readyTasks[bestNumaNode].push_back(target);
+					nReadyTasks++;
 				}
 			}
 		} while (readyTasks.empty() && scheduledTasks < vertices);
+	}
+}
+
+void TaskiterGraph::localitySchedulingMovePagesSimple()
+{
+	// Set up data structures
+	const int vertices = boost::num_vertices(_graphCpy);
+	int clusters = nosv_get_num_numa_nodes();
+	assert(clusters > 0);
+
+	std::vector<int> clustersToSystemNuma(clusters);
+	int maxSystemNuma = 0;
+	for (int i = 0; i < clusters; ++i) {
+		clustersToSystemNuma[i] = nosv_get_system_numa_id(i);
+
+		if (clustersToSystemNuma[i] > maxSystemNuma)
+			maxSystemNuma = clustersToSystemNuma[i];
+	}
+
+	std::vector<int> systemNumaToClusters(maxSystemNuma + 1);
+	for (int i = 0; i < clusters; ++i)
+		systemNumaToClusters[clustersToSystemNuma[i]] = i;
+
+	// Filter out clusters without CPUs assigned
+	clustersToSystemNuma.erase(
+		std::remove_if(clustersToSystemNuma.begin(), clustersToSystemNuma.end(),
+			[](const int &i) { return nosv_get_num_cpus_in_numa(i) == 0; }),
+		clustersToSystemNuma.end()
+	);
+	clusters = clustersToSystemNuma.size();
+
+	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graphCpy);
+	std::vector<std::vector<uint64_t>> numaScores(vertices, std::vector<uint64_t>(clusters));
+	Container::unordered_map<void *, int> pagesToNodes;
+
+	size_t pageSize = sysconf(_SC_PAGESIZE);
+
+	// Ask the OS for the pages NUMA nodes
+	// We can do this based on the bottomMap
+	for (const std::pair<access_address_t const, TaskiterGraphAccessChain>& access : _bottomMap) {
+		void *page = alignToPageBoundary(access.first, pageSize);
+		pagesToNodes[page] = -1;
+	}
+
+	std::vector<void *> pages;
+	pages.reserve(pagesToNodes.size());
+	for (const std::pair<void *const, int> &page : pagesToNodes)
+		pages.push_back(page.first);
+
+	std::vector<int> nodes(pages.size());
+	__attribute__((unused)) long ret = move_pages(0, pages.size(), pages.data(), nullptr, nodes.data(), 0);
+	assert(ret >= 0);
+
+	// Pass back to map
+	for (size_t i = 0; i < pages.size(); ++i) {
+		if (nodes[i] < 0) {
+			// Probably un-allocated memory. Assign random cluster
+			pagesToNodes[pages[i]] = i % clusters;
+		} else {
+			pagesToNodes[pages[i]] = systemNumaToClusters[nodes[i]];
+		}
+	}
+
+	graph_t::vertex_iterator vi, vend;
+	for (boost::tie(vi, vend) = boost::vertices(_graphCpy); vi != vend; vi++) {
+		graph_vertex_t v = *vi;
+		TaskiterGraphNode node = boost::get(nodemap, v);
+		TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+
+		if (task) {
+			(*task)->getTaskDataAccesses().forAll([&pagesToNodes, &numaScores, &v, this, &pageSize](void *address, DataAccess *access) -> bool {
+				void *page = alignToPageBoundary(address, pageSize);
+				int numaNode = pagesToNodes[page];
+
+				// This is very simplistic, because we don't care how many bytes are on each node
+				// Maybe the best way would be to count bytes _and_ then relativize the scores
+				if (numaNode >= 0)
+					numaScores[v][numaNode] += access->getAccessRegion().getSize();
+
+				return true;
+			});
+			int bestNumaNode = std::distance(numaScores[v].begin(), std::max_element(numaScores[v].begin(), numaScores[v].end()));
+			(*task)->setAffinity(clustersToSystemNuma[bestNumaNode], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+		}
 	}
 }
 
