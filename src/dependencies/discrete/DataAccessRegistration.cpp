@@ -379,6 +379,7 @@ namespace DataAccessRegistration {
 					assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, false));
 				}
 #endif
+				Instrument::exitUnregisterAccesses();
 				return true;
 			}
 
@@ -415,6 +416,7 @@ namespace DataAccessRegistration {
 			}
 #endif
 
+			Instrument::exitUnregisterAccesses();
 			// return false;
 			return !keepIterating;
 		}
