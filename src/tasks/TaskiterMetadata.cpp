@@ -47,16 +47,24 @@ void TaskiterMetadata::cancel()
 
 	_stop = true;
 
+	nosv_task_t currentTask = nosv_self();
+	assert(currentTask != nullptr);
+
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(currentTask);
+
 	_graph.forEach(
-		[](TaskMetadata *task) {
-			// As this is the second time this task will be finished, we have to do a little hack
-			task->increaseWakeUpCount(1);
-			TaskFinalization::taskFinished(task);
+		[taskMetadata](TaskMetadata *task) {
+			if (task != taskMetadata) {
+				// As this is the second time this task will be finished, we have to do a little hack
+				if (task->canBeWokenUp())
+					task->increaseWakeUpCount(1);
+				TaskFinalization::taskFinished(task);
 
-			__attribute__((unused)) bool deletable = task->decreaseRemovalBlockingCount();
+				bool deletable = task->decreaseRemovalBlockingCount();
 
-			if (deletable) {
-				TaskFinalization::disposeTask(task);
+				if (deletable) {
+					TaskFinalization::disposeTask(task);
+				}
 			}
 		},
 		true
@@ -93,6 +101,8 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	taskInfo->implementations[0].declaration_source = "Taskiter Control";
 	taskInfo->implementations[0].get_constraints = nullptr;
 
+	taskInfo->num_symbols = 0;
+
 	// Register the new task info
 	TaskInfo::registerTaskInfo(taskInfo);
 
@@ -112,7 +122,8 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	metadata->setParent(this->getTaskHandle());
 	metadata->incrementOriginalPredecessorCount();
 	metadata->setIterationCount(getIterationCount() + 1);
-	metadata->markAsBlocked();
+	// metadata->increaseRemovalBlockingCount();
+	// metadata->markAsBlocked();
 
 	return metadata;
 }

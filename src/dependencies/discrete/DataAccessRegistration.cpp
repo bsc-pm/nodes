@@ -835,6 +835,7 @@ namespace DataAccessRegistration {
 	{
 		assert(task != nullptr);
 		assert(translationTable != nullptr);
+		assert(totalSymbols < 30);
 
 		// Initialize translationTable
 		for (int i = 0; i < totalSymbols; ++i)

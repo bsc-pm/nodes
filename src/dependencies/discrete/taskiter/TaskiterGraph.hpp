@@ -130,6 +130,7 @@ private:
 	static EnvironmentVariable<bool> _criticalPathTrackingEnabled;
 	static EnvironmentVariable<bool> _printGraphStatistics;
 	static EnvironmentVariable<std::string> _tentativeNumaScheduling;
+	static EnvironmentVariable<bool> _communcationPriorityPropagation;
 
 	// Creates edges from chain to node and inserts them into the graph
 	inline void
@@ -408,6 +409,7 @@ private:
 	void localitySchedulingMovePages();
 	void localitySchedulingMovePagesSimple();
 	void localitySchedulingSimhash();
+	void communicationPriorityPropagation();
 
 public:
 	TaskiterGraph() :
@@ -541,7 +543,8 @@ public:
 		else if (_graphOptimization.getValue() == "basic")
 			basicReduction();
 
-		if (_tentativeNumaScheduling.getValue() != "none" || _criticalPathTrackingEnabled.getValue()) {
+		if (_tentativeNumaScheduling.getValue() != "none" || _criticalPathTrackingEnabled.getValue() ||
+			_communcationPriorityPropagation.getValue()) {
 			// Copy the graph for optimization
 			// Iterators pointing to the graph may change when adding attributes, etc.
 			// Operating on a copy will ensure this doesn't become an issue for the delayed optimization.
@@ -568,6 +571,10 @@ public:
 				// Prioritize tasks in the critical path
 				if (_criticalPathTrackingEnabled.getValue())
 					prioritizeCriticalPath();
+
+				// Prioritize communcation tasks
+				if (_communcationPriorityPropagation.getValue())
+					communicationPriorityPropagation();
 
 				forEach([](TaskMetadata *t) {
 					if (t->decreaseRemovalBlockingCount())

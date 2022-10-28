@@ -101,8 +101,14 @@ private:
 	//! Delayed priority setting
 	int _delayedPriority;
 
-	//! Dealyed affinity setting
+	//! Delta priority
+	int _priorityDelta;
+
+	//! Delayed affinity setting
 	nosv_affinity_t _delayedAffinity;
+
+	//! Detected communication task
+	bool _isCommunicationTask;
 
 protected:
 
@@ -141,7 +147,9 @@ public:
 		_iterationCount(0),
 		_elapsedTime(0),
 		_delayedPriority(INT_MIN),
+		_priorityDelta(0),
 		_delayedAffinity(),
+		_isCommunicationTask(false),
 		_task(taskPointer),
 		_dataAccesses(taskAccessInfo),
 		_flags(flags)
@@ -500,7 +508,7 @@ public:
 
 	inline void setPriority(int priority)
 	{
-		nosv_set_task_priority(getTaskHandle(), priority);
+		_delayedPriority = priority;
 	}
 
 	inline int getPriority() const
@@ -537,6 +545,21 @@ public:
 			nosv_set_task_priority(getTaskHandle(), _delayedPriority);
 			_delayedPriority = INT_MIN;
 		}
+	}
+
+	inline bool isCommunicationTask() const
+	{
+		return _isCommunicationTask;
+	}
+
+	inline void markAsCommunicationTask()
+	{
+		_isCommunicationTask = true;
+	}
+
+	inline void setPriorityDelta(int delta)
+	{
+		_priorityDelta = delta;
 	}
 
 	virtual ~TaskMetadata() {}
