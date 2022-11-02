@@ -97,6 +97,9 @@ void SpawnFunction::spawnFunction(
 		taskInfo = &(it->second);
 
 		if (itAndBool.second) {
+			// Ensure non-explicitely initialized fields are zeroed
+			memset(taskInfo, 0, sizeof(nanos6_task_info_t));
+
 			// New task info
 			taskInfo->implementations = (nanos6_task_implementation_info_t *)
 				malloc(sizeof(nanos6_task_implementation_info_t));
