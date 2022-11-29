@@ -45,7 +45,7 @@ AC_CHECK_MAIN_WRAPPER_TYPE
 SSS_CHECK_NODES_CLANG
 
 # Checks for libraries
-AX_BOOST_BASE([1.59], [], [ AC_MSG_ERROR([Boost library not found]) ])
+AX_BOOST_BASE([1.71], [], [ AC_MSG_ERROR([Boost >= 1.71 is needed to build NODES]) ])
 CHECK_PTHREAD
 AC_CHECK_NOSV
 AX_CHECK_OVNI
