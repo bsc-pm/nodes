@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
@@ -34,6 +34,9 @@ static inline void createTask(nanos6_task_info_t *taskInfo,
 	size_t flags,
 	size_t numDeps
 ) {
+	// Taskfors are no longer supported
+	assert(!(flags & nanos6_taskfor_task));
+
 	Instrument::enterCreateTask();
 
 	size_t originalArgsBlockSize = argsBlockSize;
@@ -147,10 +150,14 @@ void nanos6_create_loop(
 
 	assert(task_info->implementation_count == 1);
 
-	// The compiler passes either the num deps of a single child or -1. However, the parent taskloop
-	// must register as many deps as num_deps * numTasks
-	bool isTaskloop = flags & nanos6_taskloop_task;
-	if (num_deps != (size_t) -1 && isTaskloop) {
+	// Taskfor is no longer supported. Only accept taskloops
+	if (flags & nanos6_taskfor_task) {
+		ErrorHandler::fail("Taskfor no longer supported");
+	}
+
+	// The compiler passes either the num deps of a single child or -1. However, the parent
+	// taskloop must register as many deps as num_deps * numTasks
+	if (num_deps != (size_t) -1) {
 		size_t numTasks = Taskloop::computeNumTasks((upper_bound - lower_bound), grainsize);
 		num_deps *= numTasks;
 	}

@@ -28,7 +28,6 @@ void register_access(void *handler, void *start, size_t length, int symbolIndex,
 		return;
 	}
 
-	//bool weak = (WEAK && !task->isFinal() && !task->isTaskfor()) || task->isTaskloopSource();
 	bool weak = (WEAK && !task->isFinal()) || task->isTaskloopSource();
 	DataAccessRegistration::registerTaskDataAccess(task, ACCESS_TYPE, weak, start,
 		length, reductionTypeAndOperatorIndex, reductionIndex, symbolIndex);

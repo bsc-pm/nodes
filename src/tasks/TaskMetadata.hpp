@@ -29,6 +29,9 @@ public:
 		final_flag=0,
 		if0_flag,
 		taskloop_flag,
+		//! Taskfors are no longer supported. Keep this flag
+		//! because the compiler can still generate taskfors.
+		//! We treat taskfors as normal tasks
 		taskfor_flag,
 		wait_flag,
 		preallocated_args_block_flag,
