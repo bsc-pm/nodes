@@ -423,6 +423,7 @@ namespace DataAccessRegistration {
 
 			Instrument::exitUnregisterAccesses();
 			// return false;
+			Instrument::exitUnregisterAccesses();
 			return !keepIterating;
 		}
 
@@ -562,11 +563,13 @@ namespace DataAccessRegistration {
 			TaskMetadata *controlTask = taskiter->generateControlTask();
 			graph.process();
 			graph.setTaskDegree(controlTask);
+			graph.postProcess();
 			// Here the control task should have been scheduled already
 		} else {
 			// May need to add an extra task?
 			graph.process();
 			graph.setTaskDegree(nullptr);
+			graph.postProcess();
 		}
 	}
 

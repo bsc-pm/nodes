@@ -10,6 +10,7 @@
 // #define PRINT_TASKITER_GRAPH 1
 
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -552,8 +553,16 @@ public:
 
 			// We'll do the optimization in an offloaded task, but we need to block the existing
 			// taskiter tasks from disappearing while we optimize.
-			forEach([](TaskMetadata *t) {
+			const bool willPostProcess = _communcationPriorityPropagation.getValue();
+			forEach([willPostProcess](TaskMetadata *t) {
 				t->increaseRemovalBlockingCount();
+
+				// Wait also for the post-process actions
+				if (willPostProcess) {
+					t->increaseRemovalBlockingCount();
+					t->setPriority(INT_MAX);
+					t->applyDelayedChanges();
+				}
 			});
 
 			SpawnFunction::spawnLambda([this]() {
@@ -572,9 +581,8 @@ public:
 				if (_criticalPathTrackingEnabled.getValue())
 					prioritizeCriticalPath();
 
-				// Prioritize communcation tasks
-				if (_communcationPriorityPropagation.getValue())
-					communicationPriorityPropagation();
+				// if (_communcationPriorityPropagation.getValue())
+				// 	communicationPriorityPropagation();
 
 				forEach([](TaskMetadata *t) {
 					if (t->decreaseRemovalBlockingCount())
@@ -584,6 +592,22 @@ public:
 		}
 
 		_processed = true;
+	}
+
+	void postProcess()
+	{
+		if (_communcationPriorityPropagation.getValue()) {
+			SpawnFunction::spawnLambda([this]() {
+				// Prioritize communcation tasks
+				if (_communcationPriorityPropagation.getValue())
+					communicationPriorityPropagation();
+
+				forEach([](TaskMetadata *t) {
+					if (t->decreaseRemovalBlockingCount())
+						TaskFinalization::disposeTask(t);
+				});
+			}, []() {}, "Taskiter post-processing", true);
+		}
 	}
 
 	inline bool isProcessed() const

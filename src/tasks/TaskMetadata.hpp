@@ -10,6 +10,7 @@
 #include <atomic>
 #include <bitset>
 #include <cassert>
+#include <cstdio>
 
 #include <nosv.h>
 #include <nosv/affinity.h>
@@ -542,9 +543,23 @@ public:
 		}
 
 		if (_delayedPriority != INT_MIN) {
-			nosv_set_task_priority(getTaskHandle(), _delayedPriority);
-			_delayedPriority = INT_MIN;
+			if (_priorityDelta != 0) {
+				// Calculate the exact priority for next iteration
+				size_t iteration = _parent->getIterationCount() - _iterationCount;
+				int priority = _delayedPriority - (iteration * _priorityDelta);
+				// printf("%zu\n", priority);
+				assert(priority >= 0);
+				nosv_set_task_priority(getTaskHandle(), priority);
+			} else {
+				nosv_set_task_priority(getTaskHandle(), _delayedPriority);
+				_delayedPriority = INT_MIN;
+			}
 		}
+	}
+
+	inline virtual size_t getIterationCount() const
+	{
+		return _iterationCount;
 	}
 
 	inline bool isCommunicationTask() const

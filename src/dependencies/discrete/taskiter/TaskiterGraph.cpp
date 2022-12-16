@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <boost/graph/topological_sort.hpp>
 #include <deque>
+#include <iostream>
 #include <nosv/hwinfo.h>
 #include <numaif.h>
 #include <unistd.h>
@@ -722,6 +723,8 @@ void TaskiterGraph::localitySchedulingMovePagesSimple()
 void TaskiterGraph::communicationPriorityPropagation()
 {
 	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graphCpy);
+	boost::property_map<graph_t, boost::vertex_name_t>::type nodemapCyclic = boost::get(boost::vertex_name_t(), _graph);
+	boost::property_map<graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), _graph);
 	std::unordered_map<graph_vertex_t, int> priorityMap;
 	std::vector<graph_vertex_t> reverseTopological;
 	graph_t::out_edge_iterator ei, eend;
@@ -732,43 +735,103 @@ void TaskiterGraph::communicationPriorityPropagation()
 
 	boost::topological_sort(_graphCpy, std::back_inserter(reverseTopological));
 	int minNonZeroPriority = INT_MAX;
+	bool firstIt = true;
 
-	for (graph_vertex_t vertex : reverseTopological) {
-		int maxPriority = 0;
+	while (true) {
+		for (graph_vertex_t vertex : reverseTopological) {
+			int maxPriority = 0;
 
-		TaskiterGraphNode node = boost::get(nodemap, vertex);
-		TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+			TaskiterGraphNode node = boost::get(nodemap, vertex);
+			TaskMetadata **task = boost::get<TaskMetadata *>(&node);
 
-		if (task) {
-			if ((*task)->isCommunicationTask())
-				maxPriority = INT_MAX;
-		}
-
-		if (!maxPriority) {
-			for (boost::tie(ei, eend) = boost::out_edges(vertex, _graphCpy); ei != eend; ++ei) {
-				graph_t::edge_descriptor e = *ei;
-				graph_vertex_t to = boost::target(e, _graphCpy);
-
-				int successorPriority = priorityMap.at(to);
-				if (successorPriority > maxPriority)
-					maxPriority = successorPriority;
+			if (task) {
+				if ((*task)->isCommunicationTask())
+					maxPriority = INT_MAX;
 			}
 
-			maxPriority--;
+			if (!maxPriority) {
+				for (boost::tie(ei, eend) = boost::out_edges(vertex, _graphCpy); ei != eend; ++ei) {
+					graph_t::edge_descriptor e = *ei;
+					graph_vertex_t to = boost::target(e, _graphCpy);
+
+					int successorPriority = priorityMap.at(to);
+					if (successorPriority > maxPriority)
+						maxPriority = successorPriority;
+				}
+
+				if (maxPriority)
+					maxPriority = INT_MAX - 1;
+			}
+
+			if (maxPriority > priorityMap[vertex]) {
+				if (task) {
+					if (maxPriority != INT_MAX)
+						(*task)->setPriorityDelta(1);
+					(*task)->setPriority(maxPriority);
+
+					// if (!firstIt)
+					// 	std::cout << maxPriority << std::endl;
+				}
+
+				assert(priorityMap[vertex] <= maxPriority);
+
+				priorityMap[vertex] = maxPriority;
+
+				if (maxPriority != 0 && maxPriority < minNonZeroPriority)
+					minNonZeroPriority = maxPriority;
+			}
+			// if (!firstIt)
+			// 	std::cout << "[" << getpid() << "] " << vertex << " - " << priorityMap[vertex] << std::endl;
 		}
 
-		if (task)
-			(*task)->setPriority(maxPriority);
+		if (!firstIt)
+			break;
 
-		priorityMap[vertex] = maxPriority;
+		// Propagate priorities to next iteration
+		graph_t::vertex_iterator vi, vend;
+		for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
+			graph_vertex_t vertex = *vi;
+			TaskiterGraphNode node = boost::get(nodemapCyclic, vertex);
+			TaskMetadata **task = boost::get<TaskMetadata *>(&node);
 
-		if (maxPriority != 0 && maxPriority < minNonZeroPriority)
-			minNonZeroPriority = maxPriority;
+			int maxPriority = 0;
+			for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei) {
+				graph_t::edge_descriptor e = *ei;
+				bool edgeCrossIteration = boost::get(edgemap, e);
+				if (edgeCrossIteration) {
+					// Try to propagate priority accross one iteration barrier.
+					graph_vertex_t to = boost::target(e, _graph);
+
+					int successorPriority = priorityMap.at(to);
+					if (successorPriority > maxPriority)
+						maxPriority = INT_MAX - 1;
+				}
+			}
+
+			if (maxPriority > priorityMap[vertex]) {
+				if (task) {
+					assert(maxPriority != INT_MAX);
+					(*task)->setPriorityDelta(1);
+					(*task)->setPriority(maxPriority);
+				}
+
+				priorityMap[vertex] = maxPriority;
+				if (maxPriority != 0 && maxPriority < minNonZeroPriority)
+					minNonZeroPriority = maxPriority;
+
+			}
+		}
+
+		firstIt = false;
 	}
 
-	int priorityDelta = INT_MAX - minNonZeroPriority;
+	// int priorityDelta = 1;
+	// assert(priorityDelta >= 0);
 
-	std::cout << (INT_MAX - minNonZeroPriority) << std::endl;
+	// forEach([priorityDelta](TaskMetadata * t) {
+	// 	if (!t->isCommunicationTask())
+	// 		t->setPriorityDelta(priorityDelta);
+	// }, false);
 }
 
 void TaskiterGraph::localitySchedulingSimhash()
