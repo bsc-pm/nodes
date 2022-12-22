@@ -14,6 +14,7 @@
 #include "CPUDependencyData.hpp"
 #include "DataAccessRegistration.hpp"
 #include "TaskDataAccesses.hpp"
+#include "TaskiterReductionInfo.hpp"
 #include "instrument/OVNIInstrumentation.hpp"
 #include "memory/ObjectAllocator.hpp"
 #include "system/TaskFinalization.hpp"
@@ -793,14 +794,25 @@ namespace DataAccessRegistration {
 		// detect correctly the reinitialize case
 		TaskMetadata *parentTask = task.getParent();
 		const bool isTaskiterChild = parentTask && parentTask->isTaskiter();
+		ReductionInfo *newReductionInfo;
 
-		ReductionInfo *newReductionInfo = ObjectAllocator<ReductionInfo>::newObject(
-			address, length,
-			reductionTypeAndOpIndex,
-			taskInfo->reduction_initializers[reductionIndex],
-			taskInfo->reduction_combiners[reductionIndex],
-			isTaskiterChild
+		if (isTaskiterChild) {
+			newReductionInfo = ObjectAllocator<TaskiterReductionInfo>::newObject(
+				address, length,
+				reductionTypeAndOpIndex,
+				taskInfo->reduction_initializers[reductionIndex],
+				taskInfo->reduction_combiners[reductionIndex],
+				true
 			);
+		} else {
+			newReductionInfo = ObjectAllocator<ReductionInfo>::newObject(
+				address, length,
+				reductionTypeAndOpIndex,
+				taskInfo->reduction_initializers[reductionIndex],
+				taskInfo->reduction_combiners[reductionIndex],
+				false
+			);
+		}
 
 		return newReductionInfo;
 	}

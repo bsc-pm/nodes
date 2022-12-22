@@ -61,7 +61,7 @@ public:
 		std::function<void(void *, void *, size_t)> initializationFunction,
 		std::function<void(void *, void *, size_t)> combinationFunction, bool inTaskiter);
 
-	~ReductionInfo();
+	virtual ~ReductionInfo();
 
 	inline reduction_type_and_operator_index_t getTypeAndOperatorIndex() const
 	{

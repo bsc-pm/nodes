@@ -15,13 +15,11 @@
 #include "system/TaskCreation.hpp"
 #include "tasks/TaskInfo.hpp"
 
-
 //! Static members
 std::atomic<unsigned int> SpawnFunction::_pendingSpawnedFunctions(0);
 std::map<SpawnFunction::task_info_key_t, nanos6_task_info_t> SpawnFunction::_spawnedFunctionInfos;
 SpinLock SpawnFunction::_spawnedFunctionInfosLock;
 nanos6_task_invocation_info_t SpawnFunction::_spawnedFunctionInvocationInfo = { "Spawned from external code" };
-
 
 //! Args block of spawned functions
 struct SpawnedFunctionArgsBlock {
@@ -77,7 +75,7 @@ void SpawnFunction::spawnFunction(
 	char const *label,
 	bool fromUserCode
 ) {
-	Instrument::enterSpawnFunction();
+	// Instrument::enterSpawnFunction();
 
 	// Increase the number of spawned functions in case it is
 	// spawned from outside the runtime system
@@ -151,7 +149,7 @@ void SpawnFunction::spawnFunction(
 	// Submit the task
 	TaskCreation::submitTask((nosv_task_t) task);
 
-	Instrument::exitSpawnFunction();
+	// Instrument::exitSpawnFunction();
 }
 
 //! Args block of spawned lambdas

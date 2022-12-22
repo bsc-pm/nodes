@@ -21,6 +21,8 @@
 #include "hardware/HardwareInfo.hpp"
 #include "system/TaskCreation.hpp"
 #include "tasks/TaskiterMetadata.hpp"
+#include "tasks/TaskiterChildLoopMetadata.hpp"
+#include "tasks/TaskiterChildMetadata.hpp"
 #include "tasks/TaskloopMetadata.hpp"
 #include "tasks/TaskMetadata.hpp"
 
@@ -114,6 +116,20 @@ void TaskCreation::createTask(nanos6_task_info_t *taskInfo,
 	Instrument::exitCreateTask();
 }
 
+static inline bool creatingInTaskiter()
+{
+	// Obtain the parent task and link both parent and child
+	nosv_task_t parentTask = nosv_self();
+	
+	if (parentTask) {
+		TaskMetadata *task = TaskMetadata::getTaskMetadata(parentTask);
+		if (task)
+			return task->isTaskiter();
+	}
+
+	return false;
+}
+
 void nanos6_create_task(
 	nanos6_task_info_t *taskInfo,
 	nanos6_task_invocation_info_t *,
@@ -126,10 +142,17 @@ void nanos6_create_task(
 ) {
 	assert(!(flags & nanos6_taskiter_task));
 
-	if (flags & nanos6_taskloop_task)
-		TaskCreation::createTask<TaskloopMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
-	else
-		TaskCreation::createTask<TaskMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	if (creatingInTaskiter()) {
+		if (flags & nanos6_taskloop_task)
+			TaskCreation::createTask<TaskiterChildLoopMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+		else
+			TaskCreation::createTask<TaskiterChildMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	} else {
+		if (flags & nanos6_taskloop_task)
+			TaskCreation::createTask<TaskloopMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+		else
+			TaskCreation::createTask<TaskMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	}
 }
 
 void nanos6_create_loop(
@@ -160,7 +183,10 @@ void nanos6_create_loop(
 		num_deps *= numTasks;
 	}
 
-	TaskCreation::createTask<TaskloopMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
+	if (creatingInTaskiter())
+		TaskCreation::createTask<TaskiterChildLoopMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
+	else
+		TaskCreation::createTask<TaskloopMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
 
 	TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
 	assert(*task_pointer != nullptr);

@@ -155,15 +155,29 @@ public:
 		_dataAccesses(taskAccessInfo),
 		_flags(flags)
 	{
+		// Initialize nOS-V priority if needed
+		computePriority();
 	}
 
 	inline bool hasCode() const
 	{
 		nanos6_task_info_t *taskInfo = getTaskInfo(_task);
-		assert(taskInfo->implementation_count == 1);
 		assert(taskInfo != nullptr);
+		assert(taskInfo->implementation_count == 1);
 
 		return (taskInfo->implementations[0].run != nullptr);
+	}
+
+	inline void computePriority()
+	{
+		nanos6_task_info_t *taskInfo = getTaskInfo(_task);
+		assert(taskInfo != nullptr);
+		if (taskInfo->get_priority != nullptr) {
+			nanos6_priority_t priority;
+			taskInfo->get_priority(_argsBlock, &priority);
+			_delayedPriority = priority;
+			applyDelayedChanges();
+		}
 	}
 
 	inline void *getArgsBlock() const
@@ -194,6 +208,11 @@ public:
 		assert(res >= 0);
 
 		return (res == 0);
+	}
+
+	inline int getPredecessorCount() const
+	{
+		return _predecessorCount.load(std::memory_order_relaxed);
 	}
 
 	inline void increaseRemovalBlockingCount()
@@ -577,7 +596,7 @@ public:
 		_priorityDelta = delta;
 	}
 
-	virtual ~TaskMetadata() {}
+	virtual ~TaskMetadata() = default;
 };
 
 #endif // TASK_METADATA_HPP

@@ -48,13 +48,13 @@ void TaskiterGraph::prioritizeCriticalPath()
 		}
 
 		TaskiterGraphNode node = boost::get(nodemap, vertex);
-		TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+		TaskMetadata *task = node->getTask();
 
 		if (task) {
 			// This is adding uint64_t to the int maxPriority, which has a potential to overflow
 			// when iterations are very large
-			maxPriority += (*task)->getElapsedTime();
-			(*task)->setPriority(maxPriority);
+			maxPriority += std::min(task->getElapsedTime(), 1UL);
+			task->setPriority(maxPriority);
 		} else {
 			maxPriority++;
 		}
@@ -86,10 +86,7 @@ void TaskiterGraph::transitiveReduction()
 		graph_vertex_t originalVertex = *vi;
 		TaskiterGraphNode node = boost::get(nodemapOriginal, originalVertex);
 		boost::put(nodemapProcessed, gToTr[originalVertex], node);
-	}
-
-	for (auto &it : _tasksToVertices) {
-		it.second = gToTr[it.second];
+		node->setVertex(gToTr[originalVertex]);
 	}
 
 	graph_t::edge_iterator ei, eend;
@@ -180,7 +177,6 @@ void TaskiterGraph::basicReduction()
 
 void TaskiterGraph::localityScheduling()
 {
-	// Simulate AMD-Rome with L3 partitioned: total of 16 L3 complexes
 	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graphCpy);
 	int vertices = boost::num_vertices(_graphCpy);
 	int clusters = 2;
@@ -233,7 +229,7 @@ void TaskiterGraph::localityScheduling()
 		for (std::deque<graph_vertex_t>::iterator vIterator = readyTasks.begin(); vIterator != readyTasks.end(); ) {
 			graph_vertex_t v = *vIterator;
 			TaskiterGraphNode node = boost::get(nodemap, v);
-			TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+			TaskMetadata *task = node->getTask();
 
 			if (!task) {
 				// Node is a ReductionInfo
@@ -243,14 +239,14 @@ void TaskiterGraph::localityScheduling()
 			} else {
 				// Calculate score
 				int score = 0;
-				(*task)->getTaskDataAccesses().forAll([&accessCount, &score](void *address, DataAccess *) -> bool {
+				task->getTaskDataAccesses().forAll([&accessCount, &score](void *address, DataAccess *) -> bool {
 					score += accessCount[address];
 					return true;
 				});
 
 				if (score > matches) {
 					matches = score;
-					bestSuccessor = *task;
+					bestSuccessor = task;
 					bestSuccessorIt = vIterator;
 					if (score == total)
 						break;
@@ -279,7 +275,7 @@ void TaskiterGraph::localityScheduling()
 		bool foundTask = false;
 		if (oldTask) {
 			// Now, "release" deps
-			graph_vertex_t v = _tasksToVertices[oldTask];
+			graph_vertex_t v = getNodeFromTask(oldTask)->getVertex();
 			graph_t::out_edge_iterator ei, eend;
 			for (boost::tie(ei, eend) = boost::out_edges(v, _graphCpy); ei != eend; ei++) {
 				graph_vertex_t target = boost::target(*ei, _graphCpy);
@@ -340,10 +336,10 @@ void TaskiterGraph::localitySchedulingBitset()
 	for (boost::tie(vi, vend) = boost::vertices(_graphCpy); vi != vend; vi++) {
 		graph_vertex_t v = *vi;
 		TaskiterGraphNode node = boost::get(nodemap, v);
-		TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+		TaskMetadata *task = node->getTask();
 
 		if (task) {
-			(*task)->getTaskDataAccesses().forAll([&bitset, &v, bitsetWords, this](void *address, DataAccess *) -> bool {
+			task->getTaskDataAccesses().forAll([&bitset, &v, bitsetWords, this](void *address, DataAccess *) -> bool {
 				Container::unordered_map<access_address_t, TaskiterGraphAccessChain>::iterator mapIterator = _bottomMap.find(address);
 				assert(mapIterator != _bottomMap.end());
 				int index = std::distance(_bottomMap.begin(), mapIterator);
@@ -390,7 +386,7 @@ void TaskiterGraph::localitySchedulingBitset()
 			for (std::deque<graph_vertex_t>::iterator vIterator = readyTasks.begin(); vIterator != readyTasks.end(); vIterator++) {
 				graph_vertex_t v = *vIterator;
 				TaskiterGraphNode node = boost::get(nodemap, v);
-				TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+				TaskMetadata *task = node->getTask();
 
 				int score = 0;
 				for (int i = 0; i < bitsetWords; ++i)
@@ -398,7 +394,7 @@ void TaskiterGraph::localitySchedulingBitset()
 
 				if (score > matches) {
 					matches = score;
-					bestSuccessor = *task;
+					bestSuccessor = task;
 					bestSuccessorIt = vIterator;
 				}
 			}
@@ -523,10 +519,10 @@ void TaskiterGraph::localitySchedulingMovePages()
 	for (boost::tie(vi, vend) = boost::vertices(_graphCpy); vi != vend; vi++) {
 		graph_vertex_t v = *vi;
 		TaskiterGraphNode node = boost::get(nodemap, v);
-		TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+		TaskMetadata *task = node->getTask();
 
 		if (task) {
-			(*task)->getTaskDataAccesses().forAll([&pagesToNodes, &numaScores, &v, this, &pageSize](void *address, DataAccess *access) -> bool {
+			task->getTaskDataAccesses().forAll([&pagesToNodes, &numaScores, &v, this, &pageSize](void *address, DataAccess *access) -> bool {
 				void *page = alignToPageBoundary(address, pageSize);
 				int numaNode = pagesToNodes[page];
 
@@ -568,11 +564,11 @@ void TaskiterGraph::localitySchedulingMovePages()
 					scheduledTasks++;
 
 					TaskiterGraphNode node = boost::get(nodemap, v);
-					TaskMetadata **task = boost::get<TaskMetadata *>(&node);
-					(*task)->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
-					(*task)->setPriority(initialPriority--);
+					TaskMetadata *task = node->getTask();
+					task->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+					task->setPriority(initialPriority--);
 
-					coreDeadlines[cpu] = now + (*task)->getElapsedTime();
+					coreDeadlines[cpu] = now + task->getElapsedTime();
 				}
 			}
 		}
@@ -597,11 +593,11 @@ void TaskiterGraph::localitySchedulingMovePages()
 			scheduledTasks++;
 
 			TaskiterGraphNode node = boost::get(nodemap, v);
-			TaskMetadata **task = boost::get<TaskMetadata *>(&node);
-			(*task)->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
-			(*task)->setPriority(initialPriority--);
+			TaskMetadata *task = node->getTask();
+			task->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+			task->setPriority(initialPriority--);
 
-			coreDeadlines[cpu] = now + (*task)->getElapsedTime();
+			coreDeadlines[cpu] = now + task->getElapsedTime();
 		}
 
 		do {
@@ -700,10 +696,10 @@ void TaskiterGraph::localitySchedulingMovePagesSimple()
 	for (boost::tie(vi, vend) = boost::vertices(_graphCpy); vi != vend; vi++) {
 		graph_vertex_t v = *vi;
 		TaskiterGraphNode node = boost::get(nodemap, v);
-		TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+		TaskMetadata *task = node->getTask();
 
 		if (task) {
-			(*task)->getTaskDataAccesses().forAll([&pagesToNodes, &numaScores, &v, this, &pageSize](void *address, DataAccess *access) -> bool {
+			task->getTaskDataAccesses().forAll([&pagesToNodes, &numaScores, &v, this, &pageSize](void *address, DataAccess *access) -> bool {
 				void *page = alignToPageBoundary(address, pageSize);
 				int numaNode = pagesToNodes[page];
 
@@ -715,7 +711,7 @@ void TaskiterGraph::localitySchedulingMovePagesSimple()
 				return true;
 			});
 			int bestNumaNode = std::distance(numaScores[v].begin(), std::max_element(numaScores[v].begin(), numaScores[v].end()));
-			(*task)->setAffinity(clustersToSystemNuma[bestNumaNode], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+			task->setAffinity(clustersToSystemNuma[bestNumaNode], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
 		}
 	}
 }
@@ -742,10 +738,10 @@ void TaskiterGraph::communicationPriorityPropagation()
 			int maxPriority = 0;
 
 			TaskiterGraphNode node = boost::get(nodemap, vertex);
-			TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+			TaskMetadata *task = node->getTask();
 
 			if (task) {
-				if ((*task)->isCommunicationTask())
+				if (task->isCommunicationTask())
 					maxPriority = INT_MAX;
 			}
 
@@ -766,8 +762,8 @@ void TaskiterGraph::communicationPriorityPropagation()
 			if (maxPriority > priorityMap[vertex]) {
 				if (task) {
 					if (maxPriority != INT_MAX)
-						(*task)->setPriorityDelta(1);
-					(*task)->setPriority(maxPriority);
+						task->setPriorityDelta(1);
+					task->setPriority(maxPriority);
 
 					// if (!firstIt)
 					// 	std::cout << maxPriority << std::endl;
@@ -792,7 +788,7 @@ void TaskiterGraph::communicationPriorityPropagation()
 		for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
 			graph_vertex_t vertex = *vi;
 			TaskiterGraphNode node = boost::get(nodemapCyclic, vertex);
-			TaskMetadata **task = boost::get<TaskMetadata *>(&node);
+			TaskMetadata *task = node->getTask();
 
 			int maxPriority = 0;
 			for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei) {
@@ -811,8 +807,8 @@ void TaskiterGraph::communicationPriorityPropagation()
 			if (maxPriority > priorityMap[vertex]) {
 				if (task) {
 					assert(maxPriority != INT_MAX);
-					(*task)->setPriorityDelta(1);
-					(*task)->setPriority(maxPriority);
+					task->setPriorityDelta(1);
+					task->setPriority(maxPriority);
 				}
 
 				priorityMap[vertex] = maxPriority;
