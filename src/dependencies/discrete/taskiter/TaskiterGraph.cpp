@@ -53,7 +53,7 @@ void TaskiterGraph::prioritizeCriticalPath()
 		if (task) {
 			// This is adding uint64_t to the int maxPriority, which has a potential to overflow
 			// when iterations are very large
-			maxPriority += std::min(task->getElapsedTime(), 1UL);
+			maxPriority += std::max(task->getElapsedTime(), 1UL);
 			task->setPriority(maxPriority);
 		} else {
 			maxPriority++;
@@ -565,10 +565,14 @@ void TaskiterGraph::localitySchedulingMovePages()
 
 					TaskiterGraphNode node = boost::get(nodemap, v);
 					TaskMetadata *task = node->getTask();
-					task->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
-					task->setPriority(initialPriority--);
+					if (task) {
+						task->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+						task->setPriority(initialPriority--);
 
-					coreDeadlines[cpu] = now + task->getElapsedTime();
+						coreDeadlines[cpu] = now + task->getElapsedTime();
+					} else {
+						coreDeadlines[cpu] = now + 1;
+					}
 				}
 			}
 		}
@@ -594,10 +598,14 @@ void TaskiterGraph::localitySchedulingMovePages()
 
 			TaskiterGraphNode node = boost::get(nodemap, v);
 			TaskMetadata *task = node->getTask();
-			task->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
-			task->setPriority(initialPriority--);
+			if (task) {
+				task->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+				task->setPriority(initialPriority--);
 
-			coreDeadlines[cpu] = now + task->getElapsedTime();
+				coreDeadlines[cpu] = now + task->getElapsedTime();
+			} else {
+				coreDeadlines[cpu] = now + 1;
+			}
 		}
 
 		do {
@@ -764,9 +772,6 @@ void TaskiterGraph::communicationPriorityPropagation()
 					if (maxPriority != INT_MAX)
 						task->setPriorityDelta(1);
 					task->setPriority(maxPriority);
-
-					// if (!firstIt)
-					// 	std::cout << maxPriority << std::endl;
 				}
 
 				assert(priorityMap[vertex] <= maxPriority);
@@ -776,8 +781,6 @@ void TaskiterGraph::communicationPriorityPropagation()
 				if (maxPriority != 0 && maxPriority < minNonZeroPriority)
 					minNonZeroPriority = maxPriority;
 			}
-			// if (!firstIt)
-			// 	std::cout << "[" << getpid() << "] " << vertex << " - " << priorityMap[vertex] << std::endl;
 		}
 
 		if (!firstIt)
@@ -814,7 +817,6 @@ void TaskiterGraph::communicationPriorityPropagation()
 				priorityMap[vertex] = maxPriority;
 				if (maxPriority != 0 && maxPriority < minNonZeroPriority)
 					minNonZeroPriority = maxPriority;
-
 			}
 		}
 

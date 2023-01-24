@@ -137,8 +137,7 @@ private:
 	static EnvironmentVariable<bool> _communcationPriorityPropagation;
 
 	// Creates edges from chain to node and inserts them into the graph
-	inline void
-	createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain)
+	inline void	createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain)
 	{
 		EdgeProperty props(false);
 
@@ -554,8 +553,6 @@ public:
 		// And for control tasks
 		for (TaskiterNode *node : _controlTasks) {
 			TaskMetadata *t = node->getTask();
-			// std::cout << t->getOriginalPrecessorCount() << " | " << t->getPredecessorCount() << " | " << first << std::endl;
-			// std::cout << t << " | " << controlTask << std::endl;
 			if(t->decreasePredecessors(t->getOriginalPrecessorCount() + first))
 				nosv_submit(t->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 			first = 0;

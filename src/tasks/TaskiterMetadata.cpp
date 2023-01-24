@@ -10,6 +10,7 @@
 #include "common/ErrorHandler.hpp"
 #include "tasks/TaskInfo.hpp"
 #include "tasks/TaskiterMetadata.hpp"
+#include "tasks/TaskiterChildMetadata.hpp"
 
 // For posix_memalign
 #ifndef _POSIX_C_SOURCE
@@ -101,6 +102,8 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	taskInfo->implementations[0].declaration_source = "Taskiter Control";
 	taskInfo->implementations[0].get_constraints = nullptr;
 
+	taskInfo->get_priority = NULL;
+
 	taskInfo->num_symbols = 0;
 
 	// Register the new task info
@@ -109,10 +112,7 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	// Create the task representing the spawned function
 	void *task = nullptr;
 	TaskiterArgsBlock *argsBlock = nullptr;
-	nanos6_create_task(
-		taskInfo, &functionInvocationInfo,
-		"Taskiter Control", sizeof(TaskiterArgsBlock),
-		(void **)&argsBlock, &task, 0, 0);
+	TaskCreation::createTask<TaskiterChildMetadata>(taskInfo, NULL, "Taskiter Control", sizeof(TaskiterArgsBlock), (void **)&argsBlock, &task, 0, 0);
 	assert(task != nullptr);
 	assert(argsBlock != nullptr);
 

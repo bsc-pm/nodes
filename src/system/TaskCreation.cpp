@@ -116,6 +116,15 @@ void TaskCreation::createTask(nanos6_task_info_t *taskInfo,
 	Instrument::exitCreateTask();
 }
 
+template void TaskCreation::createTask<TaskiterChildMetadata>(
+	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
+template void TaskCreation::createTask<TaskiterChildLoopMetadata>(
+	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
+template void TaskCreation::createTask<TaskloopMetadata>(
+	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
+template void TaskCreation::createTask<TaskMetadata>(
+	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
+
 static inline bool creatingInTaskiter()
 {
 	// Obtain the parent task and link both parent and child
