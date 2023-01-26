@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2022-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef TASKITER_NODE_HPP
@@ -19,10 +19,13 @@ template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 class TaskiterNode {
 	size_t _vertex;
 	std::variant<TaskMetadata *, ReductionInfo *> _variant;
+	size_t _preferredOutVertex;
+	bool _preferredOutCrossIteration;
 
 	public:
 	TaskiterNode(TaskMetadata *taskBase, ReductionInfo *reductionBase) :
-		_vertex(0)
+		_vertex(0),
+		_preferredOutVertex(SIZE_MAX)
 	{
 		if (taskBase != nullptr)
 			_variant = taskBase;
@@ -44,6 +47,22 @@ class TaskiterNode {
 	void setVertex(size_t vertex)
 	{
 		_vertex = vertex;
+	}
+
+	size_t getPreferredOutVertex() const
+	{
+		return _preferredOutVertex;
+	}
+
+	bool getPreferredOutCrossIteration() const
+	{
+		return _preferredOutCrossIteration;
+	}
+
+	void setPreferredOutVertex(size_t preferredOutVertex, bool crossIteration)
+	{
+		_preferredOutVertex = preferredOutVertex;
+		_preferredOutCrossIteration = crossIteration;
 	}
 
 	TaskMetadata *getTask()

@@ -56,12 +56,15 @@ namespace DataAccessRegistration {
 
 				// TODO: Control using envvar? Config file (overkill?) ?
 				// Immediate successor submit
-				int err = nosv_submit(taskArray[0]->getTaskHandle(), NOSV_SUBMIT_IMMEDIATE);
-				assert(err == 0);
 
-				for (size_t j = 1; j < list.size(); ++j) {
+				size_t size = list.size();
+
+				for (size_t j = 0; j < size - 1; ++j) {
 					nosv_submit(taskArray[j]->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 				}
+
+				int err = nosv_submit(taskArray[size - 1]->getTaskHandle(), NOSV_SUBMIT_IMMEDIATE);
+				assert(err == 0);
 			}
 		}
 

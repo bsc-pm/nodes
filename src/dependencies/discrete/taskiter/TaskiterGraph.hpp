@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2022-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef TASKITER_GRAPH_HPP
@@ -135,6 +135,7 @@ private:
 	static EnvironmentVariable<bool> _printGraphStatistics;
 	static EnvironmentVariable<std::string> _tentativeNumaScheduling;
 	static EnvironmentVariable<bool> _communcationPriorityPropagation;
+	static EnvironmentVariable<bool> _smartIS;
 
 	// Creates edges from chain to node and inserts them into the graph
 	inline void	createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain)
@@ -413,7 +414,7 @@ private:
 	void localitySchedulingBitset();
 	void localitySchedulingMovePages();
 	void localitySchedulingMovePagesSimple();
-	void localitySchedulingSimhash();
+	void immediateSuccessorProcess();
 	void communicationPriorityPropagation();
 
 	inline TaskiterNode *getNodeFromTask(TaskMetadata *task)
@@ -479,12 +480,28 @@ public:
 		boost::property_map<graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), _graph);
 		boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
 
+		size_t preferredVertex = node->getPreferredOutVertex();
+
 		// Travel through adjacent vertices
 		for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei) {
 			graph_t::edge_descriptor e = *ei;
 			graph_vertex_t to = boost::target(e, _graph);
 			TaskiterGraphNode toNode = boost::get(nodemap, to);
 			bool edgeCrossIteration = boost::get(edgemap, e);
+
+			if(to != preferredVertex) {
+				if ((crossIterationBoundary || !edgeCrossIteration))
+					toNode->apply(visitor);
+			} else {
+				preferredVertex = SIZE_MAX;
+			}
+		}
+
+		preferredVertex = node->getPreferredOutVertex();
+		if (preferredVertex != SIZE_MAX) {
+			graph_vertex_t to = (graph_vertex_t) preferredVertex;
+			TaskiterGraphNode toNode = boost::get(nodemap, to);
+			bool edgeCrossIteration = node->getPreferredOutCrossIteration();
 
 			if (crossIterationBoundary || !edgeCrossIteration)
 				toNode->apply(visitor);
@@ -571,7 +588,7 @@ public:
 			basicReduction();
 
 		if (_tentativeNumaScheduling.getValue() != "none" || _criticalPathTrackingEnabled.getValue() ||
-			_communcationPriorityPropagation.getValue()) {
+			_communcationPriorityPropagation.getValue() || _smartIS.getValue()) {
 			// Copy the graph for optimization
 			// Iterators pointing to the graph may change when adding attributes, etc.
 			// Operating on a copy will ensure this doesn't become an issue for the delayed optimization.
@@ -600,12 +617,13 @@ public:
 					localitySchedulingMovePagesSimple();
 				else if (_tentativeNumaScheduling.getValue() == "move_pages")
 					localitySchedulingMovePages();
-				else if (_tentativeNumaScheduling.getValue() == "simhash")
-					localitySchedulingSimhash();
 
 				// Prioritize tasks in the critical path
 				if (_criticalPathTrackingEnabled.getValue())
 					prioritizeCriticalPath();
+
+				if (_smartIS.getValue())
+					immediateSuccessorProcess();
 
 				// if (_communcationPriorityPropagation.getValue())
 				// 	communicationPriorityPropagation();

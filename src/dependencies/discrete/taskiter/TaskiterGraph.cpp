@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2022-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #include <algorithm>
@@ -19,8 +19,9 @@
 EnvironmentVariable<std::string> TaskiterGraph::_graphOptimization("NODES_ITER_OPTIMIZE", "basic");
 EnvironmentVariable<bool> TaskiterGraph::_criticalPathTrackingEnabled("NODES_ITER_TRACK_CRITICAL", false);
 EnvironmentVariable<bool> TaskiterGraph::_printGraphStatistics("NODES_ITER_PRINT_STATISTICS", false);
-EnvironmentVariable<std::string> TaskiterGraph::_tentativeNumaScheduling("NODES_ITER_NUMA", "naive");
+EnvironmentVariable<std::string> TaskiterGraph::_tentativeNumaScheduling("NODES_ITER_NUMA", "none");
 EnvironmentVariable<bool> TaskiterGraph::_communcationPriorityPropagation("NODES_ITER_COMM_PRIORITY", false);
+EnvironmentVariable<bool> TaskiterGraph::_smartIS("NODES_ITER_SMART_IS", false);
 
 void TaskiterGraph::prioritizeCriticalPath()
 {
@@ -54,6 +55,7 @@ void TaskiterGraph::prioritizeCriticalPath()
 			// This is adding uint64_t to the int maxPriority, which has a potential to overflow
 			// when iterations are very large
 			maxPriority += std::max(task->getElapsedTime(), 1UL);
+			assert(maxPriority >= 0);
 			task->setPriority(maxPriority);
 		} else {
 			maxPriority++;
@@ -567,6 +569,7 @@ void TaskiterGraph::localitySchedulingMovePages()
 					TaskMetadata *task = node->getTask();
 					if (task) {
 						task->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+						assert(initialPriority - 1 >= 0);
 						task->setPriority(initialPriority--);
 
 						coreDeadlines[cpu] = now + task->getElapsedTime();
@@ -600,6 +603,7 @@ void TaskiterGraph::localitySchedulingMovePages()
 			TaskMetadata *task = node->getTask();
 			if (task) {
 				task->setAffinity(clustersToSystemNuma[clusterIdx], NOSV_AFFINITY_LEVEL_NUMA, NOSV_AFFINITY_TYPE_PREFERRED);
+				assert(initialPriority - 1 >= 0);
 				task->setPriority(initialPriority--);
 
 				coreDeadlines[cpu] = now + task->getElapsedTime();
@@ -771,6 +775,8 @@ void TaskiterGraph::communicationPriorityPropagation()
 				if (task) {
 					if (maxPriority != INT_MAX)
 						task->setPriorityDelta(1);
+
+					assert(maxPriority >= 0);
 					task->setPriority(maxPriority);
 				}
 
@@ -811,6 +817,7 @@ void TaskiterGraph::communicationPriorityPropagation()
 				if (task) {
 					assert(maxPriority != INT_MAX);
 					task->setPriorityDelta(1);
+					assert(maxPriority >= 0);
 					task->setPriority(maxPriority);
 				}
 
@@ -832,7 +839,62 @@ void TaskiterGraph::communicationPriorityPropagation()
 	// }, false);
 }
 
-void TaskiterGraph::localitySchedulingSimhash()
+void TaskiterGraph::immediateSuccessorProcess()
 {
+	// Explore the dependencies of a task on its successors, select out -> in edges as IS
+	boost::property_map<graph_t, boost::vertex_name_t>::type nodemapCyclic = boost::get(boost::vertex_name_t(), _graph);
+	boost::property_map<graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), _graph);
+	graph_t::out_edge_iterator ei, eend;
 
+	std::vector<void *> outAccesses;
+
+	graph_t::vertex_iterator vi, vend;
+	for (boost::tie(vi, vend) = boost::vertices(_graph); vi != vend; vi++) {
+		graph_vertex_t vertex = *vi;
+		TaskiterGraphNode node = boost::get(nodemapCyclic, vertex);
+		TaskMetadata *task = node->getTask();
+
+		if(!task)
+			continue;
+
+		task->getTaskDataAccesses().forAll([&outAccesses] (void *address, DataAccess *access) -> bool {
+			if (access->getType() == READWRITE_ACCESS_TYPE || access->getType() == WRITE_ACCESS_TYPE)
+				outAccesses.push_back(address);
+			
+			return true;
+		});
+
+		std::sort(outAccesses.begin(), outAccesses.end());
+
+		for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei) {
+			graph_t::edge_descriptor e = *ei;
+			graph_vertex_t to = boost::target(e, _graph);
+
+			TaskiterGraphNode nodeTo = boost::get(nodemapCyclic, to);
+			TaskMetadata *taskTo = nodeTo->getTask();
+
+			if (!taskTo)
+				continue;
+
+			bool edgeSelected = false;
+			
+			taskTo->getTaskDataAccesses().forAll([&outAccesses, &edgeSelected] (void *address, DataAccess *access) -> bool {
+				if ((access->getType() == READ_ACCESS_TYPE || access->getType() == READWRITE_ACCESS_TYPE) && 
+					std::binary_search(outAccesses.begin(), outAccesses.end(), address)) {
+					edgeSelected = true;
+					return false;
+				}
+
+				return true;
+			});
+
+			if (edgeSelected) {
+				bool edgeCrossIteration = boost::get(edgemap, e);
+				node->setPreferredOutVertex(to, edgeCrossIteration);
+				break;
+			}
+		}
+
+		outAccesses.clear();
+	}
 }
