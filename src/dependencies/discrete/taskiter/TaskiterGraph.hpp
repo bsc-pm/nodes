@@ -480,7 +480,9 @@ public:
 		boost::property_map<graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), _graph);
 		boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
 
+		// Ask only once for the preferred vertex, since the task calculating IS may still be running
 		size_t preferredVertex = node->getPreferredOutVertex();
+		size_t preferredOriginal = preferredVertex;
 
 		// Travel through adjacent vertices
 		for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei) {
@@ -497,9 +499,8 @@ public:
 			}
 		}
 
-		preferredVertex = node->getPreferredOutVertex();
-		if (preferredVertex != SIZE_MAX) {
-			graph_vertex_t to = (graph_vertex_t) preferredVertex;
+		if (preferredOriginal != SIZE_MAX) {
+			graph_vertex_t to = (graph_vertex_t) preferredOriginal;
 			TaskiterGraphNode toNode = boost::get(nodemap, to);
 			bool edgeCrossIteration = node->getPreferredOutCrossIteration();
 
@@ -596,15 +597,17 @@ public:
 
 			// We'll do the optimization in an offloaded task, but we need to block the existing
 			// taskiter tasks from disappearing while we optimize.
-			const bool willPostProcess = _communcationPriorityPropagation.getValue();
-			forEach([willPostProcess](TaskMetadata *t) {
+			const bool willPostProcess = _communcationPriorityPropagation.getValue() || _smartIS.getValue();
+			forEach([willPostProcess, this](TaskMetadata *t) {
 				t->increaseRemovalBlockingCount();
 
 				// Wait also for the post-process actions
 				if (willPostProcess) {
 					t->increaseRemovalBlockingCount();
-					t->setPriority(INT_MAX);
-					t->applyDelayedChanges();
+					if (_communcationPriorityPropagation.getValue()) {
+						t->setPriority(INT_MAX);
+						t->applyDelayedChanges();
+					}
 				}
 			});
 
@@ -622,12 +625,6 @@ public:
 				if (_criticalPathTrackingEnabled.getValue())
 					prioritizeCriticalPath();
 
-				if (_smartIS.getValue())
-					immediateSuccessorProcess();
-
-				// if (_communcationPriorityPropagation.getValue())
-				// 	communicationPriorityPropagation();
-
 				forEach([](TaskMetadata *t) {
 					if (t->decreaseRemovalBlockingCount())
 						TaskFinalization::disposeTask(t);
@@ -640,11 +637,14 @@ public:
 
 	void postProcess()
 	{
-		if (_communcationPriorityPropagation.getValue()) {
+		if (_communcationPriorityPropagation.getValue() || _smartIS.getValue()) {
 			SpawnFunction::spawnLambda([this]() {
 				// Prioritize communcation tasks
 				if (_communcationPriorityPropagation.getValue())
 					communicationPriorityPropagation();
+
+				if (_smartIS.getValue())
+					immediateSuccessorProcess();
 
 				forEach([](TaskMetadata *t) {
 					if (t->decreaseRemovalBlockingCount())
