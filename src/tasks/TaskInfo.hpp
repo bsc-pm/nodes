@@ -42,7 +42,7 @@ private:
 	//! Whether the manager has been initialized (after the runtime)
 	static bool _initialized;
 
-private:
+public:
 
 	//! \brief Run wrapper for task types
 	static inline void runWrapper(nosv_task_t task)
@@ -115,8 +115,6 @@ private:
 			nosv_submit(taskMetadata->getParent()->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 		}
 	}
-
-public:
 
 	//! \brief Initialize the TaskInfo manager after the runtime has been initialized
 	static inline void initialize()

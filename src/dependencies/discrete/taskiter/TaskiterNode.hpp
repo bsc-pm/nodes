@@ -8,6 +8,7 @@
 #define TASKITER_NODE_HPP
 
 #include <cstdint>
+#include <cstddef>
 #include <variant>
 
 class TaskMetadata;

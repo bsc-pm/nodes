@@ -108,6 +108,9 @@ private:
 	//! Delayed affinity setting
 	nosv_affinity_t _delayedAffinity;
 
+	//! Grouped task
+	TaskMetadata *_group;
+
 	//! Detected communication task
 	bool _isCommunicationTask;
 
@@ -594,6 +597,21 @@ public:
 	inline void setPriorityDelta(int delta)
 	{
 		_priorityDelta = delta;
+	}
+
+	inline virtual bool isGroup() const
+	{
+		return false;
+	}
+
+	inline TaskMetadata *getGroup() const
+	{
+		return _group;
+	}
+
+	inline void setGroup(TaskMetadata *group)
+	{
+		_group = group;
 	}
 
 	virtual ~TaskMetadata() = default;

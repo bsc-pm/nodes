@@ -14,6 +14,7 @@
 #include "TaskFinalization.hpp"
 #include "dependencies/discrete/CPUDependencyData.hpp"
 #include "dependencies/discrete/DataAccessRegistration.hpp"
+#include "dependencies/discrete/taskiter/TaskGroupMetadata.hpp"
 #include "hardware/HardwareInfo.hpp"
 #include "memory/MemoryAllocator.hpp"
 #include "system/SpawnFunction.hpp"
@@ -72,6 +73,9 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 		}
 
 		if (finish) {
+			if (taskMetadata->isGroup())
+				((TaskGroupMetadata *) taskMetadata)->finalizeGroupedTasks();
+
 			TaskFinalization::taskFinished(taskMetadata);
 		}
 

@@ -14,7 +14,9 @@
 #include <unordered_set>
 
 #include "common/MathSupport.hpp"
+#include "system/TaskCreation.hpp"
 #include "TaskiterGraph.hpp"
+#include "TaskGroupMetadata.hpp"
 
 EnvironmentVariable<std::string> TaskiterGraph::_graphOptimization("NODES_ITER_OPTIMIZE", "basic");
 EnvironmentVariable<bool> TaskiterGraph::_criticalPathTrackingEnabled("NODES_ITER_TRACK_CRITICAL", false);
@@ -896,5 +898,156 @@ void TaskiterGraph::immediateSuccessorProcess()
 		}
 
 		outAccesses.clear();
+	}
+}
+
+static TaskiterGraph::graph_vertex_t getOnlySuccessor(TaskiterGraph::graph_vertex_t v, TaskiterGraph::graph_t &graph)
+{
+	assert(boost::out_degree(v, graph) == 1);
+	return (*(boost::out_edges(v, graph).first)).m_target;
+}
+
+TaskGroupMetadata *getEmptyGroupTask(TaskMetadata *parent)
+{
+	nosv_task_t task;
+	void *argsBlockPointer;
+
+	TaskCreation::createTask<TaskGroupMetadata>(
+		TaskGroupMetadata::getGroupTaskInfo(), 
+		nullptr,
+		nullptr,
+		sizeof(TaskGroupMetadata *),
+		&argsBlockPointer,
+		(void **) &task,
+		0,
+		0);
+
+	assert(task != nullptr);
+	assert(argsBlockPointer != nullptr);
+
+	TaskGroupMetadata *group = (TaskGroupMetadata *) TaskMetadata::getTaskMetadata(task);
+	TaskGroupMetadata **ptr = (TaskGroupMetadata **) argsBlockPointer;
+	*ptr = group;
+
+	group->setParent(parent->getTaskHandle());
+	group->incrementOriginalPredecessorCount();
+	group->setIterationCount(parent->getIterationCount());
+	// Simulate it has been finished already
+	group->increaseWakeUpCount(-1);
+
+	return group;
+}
+
+void TaskiterGraph::granularityTuning()
+{
+	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
+	boost::property_map<graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), _graph);
+	graph_t::edge_iterator ei, eend;
+	graph_t::vertex_iterator vi, vend;
+
+	std::vector<graph_vertex_t> topologicalOrder;
+	boost::topological_sort(_graph, std::back_inserter(topologicalOrder));
+
+	// There are three possible merging algorithms, that can be applied in different orderings.
+	// First there is the "Sequential", merging single-predecessor single-successor task chains
+	// Then, "Front", which aggregates tasks in the same DAG depth with other similar ones
+	// Lastly, "Depth Front", which is a little bit more complex
+
+	// Sequential
+	{
+		int vertices = boost::num_vertices(_graph);
+		std::vector<bool> visited(vertices);
+		std::vector<int> equivalence(vertices);
+
+		graph_t transformedGraph;
+
+
+		int groupsCreated = 0;
+		// The idea is to find the relevant chains, group them and place them in the transformed graph.
+		// The ordered traversal will allow us to build the graph in a single pass
+		for (std::vector<graph_vertex_t>::reverse_iterator it = topologicalOrder.rbegin(); it != topologicalOrder.rend(); ++it) {
+			graph_vertex_t v = *it;
+
+			if (visited[v])
+				continue;
+
+			visited[v] = true;
+
+			// If it's not a part of a potential chain, insert as-is.
+			if (boost::out_degree(v, _graph) != 1) {
+				// Insert into the transformed graph
+				TaskiterGraphNode node = boost::get(nodemap, v);
+				VertexProperty prop(node);
+				graph_vertex_t newVertex = boost::add_vertex(prop, transformedGraph);
+				equivalence[v] = newVertex;
+				node->setVertex(newVertex);
+			} else {
+				assert(boost::in_degree(v, _graph) != 1);
+
+				// Find the last member of this chain
+				graph_vertex_t last = v;
+				graph_vertex_t next = getOnlySuccessor(last, _graph);
+
+				while (boost::in_degree(next, _graph) == 1 && boost::out_degree(next, _graph) == 1) {
+					last = next;
+					visited[last] = true;
+					next = getOnlySuccessor(last, _graph);
+				}
+
+				if (boost::in_degree(next, _graph) == 1) {
+					last = next;
+					visited[last] = true;
+				}
+
+				if (last == v) {
+					// No grouping
+					TaskiterGraphNode node = boost::get(nodemap, v);
+					VertexProperty prop(node);
+					graph_vertex_t newVertex = boost::add_vertex(prop, transformedGraph);
+					equivalence[v] = newVertex;
+					node->setVertex(newVertex);
+				} else {
+					// Grouping
+					// The issue here is that probably many vertices that are pointed by last won't be in the transformed graph yet.
+					// We can add them at this point, but they may be the source
+
+					// Create a new grouped task
+					TaskGroupMetadata *group = getEmptyGroupTask(_tasks[0][0]->getTask()->getParent());
+					TaskiterGraphNode nGroup =  (TaskiterNode *) group;
+					VertexProperty prop(nGroup);
+					// Add it to the graph
+					graph_vertex_t groupVertex = boost::add_vertex(prop, transformedGraph);
+					group->setVertex(groupVertex);
+
+					while(v != last) {
+						TaskiterGraphNode node = boost::get(nodemap, v);
+						group->addTask(node);
+						node->setVertex(groupVertex);
+						equivalence[v] = groupVertex;
+						v = getOnlySuccessor(v, _graph);
+					}
+
+					TaskiterGraphNode node = boost::get(nodemap, last);
+					group->addTask(node);
+					node->setVertex(groupVertex);
+					equivalence[last] = groupVertex;
+					groupsCreated++;
+				}
+			}
+		}
+
+		std::cout << groupsCreated << std::endl;
+		std::cout << boost::num_vertices(transformedGraph) << std::endl;
+
+		// Copy the edges back
+		for (boost::tie(ei, eend) = boost::edges(_graph); ei != eend; ei++) {
+			graph_t::edge_descriptor e = *ei;
+			graph_vertex_t from = equivalence[e.m_source];
+			graph_vertex_t to = equivalence[e.m_target];
+			if (from != to)
+				boost::add_edge(from, to, transformedGraph);
+		}
+
+		_graph = transformedGraph;
 	}
 }

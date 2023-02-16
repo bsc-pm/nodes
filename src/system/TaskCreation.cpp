@@ -16,6 +16,7 @@
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "dependencies/discrete/TaskDataAccesses.hpp"
 #include "dependencies/discrete/TaskDataAccessesInfo.hpp"
+#include "dependencies/discrete/taskiter/TaskGroupMetadata.hpp"
 #include "instrument/OVNIInstrumentation.hpp"
 #include "memory/MemoryAllocator.hpp"
 #include "hardware/HardwareInfo.hpp"
@@ -123,6 +124,8 @@ template void TaskCreation::createTask<TaskiterChildLoopMetadata>(
 template void TaskCreation::createTask<TaskloopMetadata>(
 	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
 template void TaskCreation::createTask<TaskMetadata>(
+	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
+template void TaskCreation::createTask<TaskGroupMetadata>(
 	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
 
 static inline bool creatingInTaskiter()

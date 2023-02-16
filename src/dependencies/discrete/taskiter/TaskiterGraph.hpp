@@ -7,7 +7,7 @@
 #ifndef TASKITER_GRAPH_HPP
 #define TASKITER_GRAPH_HPP
 
-// #define PRINT_TASKITER_GRAPH 1
+#define PRINT_TASKITER_GRAPH 1
 
 #include <algorithm>
 #include <chrono>
@@ -33,6 +33,7 @@
 #include "dependencies/discrete/DataAccess.hpp"
 #include "dependencies/discrete/ReductionInfo.hpp"
 #include "dependencies/discrete/TaskiterReductionInfo.hpp"
+#include "dependencies/discrete/taskiter/TaskGroupMetadata.hpp"
 #include "system/TaskFinalization.hpp"
 #include "system/SpawnFunction.hpp"
 #include "tasks/TaskMetadata.hpp"
@@ -232,7 +233,7 @@ private:
 	inline void closeDependencyLoop()
 	{
 		// Close every dependency chain by simulating that we are registering the first accesses again
-		VisitorSetDegreeCross visitor;
+		VisitorSetDegreeCrossGroup visitor;
 		EdgeProperty prop(true);
 
 		for (std::pair<const access_address_t, TaskiterGraphAccessChain> &it : _bottomMap) {
@@ -352,6 +353,21 @@ private:
 		}
 	};
 
+	class VisitorSetDegreeCrossGroup {
+	public:
+		void operator()(TaskMetadata *t) const
+		{
+			if (t->getGroup() != nullptr)
+				t = t->getGroup();
+			t->incrementOriginalPredecessorCount();
+		}
+
+		void operator()(ReductionInfo *r) const
+		{
+			r->incrementOriginalRegisteredAccesses();
+		}
+	};
+
 	class VisitorSetDegree {
 	public:
 		void operator()(TaskMetadata *t) const
@@ -416,6 +432,7 @@ private:
 	void localitySchedulingMovePagesSimple();
 	void immediateSuccessorProcess();
 	void communicationPriorityPropagation();
+	void granularityTuning();
 
 	inline TaskiterNode *getNodeFromTask(TaskMetadata *task)
 	{
@@ -423,6 +440,8 @@ private:
 		TaskiterNode *node;
 		if (task->isTaskloop())
 			node = static_cast<TaskiterNode *>(static_cast<TaskiterChildLoopMetadata *>(task));
+		else if (task->isGroup())
+			node = static_cast<TaskiterNode *>(static_cast<TaskGroupMetadata *>(task));
 		else
 			node = static_cast<TaskiterNode *>(static_cast<TaskiterChildMetadata *>(task));
 
@@ -515,7 +534,10 @@ public:
 	{
 		// First, increase predecessors for every task
 		forEach([](TaskMetadata *t) {
-			t->increasePredecessors();
+			if (t->getGroup())
+				t->getGroup()->increasePredecessors();
+			else
+				t->increasePredecessors();
 		});
 
 		VisitorSetDegree visitor;
@@ -549,19 +571,26 @@ public:
 		EdgeProperty prop(true);
 		// Now, incorporate delayed edges for closing reductions
 		for (TaskiterGraphEdge &edge : _edges) {
-			boost::add_edge(edge._from->getVertex(), edge._to->getVertex(), prop, _graph);
-			edge._to->apply(crossIterationVisitor);
+			if (edge._from != edge._to) {
+				boost::add_edge(edge._from->getVertex(), edge._to->getVertex(), prop, _graph);
+				edge._to->apply(crossIterationVisitor);
+			}
 		}
 
-// #if PRINT_TASKITER_GRAPH
-// 		{
-// 			std::ofstream dot("g.dot");
-// 			boost::write_graphviz(dot, _graph);
-// 		}
-// #endif
+		_edges.clear();
+
+#if PRINT_TASKITER_GRAPH
+		{
+			std::ofstream dot("g.dot");
+			boost::write_graphviz(dot, _graph);
+		}
+#endif
 
 		// Now, decrease predecessors for every task
 		forEach([](TaskMetadata *t) {
+			if (t->getGroup())
+				t = t->getGroup();
+
 			if (t->decreasePredecessors()) {
 				nosv_submit(t->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 			}
@@ -587,6 +616,17 @@ public:
 			transitiveReduction();
 		else if (_graphOptimization.getValue() == "basic")
 			basicReduction();
+
+		#if PRINT_TASKITER_GRAPH
+		{
+			std::ofstream dot("before.dot");
+			boost::write_graphviz(dot, _graph);
+		}
+		#endif
+
+		// Then, perform granularity tuning. This step also alters the number of vertices and edges, so it has to be done
+		// before the rest of optimizations
+		// granularityTuning();
 
 		if (_tentativeNumaScheduling.getValue() != "none" || _criticalPathTrackingEnabled.getValue() ||
 			_communcationPriorityPropagation.getValue() || _smartIS.getValue()) {

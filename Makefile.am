@@ -82,7 +82,9 @@ noinst_HEADERS = \
 	src/dependencies/discrete/TaskDataAccesses.hpp \
 	src/dependencies/discrete/TaskDataAccessesInfo.hpp \
 	src/dependencies/discrete/devices/HostReductionStorage.hpp \
+	src/dependencies/discrete/taskiter/TaskGroupMetadata.hpp \
 	src/dependencies/discrete/taskiter/TaskiterGraph.hpp \
+	src/dependencies/discrete/taskiter/TaskiterNode.hpp \
 	src/hardware/HardwareInfo.hpp \
 	src/instrument/OVNIInstrumentation.hpp \
 	src/memory/MemoryAllocator.hpp \
@@ -111,6 +113,7 @@ common_sources = \
 	src/dependencies/discrete/RegisterDependencies.cpp \
 	src/dependencies/discrete/ReleaseDirective.cpp \
 	src/dependencies/discrete/devices/HostReductionStorage.cpp \
+	src/dependencies/discrete/taskiter/TaskGroupMetadata.cpp \
 	src/dependencies/discrete/taskiter/TaskiterGraph.cpp \
 	src/hardware/HardwareInfo.cpp \
 	src/system/DebugAPI.cpp \
