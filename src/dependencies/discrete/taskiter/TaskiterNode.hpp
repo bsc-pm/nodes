@@ -45,7 +45,7 @@ class TaskiterNode {
 		return _vertex;
 	}
 
-	void setVertex(size_t vertex)
+	virtual void setVertex(size_t vertex)
 	{
 		_vertex = vertex;
 	}

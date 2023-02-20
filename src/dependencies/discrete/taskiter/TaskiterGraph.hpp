@@ -165,6 +165,8 @@ private:
 		controlTaskNode->setVertex(controlTaskVertex);
 		_controlTasks.push_back(controlTaskNode);
 
+		// TODO Do we have to properly close reductions here?
+
 		// In theory, we don't have to worry for reductions, as they depend on all its
 		// participants to be combined, and then into the closing task to release the control
 		// A smart way to do this is:
@@ -229,6 +231,15 @@ private:
 		}
 	}
 
+	inline void closeLeftoverReductionChains()
+	{
+		for (std::pair<const access_address_t, TaskiterGraphAccessChain> &it : _bottomMap) {
+			TaskiterGraphAccessChain &chain = it.second;
+			if (chain._reductionInfo != nullptr)
+				closeReductionChain(chain);
+		}
+	}
+
 	// Closes the dependency loop *without* a control task. All "open" dependency chains will be matched to the next
 	inline void closeDependencyLoop()
 	{
@@ -258,6 +269,7 @@ private:
 			// IN / CONCURRENT, this means no dependencies.
 
 			// TODO: Does this correctly work with reductions?
+			// Clearly not
 
 			if (chain._firstChainType != chain._lastChainType ||
 				chain._firstChainType == WRITE_ACCESS_TYPE ||
@@ -299,7 +311,7 @@ private:
 	}
 
 	// Marks the end of reduction accesses in a grain, placing the relevant edges
-	inline void closeReductionChain(TaskiterNode *, TaskiterGraphAccessChain &chain)
+	inline void closeReductionChain(TaskiterGraphAccessChain &chain)
 	{
 		// Reduction combination depends on last chain
 		createEdges(chain._reductionInfo, *(chain._lastChain));
@@ -314,8 +326,9 @@ private:
 			_edges.emplace_back(chain._reductionInfo, n, true);
 		}
 
+		swapChains(chain);
 		chain._reductionChain.clear();
-		chain._lastChain->clear();
+		// chain._lastChain->clear();
 		chain._lastChainType = REDUCTION_ACCESS_TYPE;
 		chain._lastChain->push_back(chain._reductionInfo);
 		chain._reductionInfo = nullptr;
@@ -541,7 +554,10 @@ public:
 		});
 
 		VisitorSetDegree visitor;
-		VisitorSetDegreeCross crossIterationVisitor;
+		VisitorSetDegreeCrossGroup crossIterationVisitor;
+
+		// Close the leftover reduction chains
+		// closeLeftoverReductionChains();
 
 		// Now, increment for each edge
 		graph_t::edge_iterator ei, eend;
@@ -611,7 +627,10 @@ public:
 	// the minimal graph which still mantains all the dependencies of the original one
 	void process()
 	{
-		// First, optimize edges. This is done here, as it will affect next steps and the overall closing of the graph
+		// Close leftover reduction chains
+		closeLeftoverReductionChains();
+
+		// Optimize edges. This is done here, as it will affect next steps and the overall closing of the graph
 		if (_graphOptimization.getValue() == "transitive")
 			transitiveReduction();
 		else if (_graphOptimization.getValue() == "basic")
@@ -626,7 +645,7 @@ public:
 
 		// Then, perform granularity tuning. This step also alters the number of vertices and edges, so it has to be done
 		// before the rest of optimizations
-		// granularityTuning();
+		granularityTuning();
 
 		if (_tentativeNumaScheduling.getValue() != "none" || _criticalPathTrackingEnabled.getValue() ||
 			_communcationPriorityPropagation.getValue() || _smartIS.getValue()) {
@@ -728,7 +747,7 @@ public:
 		// Note that this causes a O(n^2) dependency order when following a set of ins with a set of concurrents
 		if (type == READ_ACCESS_TYPE || type == CONCURRENT_ACCESS_TYPE) {
 			if (chain._reductionInfo) {
-				closeReductionChain(node, chain);
+				closeReductionChain(chain);
 				// Close the reduction
 			}
 
@@ -741,7 +760,7 @@ public:
 			createEdges(node, *(chain._prevChain));
 		} else if (type == WRITE_ACCESS_TYPE || type == READWRITE_ACCESS_TYPE || type == COMMUTATIVE_ACCESS_TYPE) {
 			if (chain._reductionInfo) {
-				closeReductionChain(node, chain);
+				closeReductionChain(chain);
 				// Close the reduction
 			}
 

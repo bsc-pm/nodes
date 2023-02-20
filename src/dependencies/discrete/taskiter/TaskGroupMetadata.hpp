@@ -34,17 +34,22 @@ public:
 
 	void addTask(TaskiterNode *task) 
 	{
-		_tasksInGroup.push_back(task);
 		TaskMetadata *metadata = task->getTask();
-		if (metadata)
-			metadata->setGroup(this);
+		if (metadata) {
+			if (metadata->isGroup()) {
+				mergeWithGroup((TaskGroupMetadata *) metadata);
+			} else {
+				metadata->setGroup(this);
+				task->setVertex(getVertex());
+				_tasksInGroup.push_back(task);
+			}
+		} else {
+			task->setVertex(getVertex());
+			_tasksInGroup.push_back(task);
+		}
 	}
 
-	void mergeWithGroup(TaskGroupMetadata *group)
-	{
-		for (TaskiterNode *n : group->_tasksInGroup)
-			addTask(n);
-	}
+	void mergeWithGroup(TaskGroupMetadata *group);
 
 	static void executeTask(void *args, void *, nanos6_address_translation_entry_t *);
 
@@ -62,6 +67,13 @@ public:
 	bool isGroup() const override
 	{
 		return true;
+	}
+
+	void setVertex(size_t vertex) override
+	{
+		TaskiterNode::setVertex(vertex);
+		for (TaskiterNode *t : _tasksInGroup)
+			t->setVertex(vertex);
 	}
 
 	static nanos6_task_info_t *getGroupTaskInfo();

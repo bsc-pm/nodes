@@ -408,13 +408,16 @@ namespace DataAccessRegistration {
 				task->increaseWakeUpCount(1);
 			}
 
-			graph.applySuccessors(task, keepIterating,
-				// Do this for each successor
-				[&](TaskMetadata *successor) {
-					satisfyTask(successor, hpDependencyData);
-				},
-				taskiter->isCancellationDelayed()
-			);
+			// TODO this is necessary but maybe it's better if we place the conditional somewhere else tbh.
+			if (!task->getGroup()) {
+				graph.applySuccessors(task, keepIterating,
+					// Do this for each successor
+					[&](TaskMetadata *successor) {
+						satisfyTask(successor, hpDependencyData);
+					},
+					taskiter->isCancellationDelayed()
+				);
+			}
 
 			processSatisfiedOriginators(hpDependencyData);
 

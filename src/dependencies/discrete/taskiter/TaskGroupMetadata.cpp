@@ -4,6 +4,7 @@
 	Copyright (C) 2023 Barcelona Supercomputing Center (BSC)
 */
 
+#include "system/TaskFinalization.hpp"
 #include "tasks/TaskInfo.hpp"
 #include "TaskGroupMetadata.hpp"
 
@@ -47,10 +48,10 @@ void TaskGroupMetadata::executeTask(void *args, void *, nanos6_address_translati
 {
 	auto visitor = overloaded {
 		[](ReductionInfo *reductionInfo) { 
-			if (reductionInfo->incrementUnregisteredAccesses()) {
-				reductionInfo->combine();
-				reductionInfo->reinitialize();
-			}
+			// if (reductionInfo->incrementUnregisteredAccesses()) {
+			reductionInfo->combine();
+			reductionInfo->reinitialize();
+			// }
 		},
 		[](TaskMetadata *arg) { 
 			nosv_task_t t = arg->getTaskHandle();
@@ -63,4 +64,16 @@ void TaskGroupMetadata::executeTask(void *args, void *, nanos6_address_translati
 	for (TaskiterNode *task : (*group)->_tasksInGroup) {
 		task->apply(visitor);
 	}
+}
+
+void TaskGroupMetadata::mergeWithGroup(TaskGroupMetadata *group)
+{
+	for (TaskiterNode *n : group->_tasksInGroup)
+		addTask(n);
+
+	// Remove the group?
+	group->markAsFinished();
+	[[maybe_unused]] bool ready = group->getParent()->finishChild();
+	assert(!ready);
+	TaskFinalization::disposeTask(group);
 }
