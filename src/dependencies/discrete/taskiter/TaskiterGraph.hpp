@@ -7,7 +7,7 @@
 #ifndef TASKITER_GRAPH_HPP
 #define TASKITER_GRAPH_HPP
 
-#define PRINT_TASKITER_GRAPH 1
+// #define PRINT_TASKITER_GRAPH 1
 
 #include <algorithm>
 #include <chrono>
@@ -137,6 +137,8 @@ private:
 	static EnvironmentVariable<std::string> _tentativeNumaScheduling;
 	static EnvironmentVariable<bool> _communcationPriorityPropagation;
 	static EnvironmentVariable<bool> _smartIS;
+	static EnvironmentVariable<bool> _preferredBinding;
+	static EnvironmentVariable<bool> _granularityTuning;
 
 	// Creates edges from chain to node and inserts them into the graph
 	inline void	createEdges(TaskiterGraphNode node, Container::vector<TaskiterGraphNode> &chain)
@@ -475,6 +477,9 @@ public:
 		std::function<void(TaskMetadata *)> satisfyTask,
 		bool delayedCancellationMode)
 	{
+		if (_preferredBinding.getValue())
+			task->setAffinity(task->getLastExecutionCore(), NOSV_AFFINITY_LEVEL_CPU, NOSV_AFFINITY_TYPE_PREFERRED);
+
 		applySuccessors(getNodeFromTask(task), crossIterationBoundary, satisfyTask, delayedCancellationMode);
 	}
 

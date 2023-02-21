@@ -99,6 +99,9 @@ private:
 	//! Elapsed time
 	uint64_t _elapsedTime;
 
+	//! Last core where the task was executed
+	int _lastExecutionCore;
+
 	//! Delayed priority setting
 	int _delayedPriority;
 
@@ -150,6 +153,7 @@ public:
 		_originalPredecessorCount(-1),
 		_iterationCount(0),
 		_elapsedTime(0),
+		_lastExecutionCore(0),
 		_delayedPriority(INT_MIN),
 		_priorityDelta(0),
 		_delayedAffinity(),
@@ -547,6 +551,16 @@ public:
 	inline uint64_t getElapsedTime() const
 	{
 		return _elapsedTime;
+	}
+
+	inline void setLastExecutionCore(int lastExecutionCore)
+	{
+		_lastExecutionCore = lastExecutionCore;
+	}
+
+	inline int getLastExecutionCore() const
+	{
+		return _lastExecutionCore;
 	}
 
 	inline void setAffinity(uint32_t index, nosv_affinity_level_t level, nosv_affinity_type_t type)

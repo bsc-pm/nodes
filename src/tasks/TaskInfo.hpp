@@ -106,6 +106,7 @@ public:
 
 		std::chrono::time_point<std::chrono::steady_clock> end = std::chrono::steady_clock::now();
 		taskMetadata->setElapsedTime(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+		taskMetadata->setLastExecutionCore(nosv_get_current_system_cpu());
 
 		if (!taskMetadata->isIf0Inlined()) {
 			assert(taskMetadata->getParent() != nullptr);
