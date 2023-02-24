@@ -22,6 +22,7 @@ class TaskiterNode {
 	std::variant<TaskMetadata *, ReductionInfo *> _variant;
 	size_t _preferredOutVertex;
 	bool _preferredOutCrossIteration;
+	bool _isControlTask;
 
 	public:
 	TaskiterNode(TaskMetadata *taskBase, ReductionInfo *reductionBase) :
@@ -58,6 +59,16 @@ class TaskiterNode {
 	bool getPreferredOutCrossIteration() const
 	{
 		return _preferredOutCrossIteration;
+	}
+
+	void setControlTask(bool isControlTask)
+	{
+		_isControlTask = isControlTask;
+	}
+
+	bool isControlTask() const
+	{
+		return _isControlTask;
 	}
 
 	void setPreferredOutVertex(size_t preferredOutVertex, bool crossIteration)

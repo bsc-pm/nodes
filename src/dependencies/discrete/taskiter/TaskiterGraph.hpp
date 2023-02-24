@@ -7,7 +7,7 @@
 #ifndef TASKITER_GRAPH_HPP
 #define TASKITER_GRAPH_HPP
 
-// #define PRINT_TASKITER_GRAPH 1
+#define PRINT_TASKITER_GRAPH 1
 
 #include <algorithm>
 #include <chrono>
@@ -133,7 +133,7 @@ private:
 
 	static EnvironmentVariable<std::string> _graphOptimization;
 	static EnvironmentVariable<bool> _criticalPathTrackingEnabled;
-	static EnvironmentVariable<bool> _printGraphStatistics;
+	static EnvironmentVariable<bool> _printGraph;
 	static EnvironmentVariable<std::string> _tentativeNumaScheduling;
 	static EnvironmentVariable<bool> _communcationPriorityPropagation;
 	static EnvironmentVariable<bool> _smartIS;
@@ -157,6 +157,7 @@ private:
 	{
 		TaskiterNode *controlTaskNode = (TaskiterNode *) ((TaskiterChildMetadata *) controlTask);
 		controlTask->increasePredecessors();
+		controlTaskNode->setControlTask(true);
 		VisitorSetDegree visitor;
 
 		EdgeProperty propsTrue(true);
@@ -387,6 +388,8 @@ private:
 	public:
 		void operator()(TaskMetadata *t) const
 		{
+			if (t->getGroup() != nullptr)
+				t = t->getGroup();
 			t->increasePredecessors();
 			t->incrementOriginalPredecessorCount();
 		}
@@ -601,7 +604,7 @@ public:
 		_edges.clear();
 
 #if PRINT_TASKITER_GRAPH
-		{
+		if (_printGraph.getValue()) {
 			std::ofstream dot("g.dot");
 			boost::write_graphviz(dot, _graph);
 		}
@@ -642,7 +645,7 @@ public:
 			basicReduction();
 
 		#if PRINT_TASKITER_GRAPH
-		{
+		if (_printGraph.getValue()) {
 			std::ofstream dot("before.dot");
 			boost::write_graphviz(dot, _graph);
 		}
@@ -650,7 +653,8 @@ public:
 
 		// Then, perform granularity tuning. This step also alters the number of vertices and edges, so it has to be done
 		// before the rest of optimizations
-		granularityTuning();
+		if (_granularityTuning.getValue())
+			granularityTuning();
 
 		if (_tentativeNumaScheduling.getValue() != "none" || _criticalPathTrackingEnabled.getValue() ||
 			_communcationPriorityPropagation.getValue() || _smartIS.getValue()) {

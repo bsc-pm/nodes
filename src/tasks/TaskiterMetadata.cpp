@@ -5,9 +5,10 @@
 */
 
 #include <cstdlib>
-#include <iostream>
+#include <unordered_set>
 
 #include "common/ErrorHandler.hpp"
+#include "system/TaskCreation.hpp"
 #include "tasks/TaskInfo.hpp"
 #include "tasks/TaskiterMetadata.hpp"
 #include "tasks/TaskiterChildMetadata.hpp"
@@ -52,10 +53,17 @@ void TaskiterMetadata::cancel()
 	assert(currentTask != nullptr);
 
 	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(currentTask);
+	// We have to finish the groups also
+
+	std::unordered_set<TaskGroupMetadata *> groups;
 
 	_graph.forEach(
-		[taskMetadata](TaskMetadata *task) {
+		[taskMetadata, &groups](TaskMetadata *task) {
 			if (task != taskMetadata) {
+				if (task->getGroup() != nullptr) {
+					groups.insert((TaskGroupMetadata *) task->getGroup());
+				}
+
 				// As this is the second time this task will be finished, we have to do a little hack
 				if (task->canBeWokenUp())
 					task->increaseWakeUpCount(1);
@@ -70,6 +78,18 @@ void TaskiterMetadata::cancel()
 		},
 		true
 	);
+
+	for (TaskGroupMetadata *group : groups) {
+		if (group->canBeWokenUp())
+			group->increaseWakeUpCount(1);
+		TaskFinalization::taskFinished(group);
+
+		bool deletable = group->decreaseRemovalBlockingCount();
+
+		if (deletable) {
+			TaskFinalization::disposeTask(group);
+		}
+	}
 }
 
 TaskMetadata *TaskiterMetadata::generateControlTask()

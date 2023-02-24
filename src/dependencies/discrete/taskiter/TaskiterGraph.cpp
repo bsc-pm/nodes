@@ -21,7 +21,7 @@
 
 EnvironmentVariable<std::string> TaskiterGraph::_graphOptimization("NODES_ITER_OPTIMIZE", "basic");
 EnvironmentVariable<bool> TaskiterGraph::_criticalPathTrackingEnabled("NODES_ITER_TRACK_CRITICAL", false);
-EnvironmentVariable<bool> TaskiterGraph::_printGraphStatistics("NODES_ITER_PRINT_STATISTICS", false);
+EnvironmentVariable<bool> TaskiterGraph::_printGraph("NODES_ITER_PRINT", false);
 EnvironmentVariable<std::string> TaskiterGraph::_tentativeNumaScheduling("NODES_ITER_NUMA", "none");
 EnvironmentVariable<bool> TaskiterGraph::_communcationPriorityPropagation("NODES_ITER_COMM_PRIORITY", false);
 EnvironmentVariable<bool> TaskiterGraph::_smartIS("NODES_ITER_SMART_IS", false);
@@ -128,9 +128,10 @@ void TaskiterGraph::basicReduction()
 	EdgeSet edgeSet;
 
 	boost::remove_edge_if([&edgeSet](const graph_t::edge_descriptor &e) -> bool {
-			std::pair<EdgeSet::iterator, bool> element = edgeSet.insert(e);
-			return !element.second; 
-		}, _graph);
+		std::pair<EdgeSet::iterator, bool> element = edgeSet.insert(e);
+		return !element.second;
+	},
+		_graph);
 }
 
 // static inline std::vector<int> kernighanLinBiPartition(std::vector<graph_vertex_t> &subgraph, std::vector<int> &assignedPartitions, int partitionTags[2])
@@ -958,28 +959,28 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 
 		visited[v] = true;
 
+		TaskiterGraphNode node = boost::get(nodemap, v);
+		
 		// If it's not a part of a potential chain, insert as-is.
-		if (boost::out_degree(v, g) != 1) {
+		if (boost::out_degree(v, g) != 1 || node->isControlTask()) {
 			// Insert into the transformed graph
-			TaskiterGraphNode node = boost::get(nodemap, v);
 			TaskiterGraph::VertexProperty prop(node);
 			TaskiterGraph::graph_vertex_t newVertex = boost::add_vertex(prop, transformedGraph);
 			equivalence[v] = newVertex;
 			node->setVertex(newVertex);
 		} else {
-			assert(boost::in_degree(v, g) != 1);
-
 			// Find the last member of this chain
 			TaskiterGraph::graph_vertex_t last = v;
 			TaskiterGraph::graph_vertex_t next = getOnlySuccessor(last, g);
+			TaskiterGraphNode nextNode = boost::get(nodemap, next);
 
-			while (boost::in_degree(next, g) == 1 && boost::out_degree(next, g) == 1) {
+			while (!nextNode->isControlTask() && boost::in_degree(next, g) == 1 && boost::out_degree(next, g) == 1) {
 				last = next;
 				visited[last] = true;
 				next = getOnlySuccessor(last, g);
 			}
 
-			if (boost::in_degree(next, g) == 1) {
+			if (!nextNode->isControlTask() && boost::in_degree(next, g) == 1) {
 				last = next;
 				visited[last] = true;
 			}
@@ -1066,18 +1067,18 @@ static void graphTransformFront(TaskiterGraph::graph_t &g, TaskMetadata *parent,
 	std::unique_ptr<std::vector<TaskiterGraph::graph_vertex_t>> freed = std::make_unique<std::vector<TaskiterGraph::graph_vertex_t>>();
 
 	TaskiterGraph::graph_t transformedGraph;
-	uint64_t totalTime;
-	uint64_t partialTime;
+	uint64_t totalTime = 0;
+	uint64_t partialTime = 0;
 
-#define ACUM_TIME(v, var)                                  \
-	{                                                      \
-		TaskiterGraphNode __node = boost::get(nodemap, v); \
-		TaskMetadata *__task = __node->getTask();          \
-		if (__task)                                        \
-			var += __task->getElapsedTime();               \
-		else                                               \
-			var += 1;                                      \
-		assert(var > 0);                                   \
+#define ACUM_TIME(v, var)                                              \
+	{                                                                  \
+		TaskiterGraphNode __node = boost::get(nodemap, v);             \
+		TaskMetadata *__task = __node->getTask();                      \
+		if (__task)                                                    \
+			var += std::max(__task->getElapsedTime(), (uint64_t)1ULL); \
+		else                                                           \
+			var += 1;                                                  \
+		assert(var > 0);                                               \
 	}
 
 	// Initialize outstanding deps for vertices,
@@ -1125,29 +1126,39 @@ static void graphTransformFront(TaskiterGraph::graph_t &g, TaskMetadata *parent,
 			int spotsLeft = 0;
 
 			for (TaskiterGraph::graph_vertex_t v : *ready) {
-				if (spotsLeft == 0) {
-					group = getEmptyGroupTask(parent);
-					TaskiterGraph::VertexProperty prop((TaskiterNode *)group);
-					groupVertex = boost::add_vertex(prop, transformedGraph);
-					group->setVertex(groupVertex);
-					spotsLeft = average;
-				}
-
-				for (boost::tie(oei, oeend) = boost::out_edges(v, g); oei != oeend; oei++) {
-					TaskiterGraph::graph_vertex_t dest = (*oei).m_target;
-					int res = --outstanding_deps[dest];
-					assert(res >= 0);
-					if (res == 0) {
-						ACUM_TIME(v, partialTime);
-						freed->push_back(dest);
-					}
-				}
-
 				TaskiterGraphNode node = boost::get(nodemap, v);
-				equivalence[v] = groupVertex;
-				// May delete node
-				group->addTask(node);
-				--spotsLeft;
+
+				// Prevent grouping control tasks
+				if (node->isControlTask()) {
+					TaskiterGraph::VertexProperty prop(node);
+					TaskiterGraph::graph_vertex_t newVertex = boost::add_vertex(prop, transformedGraph);
+					equivalence[v] = newVertex;
+					node->setVertex(newVertex);
+				} else {
+					// Group
+					if (spotsLeft == 0) {
+						group = getEmptyGroupTask(parent);
+						TaskiterGraph::VertexProperty prop((TaskiterNode *)group);
+						groupVertex = boost::add_vertex(prop, transformedGraph);
+						group->setVertex(groupVertex);
+						spotsLeft = average;
+					}
+
+					for (boost::tie(oei, oeend) = boost::out_edges(v, g); oei != oeend; oei++) {
+						TaskiterGraph::graph_vertex_t dest = (*oei).m_target;
+						int res = --outstanding_deps[dest];
+						assert(res >= 0);
+						if (res == 0) {
+							ACUM_TIME(v, partialTime);
+							freed->push_back(dest);
+						}
+					}
+
+					equivalence[v] = groupVertex;
+					// May delete node
+					group->addTask(node);
+					--spotsLeft;
+				}
 			}
 		}
 
@@ -1319,7 +1330,7 @@ void TaskiterGraph::granularityTuning()
 	graphTransformSequential(_graph, parent);
 
 #if PRINT_TASKITER_GRAPH
-	{
+	if (_printGraph.getValue()) {
 		std::ofstream dot("after-seq.dot");
 		boost::write_graphviz(dot, _graph);
 	}
@@ -1329,7 +1340,7 @@ void TaskiterGraph::granularityTuning()
 	graphTransformFront(_graph, parent, 1000 /* us minimum task */);
 
 #if PRINT_TASKITER_GRAPH
-	{
+	if (_printGraph.getValue()) {
 		std::ofstream dot("after-front.dot");
 		boost::write_graphviz(dot, _graph);
 	}
