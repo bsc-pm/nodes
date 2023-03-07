@@ -157,6 +157,7 @@ public:
 		_delayedPriority(INT_MIN),
 		_priorityDelta(0),
 		_delayedAffinity(),
+		_group(nullptr),
 		_isCommunicationTask(false),
 		_task(taskPointer),
 		_dataAccesses(taskAccessInfo),

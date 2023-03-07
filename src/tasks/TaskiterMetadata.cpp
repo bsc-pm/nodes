@@ -142,8 +142,6 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	metadata->setParent(this->getTaskHandle());
 	metadata->incrementOriginalPredecessorCount();
 	metadata->setIterationCount(getIterationCount() + 1);
-	// metadata->increaseRemovalBlockingCount();
-	// metadata->markAsBlocked();
 
 	return metadata;
 }

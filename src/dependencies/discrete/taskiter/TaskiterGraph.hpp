@@ -403,7 +403,7 @@ private:
 
 	class VisitorApplySuccessor {
 		TaskiterGraph *_graph;
-		std::function<void(TaskMetadata *)> _satisfyTask;
+		std::function<void(TaskMetadata *)> &_satisfyTask;
 		bool _crossIterationBoundary;
 		bool _delayedCancellation;
 
@@ -466,54 +466,32 @@ private:
 		return node;
 	}
 
-public:
-	TaskiterGraph() :
-		_currentUnroll(0),
-		_processed(false)
-	{
-		_tasks.emplace_back();
-	}
-
-	inline void applySuccessors(
-		TaskMetadata *task,
+	inline void applySuccessorsStd(TaskiterGraphNode node,
 		bool crossIterationBoundary,
-		std::function<void(TaskMetadata *)> satisfyTask,
-		bool delayedCancellationMode)
+		VisitorApplySuccessor &visitor)
 	{
-		if (_preferredBinding.getValue())
-			task->setAffinity(task->getLastExecutionCore(), NOSV_AFFINITY_LEVEL_CPU, NOSV_AFFINITY_TYPE_PREFERRED);
+		graph_vertex_t vertex = node->getVertex();
 
-		applySuccessors(getNodeFromTask(task), crossIterationBoundary, satisfyTask, delayedCancellationMode);
-	}
+		graph_t::out_edge_iterator ei, eend;
+		boost::property_map<graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), _graph);
+		boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
 
-	// Applies the function satisfyTask to every successor of node
-	// There are two special cases: sometimes we cannot cross the iteration boundary, which implies
-	// only satisfying tasks from the current iteration, and in other cases (delayedCancellation)
-	// if the task is a control task, it will only satisfy other control tasks. This second case
-	// is used when a taskiter while is on its cancellation process
-	inline void applySuccessors(
-		TaskiterGraphNode node,
-		bool crossIterationBoundary,
-		std::function<void(TaskMetadata *)> satisfyTask,
-		bool delayedCancellationMode)
-	{
-		VisitorApplySuccessor visitor(this, satisfyTask, crossIterationBoundary, delayedCancellationMode);
+		// Travel through adjacent vertices
+		for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei) {
+			graph_t::edge_descriptor e = *ei;
+			graph_vertex_t to = boost::target(e, _graph);
+			TaskiterGraphNode toNode = boost::get(nodemap, to);
+			bool edgeCrossIteration = boost::get(edgemap, e);
 
-		if (delayedCancellationMode && node->getTask()) {
-			// In this mode, control tasks can only pass satisfiability to other control tasks
-			// TaskMetadata *task = node->getTask();
-			Container::vector<TaskiterNode *>::iterator it = std::find(_controlTasks.begin(), _controlTasks.end(), node);
-			if (it != _controlTasks.end()) {
-				// Now, we're a control task, so we only satisfy the next control task in the chain
-				// Advance one:
-				if (++it == _controlTasks.end())
-					it = _controlTasks.begin();
-
-				(*it)->apply(visitor);
-				return;
-			}
+			if ((crossIterationBoundary || !edgeCrossIteration))
+				toNode->apply(visitor);
 		}
+	}
 
+	inline void applySuccessorsSmartIS(TaskiterGraphNode node,
+		bool crossIterationBoundary,
+		VisitorApplySuccessor &visitor)
+	{
 		graph_vertex_t vertex = node->getVertex();
 
 		graph_t::out_edge_iterator ei, eend;
@@ -547,6 +525,99 @@ public:
 			if (crossIterationBoundary || !edgeCrossIteration)
 				toNode->apply(visitor);
 		}
+	}
+
+	inline void applySuccessorsBinding(TaskiterGraphNode node,
+		bool crossIterationBoundary,
+		VisitorApplySuccessor &visitor) 
+	{	
+		graph_vertex_t vertex = node->getVertex();
+		TaskMetadata *t = node->getTask();
+		
+		int preferredExecutionPlace = t ? t->getLastExecutionCore() : -1;
+
+		graph_t::out_edge_iterator ei, eend;
+		boost::property_map<graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), _graph);
+		boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graph);
+
+		TaskiterGraphNode bestBind = nullptr;
+
+		// Travel through adjacent vertices
+		for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei) {
+			graph_t::edge_descriptor e = *ei;
+			graph_vertex_t to = boost::target(e, _graph);
+			TaskiterGraphNode toNode = boost::get(nodemap, to);
+			bool edgeCrossIteration = boost::get(edgemap, e);
+
+			if ((crossIterationBoundary || !edgeCrossIteration)) {
+				TaskMetadata *toTask = toNode->getTask();
+				if (bestBind == nullptr && toTask && toTask->getLastExecutionCore() == preferredExecutionPlace) {
+					bestBind = toNode;
+				} else {
+					toNode->apply(visitor);
+				}
+			}
+		}
+
+		if (bestBind != nullptr) {
+			bestBind->apply(visitor);
+		}
+	}
+
+public:
+	TaskiterGraph() :
+		_currentUnroll(0),
+		_processed(false)
+	{
+		_tasks.emplace_back();
+	}
+
+	inline void applySuccessors(
+		TaskMetadata *task,
+		bool crossIterationBoundary,
+		std::function<void(TaskMetadata *)> satisfyTask,
+		bool delayedCancellationMode)
+	{
+		if (_preferredBinding.getValue())
+			task->setAffinity(task->getLastExecutionCore(), NOSV_AFFINITY_LEVEL_CPU, NOSV_AFFINITY_TYPE_PREFERRED);
+
+		applySuccessors(getNodeFromTask(task), crossIterationBoundary, satisfyTask, delayedCancellationMode);
+	}
+
+	// Applies the function satisfyTask to every successor of node
+	// There are two special cases: sometimes we cannot cross the iteration boundary, which implies
+	// only satisfying tasks from the current iteration, and in other cases (delayedCancellation)
+	// if the task is a control task, it will only satisfy other control tasks. This second case
+	// is used when a taskiter while is on its cancellation process
+	inline void applySuccessors(
+		TaskiterGraphNode node,
+		bool crossIterationBoundary,
+		std::function<void(TaskMetadata *)> &satisfyTask,
+		bool delayedCancellationMode)
+	{
+		VisitorApplySuccessor visitor(this, satisfyTask, crossIterationBoundary, delayedCancellationMode);
+
+		if (delayedCancellationMode && node->getTask()) {
+			// In this mode, control tasks can only pass satisfiability to other control tasks
+			// TaskMetadata *task = node->getTask();
+			Container::vector<TaskiterNode *>::iterator it = std::find(_controlTasks.begin(), _controlTasks.end(), node);
+			if (it != _controlTasks.end()) {
+				// Now, we're a control task, so we only satisfy the next control task in the chain
+				// Advance one:
+				if (++it == _controlTasks.end())
+					it = _controlTasks.begin();
+
+				(*it)->apply(visitor);
+				return;
+			}
+		}
+
+		if (_smartIS.getValue())
+			applySuccessorsSmartIS(node, crossIterationBoundary, visitor);
+		else if (_preferredBinding.getValue())
+			applySuccessorsBinding(node, crossIterationBoundary, visitor);
+		else
+			applySuccessorsStd(node, crossIterationBoundary, visitor);
 	}
 
 	// For all tasks, determine the number of prececessors they have. Block the ones with > 0,

@@ -987,7 +987,6 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 
 			if (last == v) {
 				// No grouping
-				TaskiterGraphNode node = boost::get(nodemap, v);
 				TaskiterGraph::VertexProperty prop(node);
 				TaskiterGraph::graph_vertex_t newVertex = boost::add_vertex(prop, transformedGraph);
 				equivalence[v] = newVertex;
@@ -1006,16 +1005,16 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 				group->setVertex(groupVertex);
 
 				while (v != last) {
-					TaskiterGraphNode node = boost::get(nodemap, v);
+					TaskiterGraphNode currNode = boost::get(nodemap, v);
 					// May delete node
-					group->addTask(node);
+					group->addTask(currNode);
 					equivalence[v] = groupVertex;
 					v = getOnlySuccessor(v, g);
 				}
 
-				TaskiterGraphNode node = boost::get(nodemap, last);
+				TaskiterGraphNode currNode = boost::get(nodemap, last);
 				// May delete node
-				group->addTask(node);
+				group->addTask(currNode);
 				equivalence[last] = groupVertex;
 				groupsCreated++;
 			}
@@ -1114,6 +1113,7 @@ static void graphTransformFront(TaskiterGraph::graph_t &g, TaskMetadata *parent,
 				}
 
 				TaskiterGraphNode node = boost::get(nodemap, v);
+				assert(node);
 				TaskiterGraph::VertexProperty prop(node);
 				TaskiterGraph::graph_vertex_t newVertex = boost::add_vertex(prop, transformedGraph);
 				equivalence[v] = newVertex;
@@ -1157,6 +1157,7 @@ static void graphTransformFront(TaskiterGraph::graph_t &g, TaskMetadata *parent,
 					equivalence[v] = groupVertex;
 					// May delete node
 					group->addTask(node);
+					assert(group->getTask()->getGroup() == nullptr);
 					--spotsLeft;
 				}
 			}

@@ -27,7 +27,9 @@ class TaskiterNode {
 	public:
 	TaskiterNode(TaskMetadata *taskBase, ReductionInfo *reductionBase) :
 		_vertex(0),
-		_preferredOutVertex(SIZE_MAX)
+		_preferredOutVertex(SIZE_MAX),
+		_preferredOutCrossIteration(false),
+		_isControlTask(false)
 	{
 		if (taskBase != nullptr)
 			_variant = taskBase;
