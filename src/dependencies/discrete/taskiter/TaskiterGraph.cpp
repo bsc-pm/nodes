@@ -170,20 +170,6 @@ void TaskiterGraph::basicReduction()
 // 	return assignedPartitions;
 // }
 
-// static inline void kernighanLin(int partitions)
-// {
-// 	int vertices = boost::num_vertices(_graph);
-
-// 	// Save where each vertex is assigned
-// 	std::vector<int> assignedPartitions(vertices);
-
-// 	// Start with a balanced partition
-// 	for (int i = 0; i < vertices; ++i)
-// 		assignedPartitions[i] = (i >= vertices/2);
-
-// 	// Now,
-// }
-
 void TaskiterGraph::localityScheduling()
 {
 	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graphCpy);
@@ -944,7 +930,7 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 	boost::topological_sort(g, std::back_inserter(topologicalOrder));
 	int vertices = boost::num_vertices(g);
 	std::vector<bool> visited(vertices);
-	std::vector<int> equivalence(vertices);
+	std::vector<int> equivalence(vertices, -1);
 
 	TaskiterGraph::graph_t transformedGraph;
 
@@ -962,7 +948,7 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 		TaskiterGraphNode node = boost::get(nodemap, v);
 		
 		// If it's not a part of a potential chain, insert as-is.
-		if (boost::out_degree(v, g) != 1 || node->isControlTask()) {
+		if (boost::out_degree(v, g) != 1 || !node->canBeGrouped()) {
 			// Insert into the transformed graph
 			TaskiterGraph::VertexProperty prop(node);
 			TaskiterGraph::graph_vertex_t newVertex = boost::add_vertex(prop, transformedGraph);
@@ -974,13 +960,13 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 			TaskiterGraph::graph_vertex_t next = getOnlySuccessor(last, g);
 			TaskiterGraphNode nextNode = boost::get(nodemap, next);
 
-			while (!nextNode->isControlTask() && boost::in_degree(next, g) == 1 && boost::out_degree(next, g) == 1) {
+			while (nextNode->canBeGrouped() && boost::in_degree(next, g) == 1 && boost::out_degree(next, g) == 1) {
 				last = next;
 				visited[last] = true;
 				next = getOnlySuccessor(last, g);
 			}
 
-			if (!nextNode->isControlTask() && boost::in_degree(next, g) == 1) {
+			if (nextNode->canBeGrouped() && boost::in_degree(next, g) == 1) {
 				last = next;
 				visited[last] = true;
 			}
@@ -1021,11 +1007,17 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 		}
 	}
 
+	int nverticesNew = boost::num_vertices(transformedGraph);
+
 	// Copy the edges back
 	for (boost::tie(ei, eend) = boost::edges(g); ei != eend; ei++) {
 		TaskiterGraph::graph_t::edge_descriptor e = *ei;
 		TaskiterGraph::graph_vertex_t from = equivalence[e.m_source];
 		TaskiterGraph::graph_vertex_t to = equivalence[e.m_target];
+		// assert(equivalence[e.m_source] < nverticesNew);
+		// assert(equivalence[e.m_target] < nverticesNew);
+		// assert(equivalence[e.m_source] >= 0);
+		// assert(equivalence[e.m_target] >= 0);
 		if (from != to)
 			boost::add_edge(from, to, transformedGraph);
 	}
@@ -1129,7 +1121,7 @@ static void graphTransformFront(TaskiterGraph::graph_t &g, TaskMetadata *parent,
 				TaskiterGraphNode node = boost::get(nodemap, v);
 
 				// Prevent grouping control tasks
-				if (node->isControlTask()) {
+				if (!node->canBeGrouped()) {
 					TaskiterGraph::VertexProperty prop(node);
 					TaskiterGraph::graph_vertex_t newVertex = boost::add_vertex(prop, transformedGraph);
 					equivalence[v] = newVertex;
@@ -1144,21 +1136,21 @@ static void graphTransformFront(TaskiterGraph::graph_t &g, TaskMetadata *parent,
 						spotsLeft = average;
 					}
 
-					for (boost::tie(oei, oeend) = boost::out_edges(v, g); oei != oeend; oei++) {
-						TaskiterGraph::graph_vertex_t dest = (*oei).m_target;
-						int res = --outstanding_deps[dest];
-						assert(res >= 0);
-						if (res == 0) {
-							ACUM_TIME(v, partialTime);
-							freed->push_back(dest);
-						}
-					}
-
 					equivalence[v] = groupVertex;
 					// May delete node
 					group->addTask(node);
 					assert(group->getTask()->getGroup() == nullptr);
 					--spotsLeft;
+				}
+
+				for (boost::tie(oei, oeend) = boost::out_edges(v, g); oei != oeend; oei++) {
+					TaskiterGraph::graph_vertex_t dest = (*oei).m_target;
+					int res = --outstanding_deps[dest];
+					assert(res >= 0);
+					if (res == 0) {
+						ACUM_TIME(v, partialTime);
+						freed->push_back(dest);
+					}
 				}
 			}
 		}
@@ -1183,140 +1175,21 @@ static void graphTransformFront(TaskiterGraph::graph_t &g, TaskMetadata *parent,
 	g = transformedGraph;
 }
 
-static void graphTransformDepthFront(TaskiterGraph::graph_t &g, TaskMetadata *parent, int m)
+class CycleDetectorVisitor : public boost::default_dfs_visitor
 {
-	boost::property_map<TaskiterGraph::graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), g);
-	boost::property_map<TaskiterGraph::graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), g);
-	TaskiterGraph::graph_t::edge_iterator ei, eend;
-	TaskiterGraph::graph_t::out_edge_iterator oei, oeend;
-	TaskiterGraph::graph_t::vertex_iterator vi, vend;
+	std::unordered_set<int> currentVertices;
 
-	// std::vector<TaskiterGraph::graph_vertex_t> topologicalOrder;
-	// boost::topological_sort(g, std::back_inserter(topologicalOrder));
-	int vertices = boost::num_vertices(g);
-	std::vector<int> outstanding_deps(vertices);
-	std::vector<int> equivalence(vertices);
-	std::deque<TaskiterGraph::graph_vertex_t> depth;
-	std::deque<TaskiterGraph::graph_vertex_t> ready;
-	std::vector<TaskiterGraph::graph_vertex_t> group;
-	typedef std::pair<int, TaskiterGraph::graph_vertex_t> vertex_prio_t;
-	struct CustomCompare {
-		bool operator()(const vertex_prio_t l, const vertex_prio_t r)
-		{
-			return l.first > r.first;
-		}
-	};
-
-	std::priority_queue<vertex_prio_t, std::vector<vertex_prio_t>, CustomCompare> release;
-
-	TaskiterGraph::graph_t transformedGraph;
-
-	// Initialize outstanding deps for vertices,
-	for (boost::tie(vi, vend) = boost::vertices(g); vi != vend; vi++) {
-		TaskiterGraph::graph_vertex_t v = *vi;
-
-		int deps = boost::in_degree(v, g);
-		outstanding_deps[v] = deps;
-
-		if (deps == 0)
-			ready.push_back(v);
+	public:
+	void tree_edge(TaskiterGraph::graph_t::edge_descriptor e, [[maybe_unused]] const TaskiterGraph::graph_t &g)
+	{
+		// std::cout << e << std::endl;
 	}
 
-	while (!ready.empty()) {
-		depth.insert(depth.end(), ready.begin(), ready.end());
-		ready.clear();
-
-		while (!depth.empty()) {
-			TaskiterGraph::graph_vertex_t master = depth.front();
-			depth.pop_front();
-			assert(release.empty());
-
-			release.push(std::make_pair(0, master));
-			group.clear();
-			int cnt = 0;
-
-			while (cnt < m && !release.empty()) {
-				TaskiterGraph::graph_vertex_t next = release.top().second;
-				release.pop();
-				group.push_back(next);
-				// Release tasks from next
-
-				for (boost::tie(oei, oeend) = boost::out_edges(next, g); oei != oeend; oei++) {
-					TaskiterGraph::graph_vertex_t dest = (*oei).m_target;
-					int res = --outstanding_deps[dest];
-					assert(res >= 0);
-					// if (res == 0)
-					// 	freed->push_back(dest);
-				}
-			}
-		}
+	void back_edge(TaskiterGraph::graph_t::edge_descriptor e, [[maybe_unused]] const TaskiterGraph::graph_t &g)
+	{
+		std::cout << "-" << e << std::endl;
 	}
-	// 	int width = ready->size();
-	// 	int average = (width + n - 1) / n;
-	// 	assert(average >= 1);
-
-	// 	if (average == 1) {
-	// 		for (TaskiterGraph::graph_vertex_t v : *ready) {
-	// 			for (boost::tie(oei, oeend) = boost::out_edges(v, g); oei != oeend; oei++) {
-	// 				TaskiterGraph::graph_vertex_t dest = (*oei).m_target;
-	// 				int res = --outstanding_deps[dest];
-	// 				assert(res >= 0);
-	// 				if (res == 0)
-	// 					freed->push_back(dest);
-	// 			}
-
-	// 			TaskiterGraphNode node = boost::get(nodemap, v);
-	// 			TaskiterGraph::VertexProperty prop(node);
-	// 			TaskiterGraph::graph_vertex_t newVertex = boost::add_vertex(prop, transformedGraph);
-	// 			equivalence[v] = newVertex;
-	// 			node->setVertex(newVertex);
-	// 		}
-	// 	} else {
-	// 		TaskGroupMetadata *group = nullptr;
-	// 		TaskiterGraph::graph_vertex_t groupVertex;
-
-	// 		int spotsLeft = 0;
-
-	// 		for (TaskiterGraph::graph_vertex_t v : *ready) {
-	// 			if (spotsLeft == 0) {
-	// 				group = getEmptyGroupTask(parent);
-	// 				TaskiterGraph::VertexProperty prop((TaskiterNode *) group);
-	// 				groupVertex = boost::add_vertex(prop, transformedGraph);
-	// 				group->setVertex(groupVertex);
-	// 				spotsLeft = average;
-	// 			}
-
-	// 			for (boost::tie(oei, oeend) = boost::out_edges(v, g); oei != oeend; oei++) {
-	// 				TaskiterGraph::graph_vertex_t dest = (*oei).m_target;
-	// 				int res = --outstanding_deps[dest];
-	// 				assert(res >= 0);
-	// 				if (res == 0)
-	// 					freed->push_back(dest);
-	// 			}
-
-	// 			TaskiterGraphNode node = boost::get(nodemap, v);
-	// 			equivalence[v] = groupVertex;
-	// 			// May delete node
-	// 			group->addTask(node);
-	// 			--spotsLeft;
-	// 		}
-	// 	}
-
-	// 	std::swap(ready, freed);
-	// 	freed->clear();
-	// }
-
-	// Copy the edges back
-	for (boost::tie(ei, eend) = boost::edges(g); ei != eend; ei++) {
-		TaskiterGraph::graph_t::edge_descriptor e = *ei;
-		TaskiterGraph::graph_vertex_t from = equivalence[e.m_source];
-		TaskiterGraph::graph_vertex_t to = equivalence[e.m_target];
-		if (from != to)
-			boost::add_edge(from, to, transformedGraph);
-	}
-
-	g = transformedGraph;
-}
+};
 
 void TaskiterGraph::granularityTuning()
 {
@@ -1339,6 +1212,11 @@ void TaskiterGraph::granularityTuning()
 
 	// Front
 	graphTransformFront(_graph, parent, 1000 /* us minimum task */);
+
+	// Find circular dependencies
+	// CycleDetectorVisitor vis;
+	// boost::depth_first_search(_graph, 
+	// 	boost::visitor(vis));
 
 #if PRINT_TASKITER_GRAPH
 	if (_printGraph.getValue()) {

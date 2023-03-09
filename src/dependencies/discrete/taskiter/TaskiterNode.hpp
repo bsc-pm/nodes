@@ -73,6 +73,16 @@ class TaskiterNode {
 		return _isControlTask;
 	}
 
+	virtual bool hasCommunication() const
+	{
+		return false;
+	}
+
+	bool canBeGrouped() const
+	{
+		return !isControlTask() && !hasCommunication();
+	}
+
 	void setPreferredOutVertex(size_t preferredOutVertex, bool crossIteration)
 	{
 		_preferredOutVertex = preferredOutVertex;

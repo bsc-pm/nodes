@@ -42,6 +42,7 @@ public:
 				metadata->setGroup(this);
 				task->setVertex(getVertex());
 				_tasksInGroup.push_back(task);
+				this->setElapsedTime(this->getElapsedTime() + metadata->getElapsedTime());
 			}
 		} else {
 			task->setVertex(getVertex());
