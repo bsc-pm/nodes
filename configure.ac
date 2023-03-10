@@ -3,7 +3,7 @@
 
 #	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
-#	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
+#	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 
 # NODES Version and Copyright
 
@@ -74,6 +74,8 @@ echo "    Installation prefix... ${prefix}"
 echo ""
 echo "    CXXFLAGS...            ${CXXFLAGS}"
 echo "    CPPFLAGS...            ${CPPFLAGS}"
+echo ""
+echo "    Code Model flags...    ${MCMODEL_FLAGS}"
 echo ""
 echo "    Boost CPPFLAGS...      ${BOOST_CPPFLAGS}"
 echo "    Boost LDFLAGS...       ${BOOST_LDFLAGS}"

@@ -1,6 +1,6 @@
 #	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
-#	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
+#	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -135,10 +135,10 @@ libnanos6_la_CXXFLAGS = $(AM_CXXFLAGS) $(dependency_flags)
 # Taskification of the "main" function
 #
 
-noinst_LIBRARIES = libnanos6-main-wrapper.a
+noinst_LTLIBRARIES = libnanos6-main-wrapper.la
 lib_OBJECTS = nanos6-main-wrapper.o
 
-libnanos6_main_wrapper_a_SOURCES = \
+libnanos6_main_wrapper_la_SOURCES = \
 	src/bootstrap/intercept-main-common.c \
 	src/bootstrap/intercept-main-common.h \
 	src/bootstrap/main-wrapper.c \
@@ -146,16 +146,17 @@ libnanos6_main_wrapper_a_SOURCES = \
 
 # Check which main interception signature we will use (see main_intercept.m4)
 if LINUX_POWERPC_GLIBC
-libnanos6_main_wrapper_a_SOURCES += src/bootstrap/intercept-main-glibc-powerpc.c
+libnanos6_main_wrapper_la_SOURCES += src/bootstrap/intercept-main-glibc-powerpc.c
 endif
 if LINUX_GLIBC
-libnanos6_main_wrapper_a_SOURCES += src/bootstrap/intercept-main-glibc.c
+libnanos6_main_wrapper_la_SOURCES += src/bootstrap/intercept-main-glibc.c
 endif
 
-libnanos6_main_wrapper_a_CPPFLAGS = $(MCMODEL_FLAGS)
+libnanos6_main_wrapper_la_CPPFLAGS = $(MCMODEL_FLAGS)
+libnanos6_main_wrapper_la_LDFLAGS = -static
 
-nanos6-main-wrapper.o: libnanos6-main-wrapper.a
-	$(AM_V_LD)$(LD) -r --whole-archive libnanos6-main-wrapper.a -o nanos6-main-wrapper.o
+nanos6-main-wrapper.o: libnanos6-main-wrapper.la
+	$(AM_V_LD)$(LD) -r --whole-archive $(top_builddir)/.libs/libnanos6-main-wrapper.a -o nanos6-main-wrapper.o
 
 
 #
