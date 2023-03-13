@@ -1,6 +1,6 @@
 #	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
-#	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+#	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 
 
 AC_DEFUN([AC_CHECK_COMPILER_FLAG],
@@ -164,6 +164,13 @@ AC_DEFUN([SSS_FIXUP_COMPILER_FLAGS],
 		AC_SUBST(OPT_CXXFLAGS)
 		AC_SUBST(OPT_CLANG_CXXFLAGS)
 		AC_SUBST(PROFILE_CXXFLAGS)
+
+		# Some compilers do not support PIC and large mcmodels at the same time. Verify that the
+		# mcmodel is compatible with PIC. Otherwise, do not use the mcmodel. Notice that the PIC
+		# is enabed by libtool in LT_INIT
+		CXXFLAGS="${autoconf_calculated_cxxflags} -fPIC"
+		AC_CHECK_EXTRACT_FIRST_COMPILER_FLAG([MCMODEL_FLAGS], [-mcmodel=large -mcmodel=medium])
+		CXXFLAGS="${autoconf_calculated_cxxflags}"
 
 		AC_LANG_POP(C++)
 	]
