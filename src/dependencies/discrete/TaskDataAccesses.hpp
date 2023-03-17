@@ -213,7 +213,7 @@ struct TaskDataAccesses {
 			}
 		} else {
 			for (size_t i = 0; i < getRealAccessNumber(); ++i) {
-				bool cont = processor(_addressArray[i], &accessArray[i]);
+				bool cont = processor(_addressArray[i], &_accessArray[i]);
 				if (!cont)
 					return false;
 			}

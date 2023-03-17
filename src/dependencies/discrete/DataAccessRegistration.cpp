@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
@@ -43,13 +43,13 @@ namespace DataAccessRegistration {
 	static inline void releaseReductionInfo(ReductionInfo *info);
 
 	static inline void decreaseDeletableCountOrDelete(TaskMetadata *originator,
-		CPUDependencyData::deletable_originator_list_t &deletableOriginators);
+		CPUDependencyData &hpDependencyData);
 
 	//! Process all the originators that have become ready
 	static inline void processSatisfiedOriginators(CPUDependencyData &hpDependencyData)
 	{
 		for (int i = 0; i < nanos6_device_t::nanos6_device_type_num; ++i) {
-			CPUDependencyData::satisfied_originator_list_t &list = hpDependencyData.getSatisfiedOriginators(i);
+			auto &list = hpDependencyData.getSatisfiedOriginators(i);
 			if (list.size() > 0) {
 				TaskMetadata **taskArray = list.getArray();
 
@@ -79,13 +79,16 @@ namespace DataAccessRegistration {
 		// destruct the tasks for us if we mark them as not needed on the
 		// unregisterTaskDataAccesses call, so this takes care on tasks ended anywhere else
 
-		for (TaskMetadata *deletableOriginator : hpDependencyData._deletableOriginators) {
+		auto &list = hpDependencyData.getDeletableOriginators();
+
+		for (size_t t = 0; t < list.size(); ++t) {
+			TaskMetadata *deletableOriginator = list.get(t);
 			assert(deletableOriginator != nullptr);
 
 			TaskFinalization::disposeTask(deletableOriginator);
 		}
 
-		hpDependencyData._deletableOriginators.clear();
+		hpDependencyData.clearDeletableOriginators();
 	}
 
 	static inline void satisfyTask(TaskMetadata *task, CPUDependencyData &hpDependencyData)
@@ -100,7 +103,7 @@ namespace DataAccessRegistration {
 
 			hpDependencyData.addSatisfiedOriginator(task);
 
-			if (hpDependencyData.full()) {
+			if (hpDependencyData.fullSatisfiedOriginators()) {
 				processSatisfiedOriginators(hpDependencyData);
 			}
 		}
@@ -190,7 +193,7 @@ namespace DataAccessRegistration {
 					assert(!accessStruct.hasBeenDeleted());
 					assert(next.to != next.from);
 
-					decreaseDeletableCountOrDelete(task, hpDependencyData._deletableOriginators);
+					decreaseDeletableCountOrDelete(task, hpDependencyData);
 				}
 			}
 
@@ -233,7 +236,7 @@ namespace DataAccessRegistration {
 				TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 				assert(!accessStruct.hasBeenDeleted());
 
-				decreaseDeletableCountOrDelete(task, hpDependencyData._deletableOriginators);
+				decreaseDeletableCountOrDelete(task, hpDependencyData);
 			}
 		}
 	}
@@ -295,7 +298,7 @@ namespace DataAccessRegistration {
 			propagateMessages(hpDependencyData, mailBox, reductionInfo);
 			assert(!dispose);
 		} else if (dispose) {
-			decreaseDeletableCountOrDelete(task, hpDependencyData._deletableOriginators);
+			decreaseDeletableCountOrDelete(task, hpDependencyData);
 		}
 	}
 
@@ -387,7 +390,7 @@ namespace DataAccessRegistration {
 			if (keepIterating) {
 				if (task->getOriginalPrecessorCount() == 0) {
 					hpDependencyData.addSatisfiedOriginator(task);
-					assert(!hpDependencyData.full());
+					assert(!hpDependencyData.fullSatisfiedOriginators());
 				} else {
 					task->increasePredecessors(task->getOriginalPrecessorCount());
 				}
@@ -443,7 +446,7 @@ namespace DataAccessRegistration {
 			m.from = m.to = access;
 			m.flagsAfterPropagation = ACCESS_PARENT_DONE;
 			if (access->applyPropagated(m)) {
-				decreaseDeletableCountOrDelete(access->getOriginator(), hpDependencyData._deletableOriginators);
+				decreaseDeletableCountOrDelete(access->getOriginator(), hpDependencyData);
 			}
 
 			ReductionInfo *reductionInfo = itMap->second._reductionInfo;
@@ -687,7 +690,7 @@ namespace DataAccessRegistration {
 					assert(!dispose);
 
 					if (dispose)
-						decreaseDeletableCountOrDelete(parentTask, hpDependencyData._deletableOriginators);
+						decreaseDeletableCountOrDelete(parentTask, hpDependencyData);
 				} else {
 					schedule = true;
 					fromCurrent = access->applySingle(
@@ -704,7 +707,7 @@ namespace DataAccessRegistration {
 
 				dispose = predecessor->applyPropagated(message);
 				if (dispose)
-					decreaseDeletableCountOrDelete(predecessor->getOriginator(), hpDependencyData._deletableOriginators);
+					decreaseDeletableCountOrDelete(predecessor->getOriginator(), hpDependencyData);
 			}
 
 			if (fromCurrent.combine) {
@@ -757,12 +760,15 @@ namespace DataAccessRegistration {
 	}
 
 	static inline void decreaseDeletableCountOrDelete(TaskMetadata *originator,
-		CPUDependencyData::deletable_originator_list_t &deletableOriginators)
+		CPUDependencyData &hpDependencyData)
 	{
 		TaskDataAccesses &accessStruct = originator->getTaskDataAccesses();
 		if (accessStruct.decreaseDeletableCount()) {
 			if (originator->decreaseRemovalBlockingCount()) {
-				deletableOriginators.push_back(originator); // Ensure destructor is called
+				hpDependencyData.addDeletableOriginator(originator);
+
+				if (hpDependencyData.fullDeletableOriginators())
+					processDeletableOriginators(hpDependencyData);
 			}
 		}
 	}
