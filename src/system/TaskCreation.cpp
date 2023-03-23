@@ -204,20 +204,21 @@ void nanos6_submit_task(void *taskHandle)
 	nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task);
 	assert(taskInfo != nullptr);
 
+	// Obtain the parent task and link both parent and child, only if the task
+	// is not a spawned task, since spawned tasks are independent and have their
+	// own space of data dependencies
 	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-
-	// Obtain the parent task and link both parent and child
 	nosv_task_t parentTask = nosv_self();
-	if (parentTask != nullptr) {
+	if (!taskMetadata->isSpawned() && parentTask != nullptr) {
 		taskMetadata->setParent(parentTask);
-	}
 
-	TaskMetadata *parentTaskMetadata = taskMetadata->getParent();
-	const bool isTaskiterChild = (parentTaskMetadata != nullptr) && parentTaskMetadata->isTaskiter();
-	if (isTaskiterChild) {
-		TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTaskMetadata;
-		TaskiterGraph &graph = taskiter->getGraph();
-		graph.addTask(taskMetadata);
+		TaskMetadata *parentTaskMetadata = taskMetadata->getParent();
+		assert(parentTaskMetadata != nullptr);
+		if (parentTaskMetadata->isTaskiter()) {
+			TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTaskMetadata;
+			TaskiterGraph &graph = taskiter->getGraph();
+			graph.addTask(taskMetadata);
+		}
 	}
 
 	// Register the accesses of the task to check whether it is ready to be executed

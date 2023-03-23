@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef DEPENDENCY_SYSTEM_HPP
@@ -22,8 +22,8 @@ public:
 	static void initialize()
 	{
 		size_t pow2CPUs = MathSupport::roundToNextPowOf2(HardwareInfo::getNumCpus());
-		SatisfiedOriginatorList::_actualChunkSize = std::min(SatisfiedOriginatorList::getMaxChunkSize(), pow2CPUs * 2);
-		assert(MathSupport::isPowOf2(SatisfiedOriginatorList::_actualChunkSize));
+		TaskList::_actualChunkSize = std::min(TaskList::getMaxChunkSize(), pow2CPUs * 2);
+		assert(MathSupport::isPowOf2(TaskList::_actualChunkSize));
 	}
 };
 
