@@ -61,7 +61,7 @@ static inline void createTask(nanos6_task_info_t *taskInfo,
 	}
 
 	// nOS-V Might not be able to allocate the argsBlocks
-	bool locallyAllocated = (taskSize > NOSV_MAX_METADATA_SIZE);
+	bool locallyAllocated = ((taskSize + sizeof(void *)) > NOSV_MAX_METADATA_SIZE);
 
 	// Create the nOS-V task
 	nosv_task_type_t tasktype = (nosv_task_type_t) taskInfo->task_type_data;
