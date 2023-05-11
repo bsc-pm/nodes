@@ -17,7 +17,7 @@
 
 enum nanos6_task_execution_api_t { nanos6_task_execution_api = 1 };
 enum nanos6_task_constraints_api_t { nanos6_task_constraints_api = 1 };
-enum nanos6_task_info_contents_t { nanos6_task_info_contents = 4 };
+enum nanos6_task_info_contents_t { nanos6_task_info_contents = 5 };
 enum nanos6_instantiation_api_t { nanos6_instantiation_api = 6 };
 
 #ifdef __cplusplus
@@ -156,6 +156,18 @@ typedef struct __attribute__((aligned(64)))
 	//! \param[in] args_block A pointer to the source block of parameters to be copied
 	//! \param[out] result the result of the evaluation
 	void (*iter_condition)(void *args_block, uint8_t *result);
+
+	//! \brief Number of task arguments
+	int num_args;
+
+	//! \brief Table of sizeofs for all num_args arguments of the task
+	int *sizeof_table;
+
+	//! \brief Table of offsets for all num_args arguments of the task
+	int *offset_table;
+
+	//! \brief list of indexes to map a symbol into arg
+	int *arg_idx_table;
 
 } nanos6_task_info_t;
 

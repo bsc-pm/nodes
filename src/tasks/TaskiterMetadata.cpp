@@ -63,10 +63,13 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	// TODO Free this memory
 	nanos6_task_info_t *taskInfo = (nanos6_task_info_t *)aligned_alloc(64, sizeof(nanos6_task_info_t));
 	assert(taskInfo != nullptr);
+
+	// Ensure non-explicitely initialized fields are zeroed
+	memset(taskInfo, 0, sizeof(nanos6_task_info_t));
+
 	taskInfo->implementations =
 		(nanos6_task_implementation_info_t *)malloc(sizeof(nanos6_task_implementation_info_t));
 	assert(taskInfo->implementations != nullptr);
-
 
 	taskInfo->implementation_count = 1;
 	taskInfo->implementations[0].run = TaskiterMetadata::controlCallback;
