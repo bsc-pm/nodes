@@ -1,11 +1,11 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_TASKWAIT_H
-#define NANOS6_TASKWAIT_H
+#ifndef NODES_TASKWAIT_H
+#define NODES_TASKWAIT_H
 
 #include "major.h"
 
@@ -29,4 +29,4 @@ void nanos6_taskwait(char const *invocation_source);
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_TASKWAIT_H
+#endif // NODES_TASKWAIT_H

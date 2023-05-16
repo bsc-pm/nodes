@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2022-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef TASKITER_METADATA_HPP
@@ -12,7 +12,7 @@
 
 #include <nosv.h>
 
-#include <nanos6/loop.h>
+#include <nodes/loop.h>
 
 #include "TaskMetadata.hpp"
 #include "common/ErrorHandler.hpp"

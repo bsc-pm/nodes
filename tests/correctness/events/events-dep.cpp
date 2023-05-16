@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include <nanos6.h>
+#include <nodes.h>
 
 #include "Atomic.hpp"
 #include "TAPDriver.hpp"

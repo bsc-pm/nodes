@@ -186,11 +186,11 @@ AC_DEFUN([AX_PREPARE_CXX_FLAGS], [
 	)
 
 	AS_IF([test "$enable_debug" = yes], [
-		nanos6_CXXFLAGS="-O0 -g3"
+		nodes_CXXFLAGS="-O0 -g3"
 	],[
-		nanos6_CXXFLAGS="-O3 -g"
+		nodes_CXXFLAGS="-O3 -g"
 	])
 
-	AC_SUBST(nanos6_CXXFLAGS)
+	AC_SUBST(nodes_CXXFLAGS)
 ])
 

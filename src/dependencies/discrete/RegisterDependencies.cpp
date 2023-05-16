@@ -1,14 +1,14 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
 #include <cstdlib>
 
-#include <nanos6/dependencies.h>
-#include <nanos6/reductions.h>
+#include <nodes/dependencies.h>
+#include <nodes/reductions.h>
 
 #include "DataAccessRegistration.hpp"
 #include "ReductionSpecific.hpp"

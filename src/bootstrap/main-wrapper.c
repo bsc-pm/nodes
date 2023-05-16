@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #include <assert.h>
@@ -9,10 +9,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <api/nanos6/bootstrap.h>
-#include <api/nanos6/blocking.h>
-#include <api/nanos6/library-mode.h>
-#include <api/nanos6/taskwait.h>
+#include <api/nodes/bootstrap.h>
+#include <api/nodes/blocking.h>
+#include <api/nodes/library-mode.h>
+#include <api/nodes/taskwait.h>
 
 #include "main-wrapper.h"
 

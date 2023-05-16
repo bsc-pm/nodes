@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef TASKLOOP_METADATA_HPP
@@ -9,7 +9,7 @@
 
 #include <cmath>
 
-#include <nanos6/loop.h>
+#include <nodes/loop.h>
 
 #include "TaskMetadata.hpp"
 #include "common/MathSupport.hpp"

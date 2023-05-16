@@ -1,11 +1,11 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_CONSTANTS_H
-#define NANOS6_CONSTANTS_H
+#ifndef NODES_CONSTANTS_H
+#define NODES_CONSTANTS_H
 
 #include "major.h"
 
@@ -26,4 +26,4 @@ typedef enum {
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_CONSTANTS_H
+#endif // NODES_CONSTANTS_H

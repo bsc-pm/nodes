@@ -1,14 +1,14 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
 
 #include <nosv.h>
 
-#include <nanos6/final.h>
+#include <nodes/final.h>
 
 #include "tasks/TaskMetadata.hpp"
 

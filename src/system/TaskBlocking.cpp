@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #include <atomic>
@@ -9,8 +9,8 @@
 
 #include <nosv.h>
 
-#include <nanos6/blocking.h>
-#include <nanos6/user-mutex.h>
+#include <nodes/blocking.h>
+#include <nodes/user-mutex.h>
 
 #include "common/UserMutex.hpp"
 #include "tasks/TaskMetadata.hpp"

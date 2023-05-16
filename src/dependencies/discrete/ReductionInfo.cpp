@@ -1,13 +1,13 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
 #include <sys/mman.h>
 
-#include <nanos6/reductions.h>
+#include <nodes/reductions.h>
 
 #include "DeviceReductionStorage.hpp"
 #include "ReductionInfo.hpp"

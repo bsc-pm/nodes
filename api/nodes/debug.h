@@ -1,11 +1,11 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_DEBUG_H
-#define NANOS6_DEBUG_H
+#ifndef NODES_DEBUG_H
+#define NODES_DEBUG_H
 
 #include "major.h"
 
@@ -38,4 +38,4 @@ unsigned int nanos6_get_current_virtual_cpu(void);
 #pragma GCC visibility pop
 
 
-#endif /* NANOS6_DEBUG_H */
+#endif /* NODES_DEBUG_H */

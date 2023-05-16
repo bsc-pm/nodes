@@ -1,10 +1,10 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
-#include <nanos6/task-info-registration.h>
+#include <nodes/task-info-registration.h>
 
 #include "tasks/TaskInfo.hpp"
 

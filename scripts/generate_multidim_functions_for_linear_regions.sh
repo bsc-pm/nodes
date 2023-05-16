@@ -2,7 +2,7 @@
 
 #	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
-#	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+#	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 
 
 if [ $# -lt 2 ] ; then
@@ -18,8 +18,8 @@ shift
 . $(dirname $0)/common.sh
 
 
-echo '#include <nanos6/dependencies.h>'
-echo '#include <nanos6/multidimensional-dependencies.h>'
+echo '#include <nodes/dependencies.h>'
+echo '#include <nodes/multidimensional-dependencies.h>'
 echo ''
 echo '#include "MultidimensionalAPI.hpp"'
 echo ''

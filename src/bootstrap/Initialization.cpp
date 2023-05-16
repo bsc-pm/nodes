@@ -1,13 +1,13 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #include <nosv.h>
 
-#include <nanos6/bootstrap.h>
-#include <nanos6/taskwait.h>
+#include <nodes/bootstrap.h>
+#include <nodes/taskwait.h>
 
 #include "dependencies/discrete/DependencySystem.hpp"
 #include "hardware/HardwareInfo.hpp"
