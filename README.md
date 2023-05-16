@@ -14,7 +14,9 @@ Center, unless otherwise stated.
 
 The following software is required to build and install NODES:
 
-1. automake, autoconf, libtool, pkg-config, make and a C++11 compiler
+1. automake, autoconf, libtool, pkg-config, make, a C++11 compiler, Boost, and nOS-V
+
+Additionally, ovni is an optional dependency that can be used to instrument and extract execution traces.
 
 ### Build procedure
 
@@ -29,7 +31,7 @@ When the code is distributed through a tarball, it usually does not need that co
 Then execute the following commands:
 
 ```sh
-$ ./configure --prefix=INSTALLATION_PREFIX ...other options...
+$ ./configure --prefix=INSTALLATION_PREFIX --with-nosv=NOSV_INSTALLATION_PREFIX ...other options...
 $ make all
 $ make install
 ```

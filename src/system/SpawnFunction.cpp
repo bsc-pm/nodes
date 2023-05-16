@@ -118,9 +118,11 @@ void SpawnFunction::spawnFunction(
 			taskInfo->implementations[0].declaration_source = "Spawned Task";
 			taskInfo->implementations[0].get_constraints = nullptr;
 
-			// NOTE: Since NODES doesn't know "TaskTypes", we create a nOS-V
+			// NOTE: Since NODES doesn't know about "TaskTypes", we create a nOS-V
 			// type regardless of labels and declaration sources. Thus for two
-			// identical labels, we will have two separate types in nOS-V
+			// identical labels, we will have two separate types in nOS-V.
+			// The registration can cause a data-race, so it must be inside this
+			// block as it is protected by a lock
 			// Register the new task info
 			TaskInfo::registerTaskInfo(taskInfo);
 		}
