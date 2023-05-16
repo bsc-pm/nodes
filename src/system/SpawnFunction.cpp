@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
@@ -117,11 +117,16 @@ void SpawnFunction::spawnFunction(
 			taskInfo->implementations[0].task_type_label = it->first.second.c_str();
 			taskInfo->implementations[0].declaration_source = "Spawned Task";
 			taskInfo->implementations[0].get_constraints = nullptr;
+
+			// NOTE: Since NODES doesn't know about "TaskTypes", we create a nOS-V
+			// type regardless of labels and declaration sources. Thus for two
+			// identical labels, we will have two separate types in nOS-V.
+			// The registration can cause a data-race, so it must be inside this
+			// block as it is protected by a lock
+			// Register the new task info
+			TaskInfo::registerTaskInfo(taskInfo);
 		}
 	}
-
-	// Register the new task info
-	TaskInfo::registerTaskInfo(taskInfo);
 
 	// Create the task representing the spawned function
 	void *task = nullptr;

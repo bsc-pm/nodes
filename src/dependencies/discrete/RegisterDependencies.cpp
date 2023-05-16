@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
@@ -28,7 +28,6 @@ void register_access(void *handler, void *start, size_t length, int symbolIndex,
 		return;
 	}
 
-	//bool weak = (WEAK && !task->isFinal() && !task->isTaskfor()) || task->isTaskloopSource();
 	bool weak = (WEAK && !task->isFinal()) || task->isTaskloopSource();
 	DataAccessRegistration::registerTaskDataAccess(task, ACCESS_TYPE, weak, start,
 		length, reductionTypeAndOperatorIndex, reductionIndex, symbolIndex);

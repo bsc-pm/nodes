@@ -14,7 +14,9 @@ Center, unless otherwise stated.
 
 The following software is required to build and install NODES:
 
-1. automake, autoconf, libtool, pkg-config, make and a C++11 compiler
+1. automake, autoconf, libtool, pkg-config, make, a C++11 compiler, Boost, and nOS-V
+
+Additionally, ovni is an optional dependency that can be used to instrument and extract execution traces.
 
 ### Build procedure
 
@@ -29,7 +31,7 @@ When the code is distributed through a tarball, it usually does not need that co
 Then execute the following commands:
 
 ```sh
-$ ./configure --prefix=INSTALLATION_PREFIX ...other options...
+$ ./configure --prefix=INSTALLATION_PREFIX --with-nosv=NOSV_INSTALLATION_PREFIX ...other options...
 $ make all
 $ make install
 ```
@@ -48,7 +50,6 @@ The development of NODES requires contributors to follow these few simple guidel
 
 NODES supports most of the features found in the Nanos6 runtime. However, at the moment, it does not support the following:
 1. Linear-region dependency system
-1. Taskfor construct
 1. Assert directive
 
 Furthermore, the instrumentation provided differs in the sense that it only provides (1) entry-exit points instrumentation, and (2) instrumentation related to the dependency system. Thus, instrumentation variants such as `profile`, `graph`, and the linter (`lint`) are not available in NODES.
