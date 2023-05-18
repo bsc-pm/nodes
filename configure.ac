@@ -64,6 +64,9 @@ AC_OUTPUT
 if test x"${ac_have_nodes_clang}" = x"no" ; then
 	AC_MSG_WARN([the directive based tests will not be checked since there is no Clang compiler available])
 fi
+if test x"${ac_have_nosv}" = x"no" ; then
+	AC_MSG_WARN([configured without nOS-V support])
+fi
 
 echo ""
 echo ""
