@@ -1,11 +1,11 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_BLOCKING_H
-#define NANOS6_BLOCKING_H
+#ifndef NODES_BLOCKING_H
+#define NODES_BLOCKING_H
 
 #include <stdint.h>
 
@@ -78,4 +78,4 @@ uint64_t nanos6_wait_for(uint64_t time_us);
 #pragma GCC visibility pop
 
 
-#endif /* NANOS6_BLOCKING_H */
+#endif /* NODES_BLOCKING_H */

@@ -1,12 +1,12 @@
 #	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
-#	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+#	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 
 .NOTPARALLEL:
 
-AM_CXXFLAGS = -fdo-not-use-nanos6 -I$(top_srcdir)/tests/common $(PTHREAD_CFLAGS) -I$(top_srcdir)/api -I$(top_builddir) -include nanos6.h
+AM_CXXFLAGS = -fdo-not-use-ompss-2-runtime -I$(top_srcdir)/tests/common $(PTHREAD_CFLAGS) -I$(top_srcdir)/api -I$(top_builddir) -include nodes.h
 AM_LDFLAGS  = -L$(top_builddir)/.libs -rpath $(abs_top_builddir)/.libs
-LDADD = $(top_builddir)/nanos6-main-wrapper.o $(top_builddir)/.libs/libnanos6.so -ldl
+LDADD = $(top_builddir)/nodes-main-wrapper.o $(top_builddir)/.libs/libnodes.so -ldl
 
 CXX = $(NODES_CLANGXX)
 CC = $(NODES_CLANG)

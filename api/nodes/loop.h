@@ -1,11 +1,11 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_LOOP_H
-#define NANOS6_LOOP_H
+#ifndef NODES_LOOP_H
+#define NODES_LOOP_H
 
 #include "major.h"
 #include "task-instantiation.h"
@@ -95,4 +95,4 @@ void nanos6_create_iter(
 
 #pragma GCC visibility pop
 
-#endif /* NANOS6_LOOP_H */
+#endif /* NODES_LOOP_H */

@@ -11,7 +11,7 @@
 #include <cassert>
 #include <limits.h>
 
-#include <nanos6/task-instantiation.h>
+#include <nodes/task-instantiation.h>
 
 #include "DataAccessFlags.hpp"
 #include "common/Containers.hpp"

@@ -1,11 +1,11 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_REDUCTIONS_H
-#define NANOS6_REDUCTIONS_H
+#ifndef NODES_REDUCTIONS_H
+#define NODES_REDUCTIONS_H
 
 #include "major.h"
 
@@ -75,4 +75,4 @@ void nanos6_register_region_weak_reduction_depinfo1(
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_REDUCTIONS_H
+#endif // NODES_REDUCTIONS_H

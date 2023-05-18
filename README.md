@@ -1,8 +1,11 @@
 # NODES Library
 
+The NODES Library is developed by the [*System Tools and Advanced Runtimes (STAR)*](https://www.bsc.es/discover-bsc/organisation/scientific-structure/system-tools-and-advanced-runtimes) group
+at the [**Barcelona Supercomputing Center**](http://www.bsc.es/).
+
 ## Licensing
 
-The NODES (nOS-V based OmpSs-2 DEpendency System) Runtiem Library is
+The NODES (nOS-V based OmpSs-2 DEpendency System) Runtime Library is
 Free Software, licensed under the clauses of the GNU GPL v3 License
 included in the [COPYING](COPYING) file. The copyright of the files
 included in this package belongs to the Barcelona Supercomputing
@@ -14,9 +17,15 @@ Center, unless otherwise stated.
 
 The following software is required to build and install NODES:
 
-1. automake, autoconf, libtool, pkg-config, make, a C++11 compiler, Boost, and nOS-V
+1. automake, autoconf, libtool, pkg-config, make, and a C++11 compiler
+1. [boost](http://boost.org) >= 1.71
+1. [nOS-V](https://github.com/bsc-pm/nos-v)
 
-Additionally, ovni is an optional dependency that can be used to instrument and extract execution traces.
+### Optional libraries or tools
+
+Additionally, NODES is prepared to use the following optional libraries:
+
+1. [ovni](https://ovni.readthedocs.io/en/master/) to instrument and generate execution traces for offline performance analysis with paraver
 
 ### Build procedure
 
@@ -31,12 +40,22 @@ When the code is distributed through a tarball, it usually does not need that co
 Then execute the following commands:
 
 ```sh
-$ ./configure --prefix=INSTALLATION_PREFIX --with-nosv=NOSV_INSTALLATION_PREFIX ...other options...
+$ ./configure --prefix=INSTALLATION_PREFIX \\
+$   --with-nosv=NOSV_INSTALL_PATH          \\
+$   --with-boost=BOOST_INSTALL_PATH        \\
+$   ...other options...
 $ make all
 $ make install
 ```
 
 where `INSTALLATION_PREFIX` is the directory into which to install NODES.
+
+The configure script also accepts the following options:
+
+1. `--with-nosv` to specify the prefix of the nOS-V installation
+1. `--with-boost` to specify the prefix of the boost installation
+1. `--with-ovni` to specify the prefix of the ovni installation (Optional)
+1. `--with-nodes-clang` to specify he prefix of a CLANG installation with NODES support (Optional)
 
 ## Contributing
 

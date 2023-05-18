@@ -1,11 +1,11 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_DEPENDENCIES_H
-#define NANOS6_DEPENDENCIES_H
+#ifndef NODES_DEPENDENCIES_H
+#define NODES_DEPENDENCIES_H
 
 #include <stddef.h>
 
@@ -88,4 +88,4 @@ void nanos6_register_weak_commutative_depinfo(void *handler, void *start, size_t
 
 #pragma GCC visibility pop
 
-#endif // NANOS6_DEPENDENCIES_H
+#endif // NODES_DEPENDENCIES_H

@@ -1,11 +1,11 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_BOOTSTRAP_H
-#define NANOS6_BOOTSTRAP_H
+#ifndef NODES_BOOTSTRAP_H
+#define NODES_BOOTSTRAP_H
 
 #include <stddef.h>
 
@@ -32,4 +32,4 @@ void nanos6_shutdown(void);
 
 #pragma GCC visibility pop
 
-#endif /* NANOS6_BOOTSTRAP_H */
+#endif /* NODES_BOOTSTRAP_H */

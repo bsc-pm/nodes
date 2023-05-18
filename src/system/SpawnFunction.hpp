@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef SPAWN_FUNCTION_HPP
@@ -13,8 +13,8 @@
 #include <map>
 #include <string>
 
-#include <nanos6/library-mode.h>
-#include <nanos6/task-instantiation.h>
+#include <nodes/library-mode.h>
+#include <nodes/task-instantiation.h>
 
 #include "common/SpinLock.hpp"
 

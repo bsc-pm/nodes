@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef ATOMIC_HPP
@@ -18,7 +18,7 @@ using Atomic = std::atomic<T>;
 // Unfortunately this changes behaviour of the test
 // C++ 03
 
-#include <nanos6/blocking.h>
+#include <nodes/blocking.h>
 
 
 template <typename T>

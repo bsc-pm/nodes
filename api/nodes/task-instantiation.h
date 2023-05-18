@@ -1,11 +1,11 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
-#ifndef NANOS6_TASK_INSTANTIATION_H
-#define NANOS6_TASK_INSTANTIATION_H
+#ifndef NODES_TASK_INSTANTIATION_H
+#define NODES_TASK_INSTANTIATION_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -240,4 +240,4 @@ void nanos6_submit_task(void *task);
 #pragma GCC visibility pop
 
 
-#endif /* NANOS6_TASK_INSTANTIATION_H */
+#endif /* NODES_TASK_INSTANTIATION_H */

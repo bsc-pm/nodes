@@ -4,9 +4,9 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = $(ovni_CPPFLAGS) $(BOOST_CPPFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS} ${nanos6_CXXFLAGS} -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
-AM_CXXFLAGS = $(ovni_CXXFLAGS) $(BOOST_CXXFLAGS) $(PTHREAD_CFLAGS) ${nosv_CPPFLAGS} ${nanos6_CXXFLAGS} -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
-AM_LDFLAGS  = $(ovni_LIBS) $(BOOST_LDFLAGS) $(PTHREAD_CFLAGS) $(PTHREAD_LIBS) ${nosv_LIBS}
+AM_CPPFLAGS = $(ovni_CPPFLAGS) $(BOOST_CPPFLAGS) $(PTHREAD_CFLAGS) $(nosv_CPPFLAGS) $(nodes_CXXFLAGS) -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_CXXFLAGS = $(ovni_CXXFLAGS) $(BOOST_CXXFLAGS) $(PTHREAD_CFLAGS) $(nosv_CPPFLAGS) $(nodes_CXXFLAGS) -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_LDFLAGS  = $(ovni_LIBS) $(BOOST_LDFLAGS) $(PTHREAD_CFLAGS) $(PTHREAD_LIBS) $(nosv_LIBS)
 AM_LIBS     = -lrt -lpthread -lnosv
 
 SUBDIRS = . tests
@@ -20,31 +20,31 @@ lib_age = 0
 lib_major = $(shell expr $(lib_current) - $(lib_age))
 lib_suffix = $(lib_major).$(lib_age).$(lib_revision)
 
-nanos6includedir = $(includedir)/nanos6
+nodesincludedir = $(includedir)/nodes
 
-nanos6include_HEADERS = \
-	api/nanos6/blocking.h \
-	api/nanos6/bootstrap.h \
-	api/nanos6/constants.h \
-	api/nanos6/debug.h \
-	api/nanos6/dependencies.h \
-	api/nanos6/events.h \
-	api/nanos6/final.h \
-	api/nanos6/library-mode.h \
-	api/nanos6/loop.h \
-	api/nanos6/major.h \
-	api/nanos6/reductions.h \
-	api/nanos6/task-info-registration.h \
-	api/nanos6/task-instantiation.h \
-	api/nanos6/taskwait.h \
-	api/nanos6/user-mutex.h
+nodesinclude_HEADERS = \
+	api/nodes/blocking.h \
+	api/nodes/bootstrap.h \
+	api/nodes/constants.h \
+	api/nodes/debug.h \
+	api/nodes/dependencies.h \
+	api/nodes/events.h \
+	api/nodes/final.h \
+	api/nodes/library-mode.h \
+	api/nodes/loop.h \
+	api/nodes/major.h \
+	api/nodes/reductions.h \
+	api/nodes/task-info-registration.h \
+	api/nodes/task-instantiation.h \
+	api/nodes/taskwait.h \
+	api/nodes/user-mutex.h
 
-nodist_nanos6include_HEADERS = \
-	nanos6/multidimensional-dependencies.h \
-	nanos6/multidimensional-release.h
+nodist_nodesinclude_HEADERS = \
+	nodes/multidimensional-dependencies.h \
+	nodes/multidimensional-release.h
 
 include_HEADERS = \
-	api/nanos6.h
+	api/nodes.h
 
 noinst_HEADERS = \
 	src/common/AtomicBitset.hpp \
@@ -124,21 +124,21 @@ common_sources = \
 
 dependency_flags = -I$(srcdir)/src/dependencies -I$(srcdir)/src/dependencies/discrete
 
-lib_LTLIBRARIES = libnanos6.la
+lib_LTLIBRARIES = libnodes.la
 
-libnanos6_la_CPPFLAGS = $(AM_CPPFLAGS)
-libnanos6_la_LDFLAGS  = $(AM_LDFLAGS)
-libnanos6_la_SOURCES  = $(common_sources)
-libnanos6_la_CXXFLAGS = $(AM_CXXFLAGS) $(dependency_flags)
+libnodes_la_CPPFLAGS = $(AM_CPPFLAGS)
+libnodes_la_LDFLAGS  = $(AM_LDFLAGS)
+libnodes_la_SOURCES  = $(common_sources)
+libnodes_la_CXXFLAGS = $(AM_CXXFLAGS) $(dependency_flags)
 
 #
 # Taskification of the "main" function
 #
 
-noinst_LTLIBRARIES = libnanos6-main-wrapper.la
-lib_OBJECTS = nanos6-main-wrapper.o
+noinst_LTLIBRARIES = libnodes-main-wrapper.la
+lib_OBJECTS = nodes-main-wrapper.o
 
-libnanos6_main_wrapper_la_SOURCES = \
+libnodes_main_wrapper_la_SOURCES = \
 	src/bootstrap/intercept-main-common.c \
 	src/bootstrap/intercept-main-common.h \
 	src/bootstrap/main-wrapper.c \
@@ -146,34 +146,34 @@ libnanos6_main_wrapper_la_SOURCES = \
 
 # Check which main interception signature we will use (see main_intercept.m4)
 if LINUX_POWERPC_GLIBC
-libnanos6_main_wrapper_la_SOURCES += src/bootstrap/intercept-main-glibc-powerpc.c
+libnodes_main_wrapper_la_SOURCES += src/bootstrap/intercept-main-glibc-powerpc.c
 endif
 if LINUX_GLIBC
-libnanos6_main_wrapper_la_SOURCES += src/bootstrap/intercept-main-glibc.c
+libnodes_main_wrapper_la_SOURCES += src/bootstrap/intercept-main-glibc.c
 endif
 
-libnanos6_main_wrapper_la_CPPFLAGS = $(MCMODEL_FLAGS)
-libnanos6_main_wrapper_la_LDFLAGS = -static
+libnodes_main_wrapper_la_CPPFLAGS = $(MCMODEL_FLAGS)
+libnodes_main_wrapper_la_LDFLAGS = -static
 
-nanos6-main-wrapper.o: libnanos6-main-wrapper.la
-	$(AM_V_LD)$(LD) -r --whole-archive $(top_builddir)/.libs/libnanos6-main-wrapper.a -o nanos6-main-wrapper.o
+nodes-main-wrapper.o: libnodes-main-wrapper.la
+	$(AM_V_LD)$(LD) -r --whole-archive $(top_builddir)/.libs/libnodes-main-wrapper.a -o nodes-main-wrapper.o
 
 
 #
 # Multidimensional API
 #
 
-nanos6_generated_headers = \
-	nanos6/multidimensional-dependencies.h \
-	nanos6/multidimensional-release.h
+nodes_generated_headers = \
+	nodes/multidimensional-dependencies.h \
+	nodes/multidimensional-release.h
 
 multidimensional_adaptor_sources = MultidimensionalAPIToLinear.cpp
 
-nodist_common_sources = $(nanos6_generated_headers) $(multidimensional_adaptor_sources)
-nodist_libnanos6_la_SOURCES = $(nodist_common_sources)
+nodist_common_sources = $(nodes_generated_headers) $(multidimensional_adaptor_sources)
+nodist_libnodes_la_SOURCES = $(nodist_common_sources)
 
-BUILT_SOURCES = $(nanos6_generated_headers) $(multidimensional_adaptor_sources)
-CLEANFILES = $(nodist_libnanos6_la_SOURCES) $(multidimensional_adaptor_sources)
+BUILT_SOURCES = $(nodes_generated_headers) $(multidimensional_adaptor_sources)
+CLEANFILES = $(nodist_libnodes_la_SOURCES) $(multidimensional_adaptor_sources)
 
 #
 # Automatically generated API headers
@@ -191,12 +191,12 @@ EXTRA_DIST = \
 	scripts/generate_release_prototypes.sh \
 	tests/tap-driver.sh
 
-nanos6/multidimensional-dependencies.h: $(top_srcdir)/scripts/common.sh $(top_srcdir)/scripts/generate_regions_prototypes.sh Makefile
-	$(AM_V_GEN)mkdir -p nanos6 ; \
+nodes/multidimensional-dependencies.h: $(top_srcdir)/scripts/common.sh $(top_srcdir)/scripts/generate_regions_prototypes.sh Makefile
+	$(AM_V_GEN)mkdir -p nodes ; \
 	$(top_srcdir)/scripts/generate_regions_prototypes.sh $(MAX_REGION_DIMENSIONS) $(MULTIDIMENSIONAL_REGION_API_TYPES) > $@
 
-nanos6/multidimensional-release.h: $(top_srcdir)/scripts/common.sh $(top_srcdir)/scripts/generate_release_prototypes.sh Makefile
-	$(AM_V_GEN)mkdir -p nanos6 ; \
+nodes/multidimensional-release.h: $(top_srcdir)/scripts/common.sh $(top_srcdir)/scripts/generate_release_prototypes.sh Makefile
+	$(AM_V_GEN)mkdir -p nodes ; \
 	$(top_srcdir)/scripts/generate_release_prototypes.sh $(MAX_REGION_DIMENSIONS) $(MULTIDIMENSIONAL_REGION_API_TYPES) > $@
 
 MultidimensionalAPIToLinear.cpp: $(top_srcdir)/scripts/common.sh $(top_srcdir)/scripts/generate_multidim_functions_for_linear_regions.sh Makefile

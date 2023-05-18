@@ -1,15 +1,15 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef MULTIDIMENSIONAL_API_HPP
 #define MULTIDIMENSIONAL_API_HPP
 
-#include <nanos6/dependencies.h>
-#include <nanos6/reductions.h>
-#include <nanos6/multidimensional-dependencies.h>
+#include <nodes/dependencies.h>
+#include <nodes/reductions.h>
+#include <nodes/multidimensional-dependencies.h>
 
 #include "dependencies/DataAccessType.hpp"
 #include "dependencies/MultidimensionalAPITraversal.hpp"
