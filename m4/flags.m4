@@ -165,6 +165,8 @@ AC_DEFUN([SSS_FIXUP_COMPILER_FLAGS],
 		AC_SUBST(OPT_CLANG_CXXFLAGS)
 		AC_SUBST(PROFILE_CXXFLAGS)
 
+		AC_CHECK_EXTRACT_FIRST_COMPILER_FLAG([FALIGNED_NEW_FLAG], [-faligned-new])
+
 		# Some compilers do not support PIC and large mcmodels at the same time. Verify that the
 		# mcmodel is compatible with PIC. Otherwise, do not use the mcmodel. Notice that the PIC
 		# is enabed by libtool in LT_INIT
