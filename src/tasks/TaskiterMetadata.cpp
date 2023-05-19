@@ -7,8 +7,14 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "common/ErrorHandler.hpp"
 #include "tasks/TaskInfo.hpp"
 #include "tasks/TaskiterMetadata.hpp"
+
+// For posix_memalign
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200112L
+#endif
 
 nanos6_task_invocation_info_t functionInvocationInfo = {"Automatically inserted due to a while-taskiter"};
 
@@ -62,7 +68,9 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	assert(isWhile());
 
 	// TODO Free this memory
-	nanos6_task_info_t *taskInfo = (nanos6_task_info_t *) std::aligned_alloc(64, sizeof(nanos6_task_info_t));
+	nanos6_task_info_t *taskInfo = nullptr;
+	int err = posix_memalign((void **) &taskInfo, 64, sizeof(nanos6_task_info_t));
+	ErrorHandler::failIf(err != 0, " when allocating memory with posix_memalign");
 	assert(taskInfo != nullptr);
 
 	// Ensure non-explicitely initialized fields are zeroed
