@@ -37,7 +37,7 @@ LT_INIT([shared disable-static pic-only])
 # Prepare compilation flags before AC_PROG_CXX
 SSS_PREPARE_COMPILER_FLAGS
 AC_PROG_CXX
-AX_CXX_COMPILE_STDCXX_11([], [mandatory])
+AX_CXX_COMPILE_STDCXX_17([noext], [mandatory])
 AX_PREPARE_CXX_FLAGS
 AC_CHECK_MAIN_WRAPPER_TYPE
 
