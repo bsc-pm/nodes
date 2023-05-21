@@ -1,11 +1,13 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING and COPYING.LESSER files.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef OVNI_INSTRUMENTATION_HPP
 #define OVNI_INSTRUMENTATION_HPP
+
+#include <cstdlib>
 
 #ifdef ENABLE_OVNI_INSTRUMENTATION
 #include <ovni.h>
@@ -15,15 +17,20 @@
 class Instrument {
 
 private:
+	static inline bool _enabled = false;
+
+private:
 #ifdef ENABLE_OVNI_INSTRUMENTATION
 	static inline void emitOvniEvent(const char *mcv)
 	{
-		struct ovni_ev ev = {};
+		if (_enabled) {
+			struct ovni_ev ev = {};
 
-		ovni_ev_set_clock(&ev, ovni_clock_now());
-		ovni_ev_set_mcv(&ev, (char *) mcv);
+			ovni_ev_set_clock(&ev, ovni_clock_now());
+			ovni_ev_set_mcv(&ev, (char *) mcv);
 
-		ovni_ev_emit(&ev);
+			ovni_ev_emit(&ev);
+		}
 	}
 #else
 	static inline void emitOvniEvent(const char *)
@@ -32,6 +39,14 @@ private:
 #endif
 
 public:
+
+	static inline void initializeOvni()
+	{
+		const char *envvar = std::getenv("NODES_OVNI");
+		if (envvar != nullptr) {
+			_enabled = (atoi(envvar) == 1);
+		}
+	}
 
 	static inline void enterRegisterAccesses()
 	{

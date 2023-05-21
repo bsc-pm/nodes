@@ -11,12 +11,16 @@
 
 #include "dependencies/discrete/DependencySystem.hpp"
 #include "hardware/HardwareInfo.hpp"
+#include "instrument/OVNIInstrumentation.hpp"
 #include "system/SpawnFunction.hpp"
 #include "tasks/TaskInfo.hpp"
 
 
 void nanos6_init(void)
 {
+	// Initialize OVNI instrumentation
+	Instrument::initializeOvni();
+
 	// Initialize nOS-V backend
 	nosv_init();
 

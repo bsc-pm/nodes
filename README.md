@@ -67,6 +67,13 @@ The development of NODES requires contributors to follow these few simple guidel
 
 ## Features and Known Limitations
 
+By default, `ovni` instrumentation is disabled, even when compiling with ovni support. To
+enable instrumenting executions with ovni, simply set the `NODES_OVNI` environment variable to `1`:
+
+```sh
+$ export NODES_OVNI=1
+```
+
 NODES supports most of the features found in the Nanos6 runtime. However, at the moment, it does not support the following:
 1. Linear-region dependency system
 1. Assert directive
