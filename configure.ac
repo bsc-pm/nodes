@@ -48,7 +48,7 @@ SSS_CHECK_NODES_CLANG
 AX_BOOST_BASE([1.71], [], [ AC_MSG_ERROR([Boost >= 1.71 is needed to build NODES]) ])
 CHECK_PTHREAD
 AC_CHECK_NOSV
-AX_CHECK_OVNI
+AC_CHECK_OVNI
 
 # Checks for typedefs, structures
 AC_CHECK_HEADER_STDBOOL
