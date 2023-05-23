@@ -40,9 +40,9 @@ When the code is distributed through a tarball, it usually does not need that co
 Then execute the following commands:
 
 ```sh
-$ ./configure --prefix=INSTALLATION_PREFIX \\
-$   --with-nosv=NOSV_INSTALL_PATH          \\
-$   --with-boost=BOOST_INSTALL_PATH        \\
+$ ./configure --prefix=INSTALLATION_PREFIX \
+$   --with-nosv=NOSV_INSTALL_PATH          \
+$   --with-boost=BOOST_INSTALL_PATH        \
 $   ...other options...
 $ make all
 $ make install
@@ -55,7 +55,7 @@ The configure script also accepts the following options:
 1. `--with-nosv` to specify the prefix of the nOS-V installation
 1. `--with-boost` to specify the prefix of the boost installation
 1. `--with-ovni` to specify the prefix of the ovni installation (Optional)
-1. `--with-nodes-clang` to specify he prefix of a CLANG installation with NODES support (Optional)
+1. `--with-nodes-clang` to specify the prefix of a CLANG installation with NODES support (Optional)
 
 ## Contributing
 
