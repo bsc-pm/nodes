@@ -31,6 +31,7 @@
 #include "nodes/task-instantiation.h"
 #include "nodes/taskwait.h"
 #include "nodes/user-mutex.h"
+#include "nodes/version.h"
 
 
 #endif /* NODES_H */

@@ -37,7 +37,8 @@ nodesinclude_HEADERS = \
 	api/nodes/task-info-registration.h \
 	api/nodes/task-instantiation.h \
 	api/nodes/taskwait.h \
-	api/nodes/user-mutex.h
+	api/nodes/user-mutex.h \
+	api/nodes/version.h
 
 nodist_nodesinclude_HEADERS = \
 	nodes/multidimensional-dependencies.h \
@@ -116,6 +117,7 @@ common_sources = \
 	src/system/TaskCreation.cpp \
 	src/system/TaskFinalization.cpp \
 	src/system/TaskWait.cpp \
+	src/system/VersionAPI.cpp \
 	src/tasks/Task.cpp \
 	src/tasks/TaskInfo.cpp \
 	src/tasks/TaskInfoAPI.cpp \
