@@ -65,14 +65,23 @@ The development of NODES requires contributors to follow these few simple guidel
 1. K&R indentation style
 1. Camel case coding style
 
-## Features and Known Limitations
+## Instrumenting with ovni
 
-By default, `ovni` instrumentation is disabled, even when compiling with ovni support. To
-enable instrumenting executions with ovni, simply set the `NODES_OVNI` environment variable to `1`:
+For ovni to work properly in NODES, the used nOS-V installation must be configured with ovni support as well.
+Once both nOS-V and NODES are configured with ovni support, nOS-V has to enable its own instrumentation. At the time of writing, this is done as follows:
+
+```sh
+$ export NOSV_CONFIG_OVERRIDE="instrumentation.version=ovni"
+```
+
+By default, in NODES the `ovni` instrumentation is disabled, even when compiling with ovni support. To
+enable instrumenting executions with ovni, set the `NODES_OVNI` environment variable to `1`:
 
 ```sh
 $ export NODES_OVNI=1
 ```
+
+## Features and Known Limitations
 
 NODES supports most of the features found in the Nanos6 runtime. However, at the moment, it does not support the following:
 1. Linear-region dependency system
