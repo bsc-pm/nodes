@@ -146,8 +146,6 @@ void nanos6_create_loop(
 	size_t grainsize,
 	size_t chunksize
 ) {
-	Instrument::enterCreateTask();
-
 	assert(task_info->implementation_count == 1);
 
 	// Taskfor is no longer supported. Only accept taskloops
@@ -170,8 +168,6 @@ void nanos6_create_loop(
 	assert(taskloopMetadata->isTaskloop());
 
 	taskloopMetadata->initialize(lower_bound, upper_bound, grainsize, chunksize);
-
-	Instrument::exitCreateTask();
 }
 
 void nanos6_create_iter(
