@@ -31,7 +31,7 @@ extern "C" void nanos6_block_current_task(void *)
 	__attribute__((unused)) nosv_task_t currentTask = nosv_self();
 	assert(currentTask != nullptr);
 
-	nosv_pause(NOSV_SUBMIT_NONE);
+	nosv_pause(NOSV_PAUSE_NONE);
 }
 
 extern "C" void nanos6_unblock_task(void *blocking_context)
@@ -99,7 +99,7 @@ extern "C" void nanos6_user_lock(void **handlerPointer, char const *)
 	}
 
 	// Block the task
-	nosv_pause(NOSV_SUBMIT_NONE);
+	nosv_pause(NOSV_PAUSE_NONE);
 
 	// This in combination with a release from other threads makes their changes visible to this one
 	std::atomic_thread_fence(std::memory_order_acquire);

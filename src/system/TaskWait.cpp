@@ -41,7 +41,7 @@ extern "C" void nanos6_taskwait(char const */*invocationSource*/)
 	//   2. At any time the condition of the taskwait can become true
 	//   3. The task responsible for that change will re-queue the parent
 	if (!done) {
-		nosv_pause(NOSV_SUBMIT_NONE);
+		nosv_pause(NOSV_PAUSE_NONE);
 	}
 
 	std::atomic_thread_fence(std::memory_order_acquire);

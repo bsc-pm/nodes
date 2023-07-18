@@ -238,7 +238,7 @@ void nanos6_submit_task(void *taskHandle)
 
 	if (ready && !isIf0) {
 		// Submit the task to nOS-V if ready and not if0
-		nosv_submit(task, NOSV_SUBMIT_UNLOCKED);
+		nosv_submit(task, NOSV_SUBMIT_NONE);
 	}
 
 	// Special handling for if0 tasks
@@ -255,7 +255,7 @@ void nanos6_submit_task(void *taskHandle)
 			taskMetadata->markIf0AsNotInlined();
 
 			Instrument::enterWaitIf0();
-			nosv_pause(NOSV_SUBMIT_NONE);
+			nosv_pause(NOSV_PAUSE_NONE);
 			Instrument::exitWaitIf0();
 		}
 	}
