@@ -1,13 +1,13 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2022-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef TASK_CREATION_HPP
 #define TASK_CREATION_HPP
 
-#include <nanos6/task-instantiation.h>
+#include <nodes/task-instantiation.h>
 
 #include <nosv.h>
 

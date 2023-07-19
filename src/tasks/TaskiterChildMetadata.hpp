@@ -12,7 +12,7 @@
 
 #include <nosv.h>
 
-#include <nanos6/loop.h>
+#include <nodes/loop.h>
 
 #include "TaskMetadata.hpp"
 #include "common/ErrorHandler.hpp"

@@ -15,6 +15,7 @@
 #include <unordered_set>
 
 #include "common/MathSupport.hpp"
+#include "hardware/HardwareInfo.hpp"
 #include "system/TaskCreation.hpp"
 #include "TaskiterGraph.hpp"
 #include "TaskGroupMetadata.hpp"
@@ -1089,6 +1090,9 @@ static void graphTransformFront(TaskiterGraph::graph_t &g, TaskMetadata *parent,
 		int width = ready->size();
 		// Calculate the average size of group
 		uint64_t groupsToMake = ((totalTime + us - 1) / us);
+		if (groupsToMake < HardwareInfo::getNumCpus())
+			groupsToMake = HardwareInfo::getNumCpus();
+
 		int average = std::max((width / groupsToMake), (uint64_t)1ULL);
 		assert(average >= 1);
 
