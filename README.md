@@ -40,9 +40,9 @@ When the code is distributed through a tarball, it usually does not need that co
 Then execute the following commands:
 
 ```sh
-$ ./configure --prefix=INSTALLATION_PREFIX \\
-$   --with-nosv=NOSV_INSTALL_PATH          \\
-$   --with-boost=BOOST_INSTALL_PATH        \\
+$ ./configure --prefix=INSTALLATION_PREFIX \
+$   --with-nosv=NOSV_INSTALL_PATH          \
+$   --with-boost=BOOST_INSTALL_PATH        \
 $   ...other options...
 $ make all
 $ make install
@@ -55,7 +55,7 @@ The configure script also accepts the following options:
 1. `--with-nosv` to specify the prefix of the nOS-V installation
 1. `--with-boost` to specify the prefix of the boost installation
 1. `--with-ovni` to specify the prefix of the ovni installation (Optional)
-1. `--with-nodes-clang` to specify he prefix of a CLANG installation with NODES support (Optional)
+1. `--with-nodes-clang` to specify the prefix of a CLANG installation with NODES support (Optional)
 
 ## Contributing
 
@@ -65,14 +65,23 @@ The development of NODES requires contributors to follow these few simple guidel
 1. K&R indentation style
 1. Camel case coding style
 
-## Features and Known Limitations
+## Instrumenting with ovni
 
-By default, `ovni` instrumentation is disabled, even when compiling with ovni support. To
-enable instrumenting executions with ovni, simply set the `NODES_OVNI` environment variable to `1`:
+For ovni to work properly in NODES, the used nOS-V installation must be configured with ovni support as well.
+Once both nOS-V and NODES are configured with ovni support, nOS-V has to enable its own instrumentation. At the time of writing, this is done as follows:
+
+```sh
+$ export NOSV_CONFIG_OVERRIDE="instrumentation.version=ovni"
+```
+
+By default, in NODES the `ovni` instrumentation is disabled, even when compiling with ovni support. To
+enable instrumenting executions with ovni, set the `NODES_OVNI` environment variable to `1`:
 
 ```sh
 $ export NODES_OVNI=1
 ```
+
+## Features and Known Limitations
 
 NODES supports most of the features found in the Nanos6 runtime. However, at the moment, it does not support the following:
 1. Linear-region dependency system

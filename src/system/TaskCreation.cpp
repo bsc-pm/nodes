@@ -146,8 +146,6 @@ void nanos6_create_loop(
 	size_t grainsize,
 	size_t chunksize
 ) {
-	Instrument::enterCreateTask();
-
 	assert(task_info->implementation_count == 1);
 
 	// Taskfor is no longer supported. Only accept taskloops
@@ -170,8 +168,6 @@ void nanos6_create_loop(
 	assert(taskloopMetadata->isTaskloop());
 
 	taskloopMetadata->initialize(lower_bound, upper_bound, grainsize, chunksize);
-
-	Instrument::exitCreateTask();
 }
 
 void nanos6_create_iter(
@@ -242,7 +238,7 @@ void nanos6_submit_task(void *taskHandle)
 
 	if (ready && !isIf0) {
 		// Submit the task to nOS-V if ready and not if0
-		nosv_submit(task, NOSV_SUBMIT_UNLOCKED);
+		nosv_submit(task, NOSV_SUBMIT_NONE);
 	}
 
 	// Special handling for if0 tasks
@@ -259,7 +255,7 @@ void nanos6_submit_task(void *taskHandle)
 			taskMetadata->markIf0AsNotInlined();
 
 			Instrument::enterWaitIf0();
-			nosv_pause(NOSV_SUBMIT_NONE);
+			nosv_pause(NOSV_PAUSE_NONE);
 			Instrument::exitWaitIf0();
 		}
 	}
