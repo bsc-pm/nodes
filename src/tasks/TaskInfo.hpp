@@ -65,6 +65,8 @@ public:
 				task, cpuId, stackTranslationTable, tableSize
 			);
 
+			const bool isTaskiterChild = taskMetadata->getParent() && taskMetadata->getParent()->isTaskiter();
+
 			if (taskMetadata->isTaskloop()) {
 				TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) taskMetadata;
 				if (!taskloopMetadata->isTaskloopSource()) {
@@ -74,9 +76,8 @@ public:
 						translationTable
 					);
 				} else {
-					while (taskloopMetadata->getIterationCount() > 0) {
-						Taskloop::createTaskloopExecutor(task, taskloopMetadata, taskloopMetadata->getBounds());
-					}
+					if (!isTaskiterChild)
+						taskloopMetadata->generateChildTasks();
 				}
 			} else if (taskMetadata->isTaskiter()) {
 				TaskiterMetadata *taskiterMetadata = (TaskiterMetadata *)taskMetadata;

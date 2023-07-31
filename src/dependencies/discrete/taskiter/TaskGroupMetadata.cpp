@@ -29,7 +29,11 @@ static nanos6_task_info_t groupTaskInfo = {
 	.reduction_initializers = nullptr,
 	.reduction_combiners = nullptr,
 	.task_type_data = nullptr,
-	.iter_condition = nullptr
+	.iter_condition = nullptr,
+	.num_args = 0,
+	.sizeof_table = nullptr,
+	.offset_table = nullptr,
+	.arg_idx_table = nullptr
 };
 
 nanos6_task_info_t *TaskGroupMetadata::getGroupTaskInfo()

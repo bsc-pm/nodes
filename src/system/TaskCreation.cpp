@@ -263,7 +263,8 @@ void TaskCreation::submitTask(nosv_task_t task)
 
 	TaskMetadata *parentTaskMetadata = taskMetadata->getParent();
 	const bool isTaskiterChild = (parentTaskMetadata != nullptr) && parentTaskMetadata->isTaskiter();
-	if (isTaskiterChild) {
+
+	if (isTaskiterChild) { // && !taskMetadata->isTaskloopSource()
 		TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTaskMetadata;
 		TaskiterGraph &graph = taskiter->getGraph();
 		graph.addTask(taskMetadata);
@@ -275,6 +276,11 @@ void TaskCreation::submitTask(nosv_task_t task)
 		int cpuId = nosv_get_current_logical_cpu();
 		CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 		ready = DataAccessRegistration::registerTaskDataAccesses(taskMetadata, *cpuDepData);
+	}
+
+	if (isTaskiterChild && taskMetadata->isTaskloopSource()) {
+		((TaskloopMetadata *)taskMetadata)->generateChildTasks();
+		// Instrument::exitSubmitTask();
 	}
 
 	bool isIf0 = taskMetadata->isIf0();

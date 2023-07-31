@@ -529,11 +529,11 @@ private:
 
 	inline void applySuccessorsBinding(TaskiterGraphNode node,
 		bool crossIterationBoundary,
-		VisitorApplySuccessor &visitor) 
-	{	
+		VisitorApplySuccessor &visitor)
+	{
 		graph_vertex_t vertex = node->getVertex();
 		TaskMetadata *t = node->getTask();
-		
+
 		int preferredExecutionPlace = t ? t->getLastExecutionCore() : -1;
 
 		graph_t::out_edge_iterator ei, eend;
@@ -817,6 +817,10 @@ public:
 		TaskiterNode *node = getNodeFromTask(task);
 		const access_address_t address = access->getAccessRegion().getStartAddress();
 		const DataAccessType type = access->getType();
+
+		// Ignore taskloop sources
+		if (task->isTaskloopSource())
+			return;
 
 		// Find the existing access chain or create a new one and return it
 		TaskiterGraphAccessChain &chain = _bottomMap.emplace(std::piecewise_construct, std::forward_as_tuple(address), std::forward_as_tuple()).first->second;
