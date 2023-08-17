@@ -36,6 +36,11 @@ class TaskiterChildLoopMetadata : public TaskloopMetadata, public TaskiterNode {
 	{
 	}
 
+	bool isTaskiterChild() const override
+	{
+		return true;
+	}
+
 	virtual ~TaskiterChildLoopMetadata() = default;
 };
 

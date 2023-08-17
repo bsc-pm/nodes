@@ -286,6 +286,11 @@ public:
 		return (countdown == 0);
 	}
 
+	inline int getWakeUpCount() const
+	{
+		return _countdownToBeWokenUp.load(std::memory_order_relaxed);
+	}
+
 	//! \brief Mark the task as unblocked
 	//! \return True if it does not have any children
 	inline bool markAsUnblocked()
@@ -508,6 +513,11 @@ public:
 	}
 
 	virtual inline bool isTaskiter() const
+	{
+		return false;
+	}
+
+	virtual inline bool isTaskiterChild() const
 	{
 		return false;
 	}

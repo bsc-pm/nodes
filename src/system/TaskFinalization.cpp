@@ -67,6 +67,7 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 		}
 
 		bool finish = DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *cpuDepData);
+		// Here taskiter tasks may already be reenqueued
 
 		if (isExternal) {
 			delete cpuDepData;
@@ -125,6 +126,8 @@ void TaskFinalization::taskFinished(TaskMetadata *task)
 					if (finish) {
 						ready = taskMetadata->finishChild();
 						assert(ready);
+					} else {
+						ready = false;
 					}
 
 					if (taskMetadata->decreaseRemovalBlockingCount()) {

@@ -354,6 +354,39 @@ namespace DataAccessRegistration {
 		return ready;
 	}
 
+	inline void finalizeChildTaskAccesses(TaskDataAccesses &accessStruct, CPUDependencyData &hpDependencyData)
+	{
+		bottom_map_t &bottomMap = accessStruct._subaccessBottomMap;
+		for (bottom_map_t::iterator itMap = bottomMap.begin(); itMap != bottomMap.end(); itMap++) {
+			DataAccess *access = itMap->second._access;
+			assert(access != nullptr);
+
+			DataAccessMessage m;
+			m.from = m.to = access;
+			m.flagsAfterPropagation = ACCESS_PARENT_DONE;
+			if (access->applyPropagated(m)) {
+				decreaseDeletableCountOrDelete(access->getOriginator(), hpDependencyData);
+			}
+
+			ReductionInfo *reductionInfo = itMap->second._reductionInfo;
+			if (reductionInfo != nullptr) {
+				// We cannot close this in case we had a weak reduction
+				DataAccess *parentAccess = accessStruct.findAccess(itMap->first);
+
+				if (parentAccess == nullptr || parentAccess->getType() != REDUCTION_ACCESS_TYPE) {
+					assert(!reductionInfo->finished());
+					if (reductionInfo->markAsClosed()) {
+						releaseReductionInfo(reductionInfo);
+					}
+
+					itMap->second._reductionInfo = nullptr;
+				} else {
+					assert(parentAccess->isWeak());
+				}
+			}
+		}
+	}
+
 	bool unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
 	{
 		Instrument::enterUnregisterAccesses();
@@ -373,6 +406,12 @@ namespace DataAccessRegistration {
 			assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, true));
 		}
 #endif
+
+		if (taskiterChild) {
+			finalizeChildTaskAccesses(accessStruct, hpDependencyData);
+			accessStruct._subaccessBottomMap.clear();
+			processDeletableOriginators(hpDependencyData);
+		}
 
 		if (taskiterChild && task->getOriginalPrecessorCount() >= 0) {
 			TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTask;
@@ -401,11 +440,10 @@ namespace DataAccessRegistration {
 
 				task->increaseReleaseCount();
 				task->increaseRemovalBlockingCount();
-
 				task->applyDelayedChanges();
 			} else {
-				// Prepare this task so it can be re-finished
-				task->increaseWakeUpCount(1);
+				if (task->getWakeUpCount() == 0)
+					task->increaseWakeUpCount(1);
 			}
 
 			// TODO this is necessary but maybe it's better if we place the conditional somewhere else tbh.
@@ -446,36 +484,7 @@ namespace DataAccessRegistration {
 			});
 		}
 
-		bottom_map_t &bottomMap = accessStruct._subaccessBottomMap;
-
-		for (bottom_map_t::iterator itMap = bottomMap.begin(); itMap != bottomMap.end(); itMap++) {
-			DataAccess *access = itMap->second._access;
-			assert(access != nullptr);
-
-			DataAccessMessage m;
-			m.from = m.to = access;
-			m.flagsAfterPropagation = ACCESS_PARENT_DONE;
-			if (access->applyPropagated(m)) {
-				decreaseDeletableCountOrDelete(access->getOriginator(), hpDependencyData);
-			}
-
-			ReductionInfo *reductionInfo = itMap->second._reductionInfo;
-			if (reductionInfo != nullptr) {
-				// We cannot close this in case we had a weak reduction
-				DataAccess *parentAccess = accessStruct.findAccess(itMap->first);
-
-				if (parentAccess == nullptr || parentAccess->getType() != REDUCTION_ACCESS_TYPE) {
-					assert(!reductionInfo->finished());
-					if (reductionInfo->markAsClosed()) {
-						releaseReductionInfo(reductionInfo);
-					}
-
-					itMap->second._reductionInfo = nullptr;
-				} else {
-					assert(parentAccess->isWeak());
-				}
-			}
-		}
+		finalizeChildTaskAccesses(accessStruct, hpDependencyData);
 
 		// Release commutative mask. The order is important, as this will add satisfied originators
 		if (accessStruct._commutativeMask.any())
@@ -644,7 +653,8 @@ namespace DataAccessRegistration {
 			DataAccess *parentAccess = nullptr;
 
 			if (predecessor == nullptr) {
-				parentAccess = parentAccessStruct.findAccess(address);
+				if (!parentTask->isTaskiterChild())
+					parentAccess = parentAccessStruct.findAccess(address);
 
 				if (parentAccess != nullptr) {
 					// In case we need to inherit reduction
@@ -665,12 +675,15 @@ namespace DataAccessRegistration {
 				if (currentReductionInfo == nullptr) {
 					currentReductionInfo = reductionInfo;
 					// Inherited reductions must be equal
-					assert(reductionInfo == nullptr || (reductionInfo->getTypeAndOperatorIndex() == typeAndOpIndex && reductionInfo->getOriginalLength() == length));
+					assert(reductionInfo == nullptr ||
+						(reductionInfo->getTypeAndOperatorIndex() == typeAndOpIndex && reductionInfo->getOriginalLength() == length));
 				} else {
 					reductionInfo = currentReductionInfo;
 				}
 
-				if (currentReductionInfo == nullptr || currentReductionInfo->getTypeAndOperatorIndex() != typeAndOpIndex || currentReductionInfo->getOriginalLength() != length) {
+				if (currentReductionInfo == nullptr ||
+					currentReductionInfo->getTypeAndOperatorIndex() != typeAndOpIndex ||
+					currentReductionInfo->getOriginalLength() != length) {
 					currentReductionInfo = allocateReductionInfo(accessType, access->getReductionIndex(), typeAndOpIndex,
 						address, length, *task);
 				}

@@ -132,7 +132,7 @@ static inline bool creatingInTaskiter()
 {
 	// Obtain the parent task and link both parent and child
 	nosv_task_t parentTask = nosv_self();
-	
+
 	if (parentTask) {
 		TaskMetadata *task = TaskMetadata::getTaskMetadata(parentTask);
 		if (task)
@@ -156,14 +156,18 @@ void nanos6_create_task(
 
 	if (creatingInTaskiter()) {
 		if (flags & nanos6_taskloop_task)
-			TaskCreation::createTask<TaskiterChildLoopMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+			TaskCreation::createTask<TaskiterChildLoopMetadata>(
+				taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
 		else
-			TaskCreation::createTask<TaskiterChildMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+			TaskCreation::createTask<TaskiterChildMetadata>(
+				taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
 	} else {
 		if (flags & nanos6_taskloop_task)
-			TaskCreation::createTask<TaskloopMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+			TaskCreation::createTask<TaskloopMetadata>(
+				taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
 		else
-			TaskCreation::createTask<TaskMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+			TaskCreation::createTask<TaskMetadata>(
+				taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
 	}
 }
 
@@ -196,9 +200,25 @@ void nanos6_create_loop(
 	}
 
 	if (creatingInTaskiter())
-		TaskCreation::createTask<TaskiterChildLoopMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
+		TaskCreation::createTask<TaskiterChildLoopMetadata>(
+			task_info,
+			task_invocation_info,
+			task_label,
+			args_block_size,
+			args_block_pointer,
+			task_pointer,
+			flags,
+			num_deps);
 	else
-		TaskCreation::createTask<TaskloopMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
+		TaskCreation::createTask<TaskloopMetadata>(
+			task_info,
+			task_invocation_info,
+			task_label,
+			args_block_size,
+			args_block_pointer,
+			task_pointer,
+			flags,
+			num_deps);
 
 	TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
 	assert(*task_pointer != nullptr);
@@ -224,7 +244,15 @@ void nanos6_create_iter(
 	assert(task_info->implementation_count == 1);
 	assert(flags & nanos6_taskiter_task);
 
-	TaskCreation::createTask<TaskiterMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
+	TaskCreation::createTask<TaskiterMetadata>(
+		task_info,
+		task_invocation_info,
+		task_label,
+		args_block_size,
+		args_block_pointer,
+		task_pointer,
+		flags,
+		num_deps);
 
 	TaskiterMetadata *taskiterMetadata = (TaskiterMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
 	assert(*task_pointer != nullptr);
@@ -262,7 +290,15 @@ void TaskCreation::submitTask(nosv_task_t task)
 	assert(taskInfo != nullptr);
 
 	TaskMetadata *parentTaskMetadata = taskMetadata->getParent();
-	const bool isTaskiterChild = (parentTaskMetadata != nullptr) && parentTaskMetadata->isTaskiter();
+	const bool isTaskiterChild = taskMetadata->isTaskiterChild();
+	const bool nestedTaskiterTask = (parentTaskMetadata != nullptr) && parentTaskMetadata->isTaskiterChild();
+
+	// In the case of nested tasks inside a taskiter, delay dependency release
+	if (nestedTaskiterTask && !parentTaskMetadata->mustDelayRelease()) {
+		parentTaskMetadata->setDelayedRelease(true);
+		if (parentTaskMetadata->getWakeUpCount() == 1 /* myself only */)
+			parentTaskMetadata->increaseWakeUpCount(1);
+	}
 
 	if (isTaskiterChild) { // && !taskMetadata->isTaskloopSource()
 		TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTaskMetadata;

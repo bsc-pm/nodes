@@ -32,7 +32,7 @@ public:
 	{
 	}
 
-	void addTask(TaskiterNode *task) 
+	void addTask(TaskiterNode *task)
 	{
 		TaskMetadata *metadata = task->getTask();
 		if (metadata) {
@@ -75,6 +75,11 @@ public:
 		TaskiterNode::setVertex(vertex);
 		for (TaskiterNode *t : _tasksInGroup)
 			t->setVertex(vertex);
+	}
+
+	bool isTaskiterChild() const override
+	{
+		return true;
 	}
 
 	static nanos6_task_info_t *getGroupTaskInfo();

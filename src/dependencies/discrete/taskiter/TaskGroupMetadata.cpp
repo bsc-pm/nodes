@@ -51,13 +51,13 @@ nanos6_task_info_t *TaskGroupMetadata::getGroupTaskInfo()
 void TaskGroupMetadata::executeTask(void *args, void *, nanos6_address_translation_entry_t *)
 {
 	auto visitor = overloaded {
-		[](ReductionInfo *reductionInfo) { 
+		[](ReductionInfo *reductionInfo) {
 			// if (reductionInfo->incrementUnregisteredAccesses()) {
 			reductionInfo->combine();
 			reductionInfo->reinitialize();
 			// }
 		},
-		[](TaskMetadata *arg) { 
+		[](TaskMetadata *arg) {
 			nosv_task_t t = arg->getTaskHandle();
 			TaskInfo::runWrapper(t);
 			TaskFinalization::taskEndedCallback(t);

@@ -42,6 +42,11 @@ class TaskiterChildMetadata : public TaskMetadata, public TaskiterNode {
 		return this->isCommunicationTask();
 	}
 
+	bool isTaskiterChild() const override
+	{
+		return true;
+	}
+
 	virtual ~TaskiterChildMetadata() = default;
 };
 
