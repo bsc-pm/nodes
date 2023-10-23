@@ -5,7 +5,7 @@
 .NOTPARALLEL:
 
 AM_CXXFLAGS = -fdo-not-use-ompss-2-runtime -I$(top_srcdir)/tests/common $(PTHREAD_CFLAGS) -I$(top_srcdir)/api -I$(top_builddir) -include nodes.h
-AM_LDFLAGS  = -L$(top_builddir)/.libs -rpath $(abs_top_builddir)/.libs
+AM_LDFLAGS  = $(nosv_LIBS) -L$(top_builddir)/.libs -rpath $(abs_top_builddir)/.libs
 LDADD = $(top_builddir)/nodes-main-wrapper.o $(top_builddir)/.libs/libnodes.so -ldl
 
 CXX = $(NODES_CLANGXX)
