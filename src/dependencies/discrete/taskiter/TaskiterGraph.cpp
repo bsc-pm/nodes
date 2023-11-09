@@ -879,7 +879,6 @@ TaskGroupMetadata *getEmptyGroupTask(TaskMetadata *parent)
 static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *parent)
 {
 	boost::property_map<TaskiterGraph::graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), g);
-	boost::property_map<TaskiterGraph::graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), g);
 	TaskiterGraph::graph_t::edge_iterator ei, eend;
 	TaskiterGraph::graph_t::vertex_iterator vi, vend;
 
@@ -964,8 +963,6 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 		}
 	}
 
-	int nverticesNew = boost::num_vertices(transformedGraph);
-
 	// Copy the edges back
 	for (boost::tie(ei, eend) = boost::edges(g); ei != eend; ei++) {
 		TaskiterGraph::graph_t::edge_descriptor e = *ei;
@@ -997,13 +994,10 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 static void graphTransformFront(TaskiterGraph::graph_t &g, TaskMetadata *parent, uint64_t us)
 {
 	boost::property_map<TaskiterGraph::graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), g);
-	boost::property_map<TaskiterGraph::graph_t, boost::edge_name_t>::type edgemap = boost::get(boost::edge_name_t(), g);
 	TaskiterGraph::graph_t::edge_iterator ei, eend;
 	TaskiterGraph::graph_t::out_edge_iterator oei, oeend;
 	TaskiterGraph::graph_t::vertex_iterator vi, vend;
 
-	// std::vector<TaskiterGraph::graph_vertex_t> topologicalOrder;
-	// boost::topological_sort(g, std::back_inserter(topologicalOrder));
 	int vertices = boost::num_vertices(g);
 	std::vector<int> outstanding_deps(vertices);
 	std::vector<int> equivalence(vertices);

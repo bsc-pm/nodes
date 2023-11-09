@@ -81,6 +81,7 @@ noinst_HEADERS = \
 	src/dependencies/discrete/ReductionSpecific.hpp \
 	src/dependencies/discrete/TaskDataAccesses.hpp \
 	src/dependencies/discrete/TaskDataAccessesInfo.hpp \
+	src/dependencies/discrete/TaskiterReductionInfo.hpp \
 	src/dependencies/discrete/devices/HostReductionStorage.hpp \
 	src/dependencies/discrete/taskiter/TaskGroupMetadata.hpp \
 	src/dependencies/discrete/taskiter/TaskiterGraph.hpp \
@@ -90,8 +91,11 @@ noinst_HEADERS = \
 	src/memory/MemoryAllocator.hpp \
 	src/memory/ObjectAllocator.hpp \
 	src/system/SpawnFunction.hpp \
+	src/system/TaskCreation.hpp \
 	src/system/TaskFinalization.hpp \
 	src/tasks/TaskInfo.hpp \
+	src/tasks/TaskiterChildLoopMetadata.hpp \
+	src/tasks/TaskiterChildMetadata.hpp \
 	src/tasks/TaskiterMetadata.hpp \
 	src/tasks/TaskMetadata.hpp \
 	src/tasks/TaskloopMetadata.hpp \
