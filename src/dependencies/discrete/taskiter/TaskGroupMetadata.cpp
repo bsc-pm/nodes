@@ -52,10 +52,8 @@ void TaskGroupMetadata::executeTask(void *args, void *, nanos6_address_translati
 {
 	auto visitor = overloaded {
 		[](ReductionInfo *reductionInfo) {
-			// if (reductionInfo->incrementUnregisteredAccesses()) {
 			reductionInfo->combine();
 			reductionInfo->reinitialize();
-			// }
 		},
 		[](TaskMetadata *arg) {
 			nosv_task_t t = arg->getTaskHandle();

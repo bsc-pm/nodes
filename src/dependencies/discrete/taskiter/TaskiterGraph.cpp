@@ -135,42 +135,6 @@ void TaskiterGraph::basicReduction()
 		_graph);
 }
 
-// static inline std::vector<int> kernighanLinBiPartition(std::vector<graph_vertex_t> &subgraph, std::vector<int> &assignedPartitions, int partitionTags[2])
-// {
-// 	int vertices = subgraph.size();
-
-// 	// Start with a balanced partition
-// 	for (int i = 0; i < vertices; ++i)
-// 		assignedPartitions[subgraph[i]] = partitionTags[(i >= vertices/2)];
-
-// 	std::vector<size_t> d(vertices);
-// 	std::vector<size_t> a(vertices);
-// 	std::vector<size_t> b(vertices);
-
-// 	size_t g_max;
-
-// 	do {
-// 		for (int i = 0; i < vertices; ++i) {
-// 			size_t localE = 0;
-// 			size_t localI = 0;
-// 			graph_vertex_t vertex = subgraph[i];
-// 			int assignedPartition = assignedPartitions[vertex];
-
-// 			for (boost::tie(ei, eend) = boost::out_edges(vertex, _graph); ei != eend; ++ei)
-// 			{
-// 				graph_vertex_t other = boost::target(*ei);
-// 				if (assignedPartitions[other] == assignedPartition)
-// 					localI++;
-// 				else
-// 					localE++;
-// 			}
-// 		}
-
-// 	} while (g_max > 0);
-
-// 	return assignedPartitions;
-// }
-
 void TaskiterGraph::localityScheduling()
 {
 	boost::property_map<graph_t, boost::vertex_name_t>::type nodemap = boost::get(boost::vertex_name_t(), _graphCpy);
@@ -815,14 +779,6 @@ void TaskiterGraph::communicationPriorityPropagation()
 
 		firstIt = false;
 	}
-
-	// int priorityDelta = 1;
-	// assert(priorityDelta >= 0);
-
-	// forEach([priorityDelta](TaskMetadata * t) {
-	// 	if (!t->isCommunicationTask())
-	// 		t->setPriorityDelta(priorityDelta);
-	// }, false);
 }
 
 void TaskiterGraph::immediateSuccessorProcess()
@@ -846,7 +802,7 @@ void TaskiterGraph::immediateSuccessorProcess()
 		task->getTaskDataAccesses().forAll([&outAccesses](void *address, DataAccess *access) -> bool {
 			if (access->getType() == READWRITE_ACCESS_TYPE || access->getType() == WRITE_ACCESS_TYPE)
 				outAccesses.push_back(address);
-			
+
 			return true; });
 
 		std::sort(outAccesses.begin(), outAccesses.end());
@@ -864,7 +820,7 @@ void TaskiterGraph::immediateSuccessorProcess()
 			bool edgeSelected = false;
 
 			taskTo->getTaskDataAccesses().forAll([&outAccesses, &edgeSelected](void *address, DataAccess *access) -> bool {
-				if ((access->getType() == READ_ACCESS_TYPE || access->getType() == READWRITE_ACCESS_TYPE) && 
+				if ((access->getType() == READ_ACCESS_TYPE || access->getType() == READWRITE_ACCESS_TYPE) &&
 					std::binary_search(outAccesses.begin(), outAccesses.end(), address)) {
 					edgeSelected = true;
 					return false;
@@ -947,7 +903,7 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 		visited[v] = true;
 
 		TaskiterGraphNode node = boost::get(nodemap, v);
-		
+
 		// If it's not a part of a potential chain, insert as-is.
 		if (boost::out_degree(v, g) != 1 || !node->canBeGrouped()) {
 			// Insert into the transformed graph
@@ -1015,10 +971,6 @@ static void graphTransformSequential(TaskiterGraph::graph_t &g, TaskMetadata *pa
 		TaskiterGraph::graph_t::edge_descriptor e = *ei;
 		TaskiterGraph::graph_vertex_t from = equivalence[e.m_source];
 		TaskiterGraph::graph_vertex_t to = equivalence[e.m_target];
-		// assert(equivalence[e.m_source] < nverticesNew);
-		// assert(equivalence[e.m_target] < nverticesNew);
-		// assert(equivalence[e.m_source] >= 0);
-		// assert(equivalence[e.m_target] >= 0);
 		if (from != to)
 			boost::add_edge(from, to, transformedGraph);
 	}
@@ -1179,22 +1131,6 @@ static void graphTransformFront(TaskiterGraph::graph_t &g, TaskMetadata *parent,
 	g = transformedGraph;
 }
 
-class CycleDetectorVisitor : public boost::default_dfs_visitor
-{
-	std::unordered_set<int> currentVertices;
-
-	public:
-	void tree_edge(TaskiterGraph::graph_t::edge_descriptor e, [[maybe_unused]] const TaskiterGraph::graph_t &g)
-	{
-		// std::cout << e << std::endl;
-	}
-
-	void back_edge(TaskiterGraph::graph_t::edge_descriptor e, [[maybe_unused]] const TaskiterGraph::graph_t &g)
-	{
-		std::cout << "-" << e << std::endl;
-	}
-};
-
 void TaskiterGraph::granularityTuning()
 {
 	// There are three possible merging algorithms, that can be applied in different orderings.
@@ -1216,11 +1152,6 @@ void TaskiterGraph::granularityTuning()
 
 	// Front
 	graphTransformFront(_graph, parent, 1000 /* us minimum task */);
-
-	// Find circular dependencies
-	// CycleDetectorVisitor vis;
-	// boost::depth_first_search(_graph, 
-	// 	boost::visitor(vis));
 
 #if PRINT_TASKITER_GRAPH
 	if (_printGraph.getValue()) {
