@@ -26,9 +26,7 @@ void nanos6_init(void)
 
 	// Create a dummy type and task to attach/wrap the "main" process
 	nosv_task_t task;
-	nosv_task_type_t type;
-	nosv_type_init(&type, NULL, NULL, NULL, "main", NULL, &(TaskInfo::getCostWrapper), NOSV_TYPE_INIT_EXTERNAL);
-	nosv_attach(&task, type, 0, NULL, NOSV_ATTACH_NONE);
+	nosv_attach(&task, NULL, "main task", NOSV_ATTACH_NONE);
 
 	// Gather hardware info
 	HardwareInfo::initialize();
@@ -55,9 +53,7 @@ void nanos6_shutdown(void)
 
 	// Detach the wrapped main process
 	nosv_task_t task = nosv_self();
-	nosv_task_type_t type = nosv_get_task_type(task);
 	nosv_detach(NOSV_DETACH_NONE);
-	nosv_type_destroy(type, NOSV_TYPE_DESTROY_NONE);
 
 	// Shutdown nOS-V backend
 	nosv_shutdown();
