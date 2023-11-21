@@ -22,6 +22,8 @@ AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
+AX_COMPILE_FLAGS
+
 # Automake initialization
 AM_INIT_AUTOMAKE([foreign -Wall dist-bzip2 -Wno-portability subdir-objects silent-rules])
 AM_SILENT_RULES([yes])
@@ -35,10 +37,8 @@ LT_INIT([shared disable-static pic-only])
 
 # Checks for compiler characteristics
 # Prepare compilation flags before AC_PROG_CXX
-SSS_PREPARE_COMPILER_FLAGS
 AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX_17([noext], [mandatory])
-AX_PREPARE_CXX_FLAGS
 AC_CHECK_MAIN_WRAPPER_TYPE
 
 # Check for clang++
@@ -53,8 +53,6 @@ AC_CHECK_OVNI
 # Checks for typedefs, structures
 AC_CHECK_HEADER_STDBOOL
 AC_TYPE_SIZE_T
-
-SSS_FIXUP_COMPILER_FLAGS
 
 AC_CONFIG_FILES([Makefile tests/Makefile])
 AC_OUTPUT
@@ -73,8 +71,8 @@ echo "    Compiler version...    ${CXX_VERSION}"
 echo ""
 echo "    Installation prefix... ${prefix}"
 echo ""
-echo "    CXXFLAGS...            ${CXXFLAGS}"
-echo "    CPPFLAGS...            ${CPPFLAGS}"
+echo "    CXXFLAGS...            ${nodes_CXXFLAGS} ${CXXFLAGS}"
+echo "    CPPFLAGS...            ${nodes_CPPFLAGS} ${CPPFLAGS}"
 echo ""
 echo "    Code Model flags...    ${MCMODEL_FLAGS}"
 echo ""
