@@ -59,7 +59,6 @@ void nanos6_shutdown(void)
 	HardwareInfo::shutdown();
 
 	// Detach the wrapped main process
-	nosv_task_t task = nosv_self();
 	nosv_detach(NOSV_DETACH_NONE);
 
 	// Shutdown nOS-V backend
