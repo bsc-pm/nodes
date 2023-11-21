@@ -130,7 +130,7 @@ template void TaskCreation::createTask<TaskGroupMetadata>(
 
 static inline bool creatingInTaskiter()
 {
-	// Obtain the parent task and link both parent and child
+	// Figure out if the parent task is a Taskiter to create the child task as derived from TaskiterNode
 	nosv_task_t parentTask = nosv_self();
 
 	if (parentTask) {
@@ -316,7 +316,6 @@ void TaskCreation::submitTask(nosv_task_t task)
 
 	if (isTaskiterChild && taskMetadata->isTaskloopSource()) {
 		((TaskloopMetadata *)taskMetadata)->generateChildTasks();
-		// Instrument::exitSubmitTask();
 	}
 
 	bool isIf0 = taskMetadata->isIf0();

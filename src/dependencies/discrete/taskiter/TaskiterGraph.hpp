@@ -401,16 +401,17 @@ private:
 		}
 	};
 
+	template<typename Processor>
 	class VisitorApplySuccessor {
 		TaskiterGraph *_graph;
-		std::function<void(TaskMetadata *)> &_satisfyTask;
+		Processor _satisfyTask;
 		bool _crossIterationBoundary;
 		bool _delayedCancellation;
 
 	public:
 		VisitorApplySuccessor(
 			TaskiterGraph *graph,
-			std::function<void(TaskMetadata *)> satisfyTask,
+			Processor satisfyTask,
 			bool crossIterationBoundary,
 			bool delayedCancellation) :
 			_graph(graph),
@@ -466,9 +467,10 @@ private:
 		return node;
 	}
 
+	template <typename Processor>
 	inline void applySuccessorsStd(TaskiterGraphNode node,
 		bool crossIterationBoundary,
-		VisitorApplySuccessor &visitor)
+		VisitorApplySuccessor<Processor> &visitor)
 	{
 		graph_vertex_t vertex = node->getVertex();
 
@@ -488,9 +490,10 @@ private:
 		}
 	}
 
+	template <typename Processor>
 	inline void applySuccessorsSmartIS(TaskiterGraphNode node,
 		bool crossIterationBoundary,
-		VisitorApplySuccessor &visitor)
+		VisitorApplySuccessor<Processor> &visitor)
 	{
 		graph_vertex_t vertex = node->getVertex();
 
@@ -527,9 +530,10 @@ private:
 		}
 	}
 
+	template <typename Processor>
 	inline void applySuccessorsBinding(TaskiterGraphNode node,
 		bool crossIterationBoundary,
-		VisitorApplySuccessor &visitor)
+		VisitorApplySuccessor<Processor> &visitor)
 	{
 		graph_vertex_t vertex = node->getVertex();
 		TaskMetadata *t = node->getTask();
@@ -564,6 +568,13 @@ private:
 		}
 	}
 
+	static void spawnLambda(
+		std::function<void()> function,
+		std::function<void()> completionCallback,
+		char const *label,
+		bool fromUserCode = false
+	);
+
 public:
 	TaskiterGraph() :
 		_currentUnroll(0),
@@ -589,17 +600,17 @@ public:
 	// only satisfying tasks from the current iteration, and in other cases (delayedCancellation)
 	// if the task is a control task, it will only satisfy other control tasks. This second case
 	// is used when a taskiter while is on its cancellation process
+	template <typename Processor>
 	inline void applySuccessors(
 		TaskiterGraphNode node,
 		bool crossIterationBoundary,
-		std::function<void(TaskMetadata *)> &satisfyTask,
+		Processor satisfyTask,
 		bool delayedCancellationMode)
 	{
-		VisitorApplySuccessor visitor(this, satisfyTask, crossIterationBoundary, delayedCancellationMode);
+		VisitorApplySuccessor<Processor> visitor(this, satisfyTask, crossIterationBoundary, delayedCancellationMode);
 
 		if (delayedCancellationMode && node->getTask()) {
 			// In this mode, control tasks can only pass satisfiability to other control tasks
-			// TaskMetadata *task = node->getTask();
 			Container::vector<TaskiterNode *>::iterator it = std::find(_controlTasks.begin(), _controlTasks.end(), node);
 			if (it != _controlTasks.end()) {
 				// Now, we're a control task, so we only satisfy the next control task in the chain
@@ -715,12 +726,12 @@ public:
 		else if (_graphOptimization.getValue() == "basic")
 			basicReduction();
 
-		#if PRINT_TASKITER_GRAPH
+#if PRINT_TASKITER_GRAPH
 		if (_printGraph.getValue()) {
 			std::ofstream dot("before.dot");
 			boost::write_graphviz(dot, _graph);
 		}
-		#endif
+#endif
 
 		// Then, perform granularity tuning. This step also alters the number of vertices and edges, so it has to be done
 		// before the rest of optimizations
@@ -750,7 +761,7 @@ public:
 				}
 			});
 
-			SpawnFunction::spawnLambda([this]() {
+			spawnLambda([this]() {
 				if (_tentativeNumaScheduling.getValue() == "naive")
 					localityScheduling();
 				else if (_tentativeNumaScheduling.getValue() == "bitset")
@@ -777,7 +788,7 @@ public:
 	void postProcess()
 	{
 		if (_communcationPriorityPropagation.getValue() || _smartIS.getValue()) {
-			SpawnFunction::spawnLambda([this]() {
+			spawnLambda([this]() {
 				// Prioritize communcation tasks
 				if (_communcationPriorityPropagation.getValue())
 					communicationPriorityPropagation();

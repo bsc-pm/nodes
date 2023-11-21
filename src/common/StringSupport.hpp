@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2017-2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2023 Barcelona Supercomputing Center (BSC)
 */
 
 

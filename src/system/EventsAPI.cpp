@@ -27,6 +27,8 @@ extern "C" void nanos6_increase_current_task_event_counter(void *, unsigned int 
 	assert(current_task != nullptr);
 	TaskMetadata *metadata = TaskMetadata::getTaskMetadata(current_task);
 	assert(metadata != nullptr);
+	// Mark this task as a potential communication task (TAMPI), which we need for some
+	// optimizations related with the taskiter construct
 	metadata->markAsCommunicationTask();
 
 	nosv_increase_event_counter(increment);

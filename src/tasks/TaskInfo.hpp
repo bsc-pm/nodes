@@ -16,6 +16,7 @@
 
 #include <nodes/task-instantiation.h>
 
+#include "common/Chrono.hpp"
 #include "common/SpinLock.hpp"
 #include "dependencies/SymbolTranslation.hpp"
 #include "dependencies/discrete/DataAccessRegistration.hpp"
@@ -54,9 +55,12 @@ public:
 		assert(taskInfo->implementation_count == 1);
 		assert(taskInfo->implementations != nullptr);
 
-		std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
 
 		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
+		Chrono chrono;
+		if (taskMetadata->isTaskiterChild())
+			chrono.start();
+
 		if (taskMetadata->hasCode()) {
 			size_t tableSize = 0;
 			int cpuId = nosv_get_current_logical_cpu();
@@ -105,9 +109,11 @@ public:
 			}
 		}
 
-		std::chrono::time_point<std::chrono::steady_clock> end = std::chrono::steady_clock::now();
-		taskMetadata->setElapsedTime(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
-		taskMetadata->setLastExecutionCore(nosv_get_current_system_cpu());
+		if (taskMetadata->isTaskiterChild()) {
+			chrono.stop();
+			taskMetadata->setElapsedTime(chrono);
+			taskMetadata->setLastExecutionCore(nosv_get_current_system_cpu());
+		}
 
 		if (!taskMetadata->isIf0Inlined()) {
 			assert(taskMetadata->getParent() != nullptr);

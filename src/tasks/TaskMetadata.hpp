@@ -594,7 +594,6 @@ public:
 				// Calculate the exact priority for next iteration
 				size_t iteration = _parent->getIterationCount() - _iterationCount;
 				int priority = _delayedPriority - (iteration * _priorityDelta);
-				// printf("%zu\n", priority);
 				assert(priority >= 0);
 				nosv_set_task_priority(getTaskHandle(), priority);
 			} else {

@@ -49,15 +49,15 @@ namespace DataAccessRegistration {
 	//! Process all the originators that have become ready
 	static inline void processSatisfiedOriginators(CPUDependencyData &hpDependencyData)
 	{
+		// In NODES the last task is the immediate successor.
+		// This differs from the Nanos6 runtime where we choose the first task with highest priority.
+		// This implementation choice has been taken because it allows an easier implementation of
+		// mechanisms that want to control the immediate successor, such as taskiter optimizations
 		for (int i = 0; i < nanos6_device_t::nanos6_device_type_num; ++i) {
 			auto &list = hpDependencyData.getSatisfiedOriginators(i);
-			if (list.size() > 0) {
+			const size_t size = list.size();
+			if (size > 0) {
 				TaskMetadata **taskArray = list.getArray();
-
-				// TODO: Control using envvar? Config file (overkill?) ?
-				// Immediate successor submit
-
-				size_t size = list.size();
 
 				for (size_t j = 0; j < size - 1; ++j) {
 					nosv_submit(taskArray[j]->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
@@ -467,8 +467,6 @@ namespace DataAccessRegistration {
 #endif
 
 			Instrument::exitUnregisterAccesses();
-			// return false;
-			Instrument::exitUnregisterAccesses();
 			return !keepIterating;
 		}
 
@@ -869,7 +867,6 @@ namespace DataAccessRegistration {
 	{
 		assert(task != nullptr);
 		assert(translationTable != nullptr);
-		assert(totalSymbols < 30);
 
 		// Initialize translationTable
 		for (int i = 0; i < totalSymbols; ++i)

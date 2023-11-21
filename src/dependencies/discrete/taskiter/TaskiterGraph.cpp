@@ -29,6 +29,45 @@ EnvironmentVariable<bool> TaskiterGraph::_smartIS("NODES_ITER_SMART_IS", false);
 EnvironmentVariable<bool> TaskiterGraph::_preferredBinding("NODES_ITER_BIND_LAST_EXECUTION", false);
 EnvironmentVariable<bool> TaskiterGraph::_granularityTuning("NODES_ITER_GRANULARITY_TUNING", false);
 
+//! Args block of spawned lambdas
+struct SpawnedLambdaArgsBlock {
+	std::function<void()> _function;
+	std::function<void()> _completionCallback;
+
+	SpawnedLambdaArgsBlock() :
+		_function(),
+		_completionCallback()
+	{
+	}
+};
+
+static void spawnedLambdaWrapper(void *args)
+{
+ 	SpawnedLambdaArgsBlock *block = (SpawnedLambdaArgsBlock *) args;
+	block->_function();
+}
+
+static void spawnedLambdaCompletion(void *args)
+{
+	SpawnedLambdaArgsBlock *block = (SpawnedLambdaArgsBlock *) args;
+	block->_completionCallback();
+	delete block;
+}
+
+void TaskiterGraph::spawnLambda(
+	std::function<void()> function,
+	std::function<void()> completionCallback,
+	char const *label,
+	bool fromUserCode
+) {
+	// This could be more efficient if we use the pre-allocated argsblock, but should do for now
+	SpawnedLambdaArgsBlock *args = new SpawnedLambdaArgsBlock();
+	args->_function = function;
+	args->_completionCallback = completionCallback;
+
+	SpawnFunction::spawnFunction(spawnedLambdaWrapper, (void *)args, spawnedLambdaCompletion, (void *)args, label, fromUserCode);
+}
+
 void TaskiterGraph::prioritizeCriticalPath()
 {
 	// Analyze the graph to figure out the critical task path.

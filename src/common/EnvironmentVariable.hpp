@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2015-2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2023 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef ENVIRONMENT_VARIABLE_HPP
@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 
+#include "ErrorHandler.hpp"
 #include "StringSupport.hpp"
 
 //! \brief A class to read environment variables
@@ -36,7 +37,13 @@ public:
 			if (StringSupport::parse<T>(value, _value)) {
 				_isPresent = true;
 			} else {
-				std::cerr << "Warning: invalid value for environment variable " << name << ". Defaulting to " << defaultValue << "." << std::endl;
+				ErrorHandler::warn(
+					"invalid value for environment variable",
+					name,
+					". Defaulting to ",
+					defaultValue,
+					"."
+				);
 				_isPresent = false;
 			}
 		} else {

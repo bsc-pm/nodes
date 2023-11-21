@@ -84,19 +84,6 @@ public:
 		bool fromUserCode = false
 	);
 
-	//! \brief Spawn a C++ std::function asynchronously
-	//!
-	//! \param[in] function The function to be spawned
-	//! \param[in] completionCallback An optional function that will be called when the function finishes
-	//! \param[in] label An optional name for the function
-	//! \param[in] fromUserCode Whether called from user code (i.e. nanos6_spawn_function)
-	static void spawnLambda(
-		std::function<void()> function,
-		std::function<void()> completionCallback,
-		char const *label,
-		bool fromUserCode = false
-	);
-
 	//! \brief Finalize spawned functions
 	static inline void shutdown()
 	{
