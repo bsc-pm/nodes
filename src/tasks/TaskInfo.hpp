@@ -8,6 +8,7 @@
 #define TASK_INFO_HPP
 
 #include <cassert>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,7 @@
 
 #include <nodes/task-instantiation.h>
 
+#include "common/Chrono.hpp"
 #include "common/SpinLock.hpp"
 #include "dependencies/SymbolTranslation.hpp"
 #include "dependencies/discrete/DataAccessRegistration.hpp"
@@ -41,7 +43,7 @@ private:
 	//! Whether the manager has been initialized (after the runtime)
 	static bool _initialized;
 
-private:
+public:
 
 	//! \brief Run wrapper for task types
 	static inline void runWrapper(nosv_task_t task)
@@ -53,7 +55,12 @@ private:
 		assert(taskInfo->implementation_count == 1);
 		assert(taskInfo->implementations != nullptr);
 
+
 		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
+		Chrono chrono;
+		if (taskMetadata->isTaskiterChild())
+			chrono.start();
+
 		if (taskMetadata->hasCode()) {
 			size_t tableSize = 0;
 			int cpuId = nosv_get_current_logical_cpu();
@@ -61,6 +68,8 @@ private:
 			nanos6_address_translation_entry_t *translationTable = SymbolTranslation::generateTranslationTable(
 				task, cpuId, stackTranslationTable, tableSize
 			);
+
+			const bool isTaskiterChild = taskMetadata->getParent() && taskMetadata->getParent()->isTaskiter();
 
 			if (taskMetadata->isTaskloop()) {
 				TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) taskMetadata;
@@ -71,9 +80,8 @@ private:
 						translationTable
 					);
 				} else {
-					while (taskloopMetadata->getIterationCount() > 0) {
-						Taskloop::createTaskloopExecutor(task, taskloopMetadata, taskloopMetadata->getBounds());
-					}
+					if (!isTaskiterChild)
+						taskloopMetadata->generateChildTasks();
 				}
 			} else if (taskMetadata->isTaskiter()) {
 				TaskiterMetadata *taskiterMetadata = (TaskiterMetadata *)taskMetadata;
@@ -101,6 +109,12 @@ private:
 			}
 		}
 
+		if (taskMetadata->isTaskiterChild()) {
+			chrono.stop();
+			taskMetadata->setElapsedTime(chrono);
+			taskMetadata->setLastExecutionCore(nosv_get_current_system_cpu());
+		}
+
 		if (!taskMetadata->isIf0Inlined()) {
 			assert(taskMetadata->getParent() != nullptr);
 
@@ -109,8 +123,6 @@ private:
 			nosv_submit(taskMetadata->getParent()->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 		}
 	}
-
-public:
 
 	//! \brief Initialize the TaskInfo manager after the runtime has been initialized
 	static inline void initialize()

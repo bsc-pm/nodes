@@ -84,7 +84,7 @@ public:
 		}
 	}
 
-	inline size_t getIterationCount() const
+	inline size_t getIterationCount() const override
 	{
 		return (_upperBound - _lowerBound);
 	}

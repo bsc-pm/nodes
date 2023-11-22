@@ -5,11 +5,13 @@
 */
 
 #include <cstdlib>
-#include <iostream>
+#include <unordered_set>
 
 #include "common/ErrorHandler.hpp"
+#include "system/TaskCreation.hpp"
 #include "tasks/TaskInfo.hpp"
 #include "tasks/TaskiterMetadata.hpp"
+#include "tasks/TaskiterChildMetadata.hpp"
 
 // For posix_memalign
 #ifndef _POSIX_C_SOURCE
@@ -47,20 +49,47 @@ void TaskiterMetadata::cancel()
 
 	_stop = true;
 
+	nosv_task_t currentTask = nosv_self();
+	assert(currentTask != nullptr);
+
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(currentTask);
+	// We have to finish the groups also
+
+	std::unordered_set<TaskGroupMetadata *> groups;
+
 	_graph.forEach(
-		[](TaskMetadata *task) {
-			// As this is the second time this task will be finished, we have to do a little hack
-			task->increaseWakeUpCount(1);
-			TaskFinalization::taskFinished(task);
+		[taskMetadata, &groups](TaskMetadata *task) {
+			if (task != taskMetadata) {
+				if (task->getGroup() != nullptr) {
+					groups.insert((TaskGroupMetadata *) task->getGroup());
+				}
 
-			__attribute__((unused)) bool deletable = task->decreaseRemovalBlockingCount();
+				// As this is the second time this task will be finished, we have to do a little hack
+				if (task->canBeWokenUp())
+					task->increaseWakeUpCount(1);
+				TaskFinalization::taskFinished(task);
 
-			if (deletable) {
-				TaskFinalization::disposeTask(task);
+				bool deletable = task->decreaseRemovalBlockingCount();
+
+				if (deletable) {
+					TaskFinalization::disposeTask(task);
+				}
 			}
 		},
 		true
 	);
+
+	for (TaskGroupMetadata *group : groups) {
+		if (group->canBeWokenUp())
+			group->increaseWakeUpCount(1);
+		TaskFinalization::taskFinished(group);
+
+		bool deletable = group->decreaseRemovalBlockingCount();
+
+		if (deletable) {
+			TaskFinalization::disposeTask(group);
+		}
+	}
 }
 
 TaskMetadata *TaskiterMetadata::generateControlTask()
@@ -93,16 +122,17 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	taskInfo->implementations[0].declaration_source = "Taskiter Control";
 	taskInfo->implementations[0].get_constraints = nullptr;
 
+	taskInfo->get_priority = NULL;
+
+	taskInfo->num_symbols = 0;
+
 	// Register the new task info
 	TaskInfo::registerTaskInfo(taskInfo);
 
 	// Create the task representing the spawned function
 	void *task = nullptr;
 	TaskiterArgsBlock *argsBlock = nullptr;
-	nanos6_create_task(
-		taskInfo, &functionInvocationInfo,
-		"Taskiter Control", sizeof(TaskiterArgsBlock),
-		(void **)&argsBlock, &task, 0, 0);
+	TaskCreation::createTask<TaskiterChildMetadata>(taskInfo, NULL, "Taskiter Control", sizeof(TaskiterArgsBlock), (void **)&argsBlock, &task, 0, 0);
 	assert(task != nullptr);
 	assert(argsBlock != nullptr);
 
@@ -112,7 +142,6 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	metadata->setParent(this->getTaskHandle());
 	metadata->incrementOriginalPredecessorCount();
 	metadata->setIterationCount(getIterationCount() + 1);
-	metadata->markAsBlocked();
 
 	return metadata;
 }

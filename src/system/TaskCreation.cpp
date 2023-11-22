@@ -16,16 +16,19 @@
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "dependencies/discrete/TaskDataAccesses.hpp"
 #include "dependencies/discrete/TaskDataAccessesInfo.hpp"
+#include "dependencies/discrete/taskiter/TaskGroupMetadata.hpp"
 #include "instrument/OVNIInstrumentation.hpp"
 #include "memory/MemoryAllocator.hpp"
 #include "hardware/HardwareInfo.hpp"
+#include "system/TaskCreation.hpp"
 #include "tasks/TaskiterMetadata.hpp"
+#include "tasks/TaskiterChildLoopMetadata.hpp"
+#include "tasks/TaskiterChildMetadata.hpp"
 #include "tasks/TaskloopMetadata.hpp"
 #include "tasks/TaskMetadata.hpp"
 
-
 template <typename T>
-static inline void createTask(nanos6_task_info_t *taskInfo,
+void TaskCreation::createTask(nanos6_task_info_t *taskInfo,
 	nanos6_task_invocation_info_t *,
 	char const *,
 	size_t argsBlockSize,
@@ -114,6 +117,31 @@ static inline void createTask(nanos6_task_info_t *taskInfo,
 	Instrument::exitCreateTask();
 }
 
+template void TaskCreation::createTask<TaskiterChildMetadata>(
+	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
+template void TaskCreation::createTask<TaskiterChildLoopMetadata>(
+	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
+template void TaskCreation::createTask<TaskloopMetadata>(
+	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
+template void TaskCreation::createTask<TaskMetadata>(
+	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
+template void TaskCreation::createTask<TaskGroupMetadata>(
+	nanos6_task_info_t *, nanos6_task_invocation_info_t *, char const *, size_t, void **, void **, size_t, size_t);
+
+static inline bool creatingInTaskiter()
+{
+	// Figure out if the parent task is a Taskiter to create the child task as derived from TaskiterNode
+	nosv_task_t parentTask = nosv_self();
+
+	if (parentTask) {
+		TaskMetadata *task = TaskMetadata::getTaskMetadata(parentTask);
+		if (task)
+			return task->isTaskiter();
+	}
+
+	return false;
+}
+
 void nanos6_create_task(
 	nanos6_task_info_t *taskInfo,
 	nanos6_task_invocation_info_t *,
@@ -126,10 +154,21 @@ void nanos6_create_task(
 ) {
 	assert(!(flags & nanos6_taskiter_task));
 
-	if (flags & nanos6_taskloop_task)
-		createTask<TaskloopMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
-	else
-		createTask<TaskMetadata>(taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	if (creatingInTaskiter()) {
+		if (flags & nanos6_taskloop_task)
+			TaskCreation::createTask<TaskiterChildLoopMetadata>(
+				taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+		else
+			TaskCreation::createTask<TaskiterChildMetadata>(
+				taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	} else {
+		if (flags & nanos6_taskloop_task)
+			TaskCreation::createTask<TaskloopMetadata>(
+				taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+		else
+			TaskCreation::createTask<TaskMetadata>(
+				taskInfo, NULL, task_label, argsBlockSize, argsBlockPointer, taskPointer, flags, numDeps);
+	}
 }
 
 void nanos6_create_loop(
@@ -160,7 +199,26 @@ void nanos6_create_loop(
 		num_deps *= numTasks;
 	}
 
-	createTask<TaskloopMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
+	if (creatingInTaskiter())
+		TaskCreation::createTask<TaskiterChildLoopMetadata>(
+			task_info,
+			task_invocation_info,
+			task_label,
+			args_block_size,
+			args_block_pointer,
+			task_pointer,
+			flags,
+			num_deps);
+	else
+		TaskCreation::createTask<TaskloopMetadata>(
+			task_info,
+			task_invocation_info,
+			task_label,
+			args_block_size,
+			args_block_pointer,
+			task_pointer,
+			flags,
+			num_deps);
 
 	TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
 	assert(*task_pointer != nullptr);
@@ -186,7 +244,15 @@ void nanos6_create_iter(
 	assert(task_info->implementation_count == 1);
 	assert(flags & nanos6_taskiter_task);
 
-	createTask<TaskiterMetadata>(task_info, task_invocation_info, task_label, args_block_size, args_block_pointer, task_pointer, flags, num_deps);
+	TaskCreation::createTask<TaskiterMetadata>(
+		task_info,
+		task_invocation_info,
+		task_label,
+		args_block_size,
+		args_block_pointer,
+		task_pointer,
+		flags,
+		num_deps);
 
 	TaskiterMetadata *taskiterMetadata = (TaskiterMetadata *) TaskMetadata::getTaskMetadata((nosv_task_t) (*task_pointer));
 	assert(*task_pointer != nullptr);
@@ -199,13 +265,8 @@ void nanos6_create_iter(
 //! Public API function to submit tasks
 void nanos6_submit_task(void *taskHandle)
 {
-	Instrument::enterSubmitTask();
-
 	nosv_task_t task = (nosv_task_t) taskHandle;
 	assert(task != nullptr);
-
-	nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task);
-	assert(taskInfo != nullptr);
 
 	// Obtain the parent task and link both parent and child, only if the task
 	// is not a spawned task, since spawned tasks are independent and have their
@@ -214,14 +275,35 @@ void nanos6_submit_task(void *taskHandle)
 	nosv_task_t parentTask = nosv_self();
 	if (!taskMetadata->isSpawned() && parentTask != nullptr) {
 		taskMetadata->setParent(parentTask);
+	}
 
-		TaskMetadata *parentTaskMetadata = taskMetadata->getParent();
-		assert(parentTaskMetadata != nullptr);
-		if (parentTaskMetadata->isTaskiter()) {
-			TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTaskMetadata;
-			TaskiterGraph &graph = taskiter->getGraph();
-			graph.addTask(taskMetadata);
-		}
+	TaskCreation::submitTask(task);
+}
+
+void TaskCreation::submitTask(nosv_task_t task)
+{
+	Instrument::enterSubmitTask();
+
+	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
+
+	nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task);
+	assert(taskInfo != nullptr);
+
+	TaskMetadata *parentTaskMetadata = taskMetadata->getParent();
+	const bool isTaskiterChild = taskMetadata->isTaskiterChild();
+	const bool nestedTaskiterTask = (parentTaskMetadata != nullptr) && parentTaskMetadata->isTaskiterChild();
+
+	// In the case of nested tasks inside a taskiter, delay dependency release
+	if (nestedTaskiterTask && !parentTaskMetadata->mustDelayRelease()) {
+		parentTaskMetadata->setDelayedRelease(true);
+		if (parentTaskMetadata->getWakeUpCount() == 1 /* myself only */)
+			parentTaskMetadata->increaseWakeUpCount(1);
+	}
+
+	if (isTaskiterChild) { // && !taskMetadata->isTaskloopSource()
+		TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTaskMetadata;
+		TaskiterGraph &graph = taskiter->getGraph();
+		graph.addTask(taskMetadata);
 	}
 
 	// Register the accesses of the task to check whether it is ready to be executed
@@ -232,9 +314,13 @@ void nanos6_submit_task(void *taskHandle)
 		ready = DataAccessRegistration::registerTaskDataAccesses(taskMetadata, *cpuDepData);
 	}
 
+	if (isTaskiterChild && taskMetadata->isTaskloopSource()) {
+		((TaskloopMetadata *)taskMetadata)->generateChildTasks();
+	}
+
 	bool isIf0 = taskMetadata->isIf0();
-	assert(parentTask != nullptr || ready);
-	assert(parentTask != nullptr || !isIf0);
+	assert(parentTaskMetadata != nullptr || ready);
+	assert(parentTaskMetadata != nullptr || !isIf0);
 
 	if (ready && !isIf0) {
 		// Submit the task to nOS-V if ready and not if0

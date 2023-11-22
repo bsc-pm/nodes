@@ -103,6 +103,8 @@ public:
 
 	void registerDependencies() override;
 
+	void generateChildTasks();
+
 };
 
 namespace Taskloop {

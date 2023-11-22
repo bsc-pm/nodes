@@ -14,6 +14,7 @@
 #include "CPUDependencyData.hpp"
 #include "DataAccessRegistration.hpp"
 #include "TaskDataAccesses.hpp"
+#include "TaskiterReductionInfo.hpp"
 #include "instrument/OVNIInstrumentation.hpp"
 #include "memory/ObjectAllocator.hpp"
 #include "system/TaskFinalization.hpp"
@@ -48,19 +49,22 @@ namespace DataAccessRegistration {
 	//! Process all the originators that have become ready
 	static inline void processSatisfiedOriginators(CPUDependencyData &hpDependencyData)
 	{
+		// In NODES the last task is the immediate successor.
+		// This differs from the Nanos6 runtime where we choose the first task with highest priority.
+		// This implementation choice has been taken because it allows an easier implementation of
+		// mechanisms that want to control the immediate successor, such as taskiter optimizations
 		for (int i = 0; i < nanos6_device_t::nanos6_device_type_num; ++i) {
 			auto &list = hpDependencyData.getSatisfiedOriginators(i);
-			if (list.size() > 0) {
+			const size_t size = list.size();
+			if (size > 0) {
 				TaskMetadata **taskArray = list.getArray();
 
-				// TODO: Control using envvar? Config file (overkill?) ?
-				// Immediate successor submit
-				int err = nosv_submit(taskArray[0]->getTaskHandle(), NOSV_SUBMIT_IMMEDIATE);
-				assert(err == 0);
-
-				for (size_t j = 1; j < list.size(); ++j) {
+				for (size_t j = 0; j < size - 1; ++j) {
 					nosv_submit(taskArray[j]->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
 				}
+
+				int err = nosv_submit(taskArray[size - 1]->getTaskHandle(), NOSV_SUBMIT_IMMEDIATE);
+				assert(err == 0);
 			}
 		}
 
@@ -350,94 +354,9 @@ namespace DataAccessRegistration {
 		return ready;
 	}
 
-	bool unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
+	inline void finalizeChildTaskAccesses(TaskDataAccesses &accessStruct, CPUDependencyData &hpDependencyData)
 	{
-		Instrument::enterUnregisterAccesses();
-
-		assert(task != nullptr);
-
-		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
-		assert(!accessStruct.hasBeenDeleted());
-		assert(hpDependencyData._mailBox.empty());
-
-		TaskMetadata *parentTask = task->getParent();
-		const bool taskiterChild = parentTask && parentTask->isTaskiter();
-
-#ifndef NDEBUG
-		{
-			bool alreadyTaken = false;
-			assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, true));
-		}
-#endif
-
-		if (taskiterChild && task->getOriginalPrecessorCount() >= 0) {
-			TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTask;
-			TaskiterGraph &graph = taskiter->getGraph();
-
-			if (taskiter->cancelled()) {
-				// Nevermind, we cancelled the taskiter
-#ifndef NDEBUG
-				{
-					bool alreadyTaken = true;
-					assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, false));
-				}
-#endif
-				Instrument::exitUnregisterAccesses();
-				return true;
-			}
-
-			bool keepIterating = task->decreaseIterations();
-			if (keepIterating) {
-				if (task->getOriginalPrecessorCount() == 0) {
-					hpDependencyData.addSatisfiedOriginator(task);
-					assert(!hpDependencyData.fullSatisfiedOriginators());
-				} else {
-					task->increasePredecessors(task->getOriginalPrecessorCount());
-				}
-
-				task->increaseReleaseCount();
-				task->increaseRemovalBlockingCount();
-			} else {
-				// Prepare this task so it can be re-finished
-				task->increaseWakeUpCount(1);
-			}
-
-			graph.applySuccessors(task, keepIterating,
-				// Do this for each successor
-				[&](TaskMetadata *successor) {
-					satisfyTask(successor, hpDependencyData);
-				},
-				taskiter->isCancellationDelayed()
-			);
-
-			processSatisfiedOriginators(hpDependencyData);
-
-#ifndef NDEBUG
-			{
-				bool alreadyTaken = true;
-				assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, false));
-			}
-#endif
-
-			Instrument::exitUnregisterAccesses();
-			// return false;
-			return !keepIterating;
-		}
-
-		if (accessStruct.hasDataAccesses()) {
-			// Release dependencies of all my accesses
-			accessStruct.forAll([&](void *address, DataAccess *access) -> bool {
-				// Skip if released
-				if (!access->isReleased()) {
-					finalizeDataAccess(task, access, address, hpDependencyData);
-				}
-
-				return true;
-			});
-		}
-
 		bottom_map_t &bottomMap = accessStruct._subaccessBottomMap;
-
 		for (bottom_map_t::iterator itMap = bottomMap.begin(); itMap != bottomMap.end(); itMap++) {
 			DataAccess *access = itMap->second._access;
 			assert(access != nullptr);
@@ -466,6 +385,104 @@ namespace DataAccessRegistration {
 				}
 			}
 		}
+	}
+
+	bool unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
+	{
+		Instrument::enterUnregisterAccesses();
+
+		assert(task != nullptr);
+
+		TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
+		assert(!accessStruct.hasBeenDeleted());
+		assert(hpDependencyData._mailBox.empty());
+
+		TaskMetadata *parentTask = task->getParent();
+		const bool taskiterChild = parentTask && parentTask->isTaskiter();
+
+#ifndef NDEBUG
+		{
+			bool alreadyTaken = false;
+			assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, true));
+		}
+#endif
+
+		if (taskiterChild) {
+			finalizeChildTaskAccesses(accessStruct, hpDependencyData);
+			accessStruct._subaccessBottomMap.clear();
+			processDeletableOriginators(hpDependencyData);
+		}
+
+		if (taskiterChild && task->getOriginalPrecessorCount() >= 0) {
+			TaskiterMetadata *taskiter = (TaskiterMetadata *)parentTask;
+			TaskiterGraph &graph = taskiter->getGraph();
+
+			if (taskiter->cancelled()) {
+				// Nevermind, we cancelled the taskiter
+#ifndef NDEBUG
+				{
+					bool alreadyTaken = true;
+					assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, false));
+				}
+#endif
+				Instrument::exitUnregisterAccesses();
+				return true;
+			}
+
+			bool keepIterating = task->decreaseIterations();
+			if (keepIterating) {
+				if (task->getOriginalPrecessorCount() == 0) {
+					hpDependencyData.addSatisfiedOriginator(task);
+					assert(!hpDependencyData.fullSatisfiedOriginators());
+				} else {
+					task->increasePredecessors(task->getOriginalPrecessorCount());
+				}
+
+				task->increaseReleaseCount();
+				task->increaseRemovalBlockingCount();
+				task->applyDelayedChanges();
+			} else {
+				if (task->getWakeUpCount() == 0)
+					task->increaseWakeUpCount(1);
+			}
+
+			// TODO this is necessary but maybe it's better if we place the conditional somewhere else tbh.
+			if (!task->getGroup()) {
+				graph.applySuccessors(task, keepIterating,
+					// Do this for each successor
+					[&](TaskMetadata *successor) {
+						satisfyTask(successor, hpDependencyData);
+					},
+					taskiter->isCancellationDelayed()
+				);
+			}
+
+			processSatisfiedOriginators(hpDependencyData);
+
+#ifndef NDEBUG
+			{
+				bool alreadyTaken = true;
+				assert(hpDependencyData._inUse.compare_exchange_strong(alreadyTaken, false));
+			}
+#endif
+
+			Instrument::exitUnregisterAccesses();
+			return !keepIterating;
+		}
+
+		if (accessStruct.hasDataAccesses()) {
+			// Release dependencies of all my accesses
+			accessStruct.forAll([&](void *address, DataAccess *access) -> bool {
+				// Skip if released
+				if (!access->isReleased()) {
+					finalizeDataAccess(task, access, address, hpDependencyData);
+				}
+
+				return true;
+			});
+		}
+
+		finalizeChildTaskAccesses(accessStruct, hpDependencyData);
 
 		// Release commutative mask. The order is important, as this will add satisfied originators
 		if (accessStruct._commutativeMask.any())
@@ -560,11 +577,13 @@ namespace DataAccessRegistration {
 			TaskMetadata *controlTask = taskiter->generateControlTask();
 			graph.process();
 			graph.setTaskDegree(controlTask);
+			graph.postProcess();
 			// Here the control task should have been scheduled already
 		} else {
 			// May need to add an extra task?
 			graph.process();
 			graph.setTaskDegree(nullptr);
+			graph.postProcess();
 		}
 	}
 
@@ -632,7 +651,8 @@ namespace DataAccessRegistration {
 			DataAccess *parentAccess = nullptr;
 
 			if (predecessor == nullptr) {
-				parentAccess = parentAccessStruct.findAccess(address);
+				if (!parentTask->isTaskiterChild())
+					parentAccess = parentAccessStruct.findAccess(address);
 
 				if (parentAccess != nullptr) {
 					// In case we need to inherit reduction
@@ -653,12 +673,15 @@ namespace DataAccessRegistration {
 				if (currentReductionInfo == nullptr) {
 					currentReductionInfo = reductionInfo;
 					// Inherited reductions must be equal
-					assert(reductionInfo == nullptr || (reductionInfo->getTypeAndOperatorIndex() == typeAndOpIndex && reductionInfo->getOriginalLength() == length));
+					assert(reductionInfo == nullptr ||
+						(reductionInfo->getTypeAndOperatorIndex() == typeAndOpIndex && reductionInfo->getOriginalLength() == length));
 				} else {
 					reductionInfo = currentReductionInfo;
 				}
 
-				if (currentReductionInfo == nullptr || currentReductionInfo->getTypeAndOperatorIndex() != typeAndOpIndex || currentReductionInfo->getOriginalLength() != length) {
+				if (currentReductionInfo == nullptr ||
+					currentReductionInfo->getTypeAndOperatorIndex() != typeAndOpIndex ||
+					currentReductionInfo->getOriginalLength() != length) {
 					currentReductionInfo = allocateReductionInfo(accessType, access->getReductionIndex(), typeAndOpIndex,
 						address, length, *task);
 				}
@@ -788,14 +811,25 @@ namespace DataAccessRegistration {
 		// detect correctly the reinitialize case
 		TaskMetadata *parentTask = task.getParent();
 		const bool isTaskiterChild = parentTask && parentTask->isTaskiter();
+		ReductionInfo *newReductionInfo;
 
-		ReductionInfo *newReductionInfo = ObjectAllocator<ReductionInfo>::newObject(
-			address, length,
-			reductionTypeAndOpIndex,
-			taskInfo->reduction_initializers[reductionIndex],
-			taskInfo->reduction_combiners[reductionIndex],
-			isTaskiterChild
+		if (isTaskiterChild) {
+			newReductionInfo = ObjectAllocator<TaskiterReductionInfo>::newObject(
+				address, length,
+				reductionTypeAndOpIndex,
+				taskInfo->reduction_initializers[reductionIndex],
+				taskInfo->reduction_combiners[reductionIndex],
+				true
 			);
+		} else {
+			newReductionInfo = ObjectAllocator<ReductionInfo>::newObject(
+				address, length,
+				reductionTypeAndOpIndex,
+				taskInfo->reduction_initializers[reductionIndex],
+				taskInfo->reduction_combiners[reductionIndex],
+				false
+			);
+		}
 
 		return newReductionInfo;
 	}

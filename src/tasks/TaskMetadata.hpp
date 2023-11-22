@@ -10,8 +10,10 @@
 #include <atomic>
 #include <bitset>
 #include <cassert>
+#include <cstdio>
 
 #include <nosv.h>
+#include <nosv/affinity.h>
 
 #include "dependencies/discrete/TaskDataAccesses.hpp"
 
@@ -94,6 +96,27 @@ private:
 	//! Iteration count
 	size_t _iterationCount;
 
+	//! Elapsed time
+	uint64_t _elapsedTime;
+
+	//! Last core where the task was executed
+	int _lastExecutionCore;
+
+	//! Delayed priority setting
+	int _delayedPriority;
+
+	//! Delta priority
+	int _priorityDelta;
+
+	//! Delayed affinity setting
+	nosv_affinity_t _delayedAffinity;
+
+	//! Grouped task
+	TaskMetadata *_group;
+
+	//! Detected communication task
+	bool _isCommunicationTask;
+
 protected:
 
 	//! A pointer to the original task that wraps this metadata
@@ -129,19 +152,40 @@ public:
 		_locallyAllocated(locallyAllocated),
 		_originalPredecessorCount(-1),
 		_iterationCount(0),
+		_elapsedTime(0),
+		_lastExecutionCore(0),
+		_delayedPriority(INT_MIN),
+		_priorityDelta(0),
+		_delayedAffinity(),
+		_group(nullptr),
+		_isCommunicationTask(false),
 		_task(taskPointer),
 		_dataAccesses(taskAccessInfo),
 		_flags(flags)
 	{
+		// Initialize nOS-V priority if needed
+		computePriority();
 	}
 
 	inline bool hasCode() const
 	{
 		nanos6_task_info_t *taskInfo = getTaskInfo(_task);
-		assert(taskInfo->implementation_count == 1);
 		assert(taskInfo != nullptr);
+		assert(taskInfo->implementation_count == 1);
 
 		return (taskInfo->implementations[0].run != nullptr);
+	}
+
+	inline void computePriority()
+	{
+		nanos6_task_info_t *taskInfo = getTaskInfo(_task);
+		assert(taskInfo != nullptr);
+		if (taskInfo->get_priority != nullptr) {
+			nanos6_priority_t priority;
+			taskInfo->get_priority(_argsBlock, &priority);
+			_delayedPriority = priority;
+			applyDelayedChanges();
+		}
 	}
 
 	inline void *getArgsBlock() const
@@ -172,6 +216,11 @@ public:
 		assert(res >= 0);
 
 		return (res == 0);
+	}
+
+	inline int getPredecessorCount() const
+	{
+		return _predecessorCount.load(std::memory_order_relaxed);
 	}
 
 	inline void increaseRemovalBlockingCount()
@@ -235,6 +284,11 @@ public:
 		assert(countdown >= 0);
 
 		return (countdown == 0);
+	}
+
+	inline int getWakeUpCount() const
+	{
+		return _countdownToBeWokenUp.load(std::memory_order_relaxed);
 	}
 
 	//! \brief Mark the task as unblocked
@@ -463,6 +517,11 @@ public:
 		return false;
 	}
 
+	virtual inline bool isTaskiterChild() const
+	{
+		return false;
+	}
+
 	inline int getOriginalPrecessorCount() const
 	{
 		return _originalPredecessorCount;
@@ -485,7 +544,101 @@ public:
 		return (--_iterationCount > 1);
 	}
 
-	virtual ~TaskMetadata() {}
+	inline void setPriority(int priority)
+	{
+		_delayedPriority = priority;
+	}
+
+	inline int getPriority() const
+	{
+		return nosv_get_task_priority(getTaskHandle());
+	}
+
+	inline void setElapsedTime(uint64_t elapsed)
+	{
+		_elapsedTime = elapsed;
+	}
+
+	inline uint64_t getElapsedTime() const
+	{
+		return _elapsedTime;
+	}
+
+	inline void setLastExecutionCore(int lastExecutionCore)
+	{
+		_lastExecutionCore = lastExecutionCore;
+	}
+
+	inline int getLastExecutionCore() const
+	{
+		return _lastExecutionCore;
+	}
+
+	inline void setAffinity(uint32_t index, nosv_affinity_level_t level, nosv_affinity_type_t type)
+	{
+		assert(level);
+		_delayedAffinity = nosv_affinity_get(index, level, type);
+	}
+
+	inline void applyDelayedChanges()
+	{
+		// A limitation we have is we only apply affinity changes if there is actual affinity, but we cannot detect
+		// a restoration to *no* affinity.
+		if (_delayedAffinity.level) {
+			nosv_set_task_affinity(getTaskHandle(), &_delayedAffinity);
+			_delayedAffinity.level = NOSV_AFFINITY_LEVEL_NONE;
+		}
+
+		if (_delayedPriority != INT_MIN) {
+			if (_priorityDelta != 0) {
+				// Calculate the exact priority for next iteration
+				size_t iteration = _parent->getIterationCount() - _iterationCount;
+				int priority = _delayedPriority - (iteration * _priorityDelta);
+				assert(priority >= 0);
+				nosv_set_task_priority(getTaskHandle(), priority);
+			} else {
+				nosv_set_task_priority(getTaskHandle(), _delayedPriority);
+				_delayedPriority = INT_MIN;
+			}
+		}
+	}
+
+	inline virtual size_t getIterationCount() const
+	{
+		return _iterationCount;
+	}
+
+	inline bool isCommunicationTask() const
+	{
+		return _isCommunicationTask;
+	}
+
+	inline void markAsCommunicationTask()
+	{
+		_isCommunicationTask = true;
+	}
+
+	inline void setPriorityDelta(int delta)
+	{
+		_priorityDelta = delta;
+	}
+
+	inline virtual bool isGroup() const
+	{
+		return false;
+	}
+
+	inline TaskMetadata *getGroup() const
+	{
+		return _group;
+	}
+
+	inline void setGroup(TaskMetadata *group)
+	{
+		_group = group;
+	}
+
+	virtual ~TaskMetadata() = default;
 };
 
 #endif // TASK_METADATA_HPP

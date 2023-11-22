@@ -39,3 +39,10 @@ void TaskloopMetadata::registerDependencies()
 		taskInfo->register_depinfo(getArgsBlock(), (void *) &_bounds, this);
 	}
 }
+
+void TaskloopMetadata::generateChildTasks()
+{
+	while (getIterationCount() > 0) {
+		Taskloop::createTaskloopExecutor(this->getTaskHandle(), this, this->getBounds());
+	}
+}

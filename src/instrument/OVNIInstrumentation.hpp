@@ -13,6 +13,7 @@
 #include <ovni.h>
 #endif
 
+#include "common/EnvironmentVariable.hpp"
 
 class Instrument {
 
@@ -42,10 +43,8 @@ public:
 
 	static inline void initializeOvni()
 	{
-		const char *envvar = std::getenv("NODES_OVNI");
-		if (envvar != nullptr) {
-			_enabled = (atoi(envvar) == 1);
-		}
+		EnvironmentVariable<bool> envvar("NODES_OVNI", false);
+		_enabled = envvar.getValue();
 	}
 
 	static inline void enterRegisterAccesses()

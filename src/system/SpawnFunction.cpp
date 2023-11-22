@@ -12,15 +12,14 @@
 
 #include "SpawnFunction.hpp"
 #include "instrument/OVNIInstrumentation.hpp"
+#include "system/TaskCreation.hpp"
 #include "tasks/TaskInfo.hpp"
-
 
 //! Static members
 std::atomic<unsigned int> SpawnFunction::_pendingSpawnedFunctions(0);
 std::map<SpawnFunction::task_info_key_t, nanos6_task_info_t> SpawnFunction::_spawnedFunctionInfos;
 SpinLock SpawnFunction::_spawnedFunctionInfosLock;
 nanos6_task_invocation_info_t SpawnFunction::_spawnedFunctionInvocationInfo = { "Spawned from external code" };
-
 
 //! Args block of spawned functions
 struct SpawnedFunctionArgsBlock {
@@ -37,7 +36,6 @@ struct SpawnedFunctionArgsBlock {
 	{
 	}
 };
-
 
 void nanos6_spawn_function(
 	void (*function)(void *),
@@ -149,8 +147,7 @@ void SpawnFunction::spawnFunction(
 	taskMetadata->setSpawned(true);
 
 	// Submit the task
-	nanos6_submit_task(task);
+	TaskCreation::submitTask((nosv_task_t) task);
 
 	Instrument::exitSpawnFunction();
 }
-

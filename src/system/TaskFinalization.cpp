@@ -14,6 +14,7 @@
 #include "TaskFinalization.hpp"
 #include "dependencies/discrete/CPUDependencyData.hpp"
 #include "dependencies/discrete/DataAccessRegistration.hpp"
+#include "dependencies/discrete/taskiter/TaskGroupMetadata.hpp"
 #include "hardware/HardwareInfo.hpp"
 #include "memory/MemoryAllocator.hpp"
 #include "system/SpawnFunction.hpp"
@@ -66,12 +67,16 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 		}
 
 		bool finish = DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *cpuDepData);
+		// Here taskiter tasks may already be reenqueued
 
 		if (isExternal) {
 			delete cpuDepData;
 		}
 
 		if (finish) {
+			if (taskMetadata->isGroup())
+				((TaskGroupMetadata *) taskMetadata)->finalizeGroupedTasks();
+
 			TaskFinalization::taskFinished(taskMetadata);
 		}
 
@@ -121,6 +126,8 @@ void TaskFinalization::taskFinished(TaskMetadata *task)
 					if (finish) {
 						ready = taskMetadata->finishChild();
 						assert(ready);
+					} else {
+						ready = false;
 					}
 
 					if (taskMetadata->decreaseRemovalBlockingCount()) {

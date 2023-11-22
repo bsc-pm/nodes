@@ -10,6 +10,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstdlib>
+#include <functional>
 #include <map>
 #include <string>
 
