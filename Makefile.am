@@ -4,8 +4,9 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = $(ovni_CPPFLAGS) $(BOOST_CPPFLAGS) $(PTHREAD_CFLAGS) $(nosv_CPPFLAGS) $(nodes_CXXFLAGS) -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
-AM_CXXFLAGS = $(ovni_CXXFLAGS) $(BOOST_CXXFLAGS) $(PTHREAD_CFLAGS) $(nosv_CPPFLAGS) $(nodes_CXXFLAGS) -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_CPPFLAGS = $(ovni_CPPFLAGS) $(BOOST_CPPFLAGS) $(PTHREAD_CFLAGS) $(nosv_CPPFLAGS) $(nodes_CPPFLAGS) -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_CXXFLAGS = $(ovni_CXXFLAGS) $(PTHREAD_CFLAGS) $(nosv_CPPFLAGS) $(nodes_CXXFLAGS) -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_CFLAGS   = $(PTHREAD_CFLAGS) $(nodes_CFLAGS) -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
 AM_LDFLAGS  = $(ovni_LIBS) $(BOOST_LDFLAGS) $(PTHREAD_CFLAGS) $(PTHREAD_LIBS) $(nosv_LIBS)
 AM_LIBS     = -lrt -lpthread -lnosv
 
