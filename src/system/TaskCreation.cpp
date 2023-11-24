@@ -74,13 +74,14 @@ void TaskCreation::createTask(nanos6_task_info_t *taskInfo,
 	assert(tasktype != nullptr);
 
 	nosv_task_t task;
-	int ret = nosv_create(
+	int err = nosv_create(
 		&task,
 		tasktype,
 		(locallyAllocated) ? sizeof(void *) : sizeof (void *) + taskSize,
 		NOSV_CREATE_NONE
 	);
-	assert(!ret);
+	if (err)
+		ErrorHandler::fail("nosv_create failed: ", nosv_get_error_string(err));
 
 	// Since we won't know if the metadata returned by nOS-V is a memory region
 	// or a pointer that points to a locally allocated region, we always alloc
@@ -310,6 +311,10 @@ void TaskCreation::submitTask(nosv_task_t task)
 	bool ready = true;
 	if (taskInfo->register_depinfo != nullptr) {
 		int cpuId = nosv_get_current_logical_cpu();
+		if (cpuId < 0) {
+			ErrorHandler::fail("nosv_get_current_logical_cpu failed: ", nosv_get_error_string(cpuId));
+		}
+
 		CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 		ready = DataAccessRegistration::registerTaskDataAccesses(taskMetadata, *cpuDepData);
 	}
@@ -324,7 +329,8 @@ void TaskCreation::submitTask(nosv_task_t task)
 
 	if (ready && !isIf0) {
 		// Submit the task to nOS-V if ready and not if0
-		nosv_submit(task, NOSV_SUBMIT_NONE);
+		if (int err = nosv_submit(task, NOSV_SUBMIT_NONE))
+			ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 	}
 
 	// Special handling for if0 tasks
@@ -332,7 +338,10 @@ void TaskCreation::submitTask(nosv_task_t task)
 		if (ready) {
 			// Ready if0 tasks are executed inline
 			Instrument::enterInlineIf0();
-			nosv_submit(task, NOSV_SUBMIT_INLINE);
+
+			if (int err = nosv_submit(task, NOSV_SUBMIT_INLINE))
+				ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
+
 			Instrument::exitInlineIf0();
 		} else {
 			// Non-ready if0 tasks cause this task to get paused. Before the
@@ -341,7 +350,10 @@ void TaskCreation::submitTask(nosv_task_t task)
 			taskMetadata->markIf0AsNotInlined();
 
 			Instrument::enterWaitIf0();
-			nosv_pause(NOSV_PAUSE_NONE);
+
+			if (int err = nosv_pause(NOSV_PAUSE_NONE))
+				ErrorHandler::fail("nosv_pause failed: ", nosv_get_error_string(err));
+
 			Instrument::exitWaitIf0();
 		}
 	}

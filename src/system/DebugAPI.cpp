@@ -10,6 +10,8 @@
 
 #include <nodes/debug.h>
 
+#include "common/ErrorHandler.hpp"
+
 
 extern "C" unsigned int nanos6_get_total_num_cpus(void)
 {
@@ -23,11 +25,20 @@ extern "C" unsigned int nanos6_get_num_cpus(void)
 
 extern "C" long nanos6_get_current_system_cpu(void)
 {
-	return nosv_get_current_system_cpu();
+	int cpuId = nosv_get_current_system_cpu();
+	if (cpuId < 0) {
+		ErrorHandler::fail("nosv_get_current_system_cpu failed: ", nosv_get_error_string(cpuId));
+	}
+
+	return cpuId;
 }
 
 extern "C" unsigned int nanos6_get_current_virtual_cpu(void)
 {
-	return nosv_get_current_logical_cpu();
-}
+	int cpuId = nosv_get_current_logical_cpu();
+	if (cpuId < 0) {
+		ErrorHandler::fail("nosv_get_current_logical_cpu failed: ", nosv_get_error_string(cpuId));
+	}
 
+	return cpuId;
+}

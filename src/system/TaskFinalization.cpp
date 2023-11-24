@@ -12,6 +12,7 @@
 #include <nodes/task-instantiation.h>
 
 #include "TaskFinalization.hpp"
+#include "common/ErrorHandler.hpp"
 #include "dependencies/discrete/CPUDependencyData.hpp"
 #include "dependencies/discrete/DataAccessRegistration.hpp"
 #include "dependencies/discrete/taskiter/TaskGroupMetadata.hpp"
@@ -24,7 +25,13 @@
 void TaskFinalization::taskEndedCallback(nosv_task_t task)
 {
 	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
+
+	// Negative returned values mean the call failed, and the error is codified within
 	int cpuId = nosv_get_current_logical_cpu();
+	if (cpuId < 0) {
+		ErrorHandler::fail("nosv_get_current_logical_cpu failed: ", nosv_get_error_string(cpuId));
+	}
+
 	DataAccessRegistration::combineTaskReductions(taskMetadata, cpuId);
 }
 
@@ -63,6 +70,9 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 			cpuDepData = new CPUDependencyData();
 		} else {
 			int cpuId = nosv_get_current_logical_cpu();
+			if (cpuId < 0) {
+				ErrorHandler::fail("nosv_get_current_logical_cpu failed: ", nosv_get_error_string(cpuId));
+			}
 			cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 		}
 
@@ -142,7 +152,8 @@ void TaskFinalization::taskFinished(TaskMetadata *task)
 			}
 		} else {
 			// An ancestor in a taskwait that must be unblocked at this point
-			nosv_submit(taskMetadata->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
+			if (int err = nosv_submit(taskMetadata->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
+				ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 
 			ready = false;
 		}
@@ -200,7 +211,8 @@ void TaskFinalization::disposeTask(TaskMetadata *task)
 		}
 
 		// Destroy the task
-		nosv_destroy(taskHandle, NOSV_DESTROY_NONE);
+		if (int err = nosv_destroy(taskHandle, NOSV_DESTROY_NONE))
+			ErrorHandler::fail("nosv_destroy failed: ", nosv_get_error_string(err));
 
 		// Follow the chain of ancestors
 		taskMetadata = parentMetadata;

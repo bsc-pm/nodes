@@ -12,6 +12,7 @@
 #include <nodes/blocking.h>
 #include <nodes/user-mutex.h>
 
+#include "common/ErrorHandler.hpp"
 #include "common/UserMutex.hpp"
 #include "tasks/TaskMetadata.hpp"
 
@@ -31,7 +32,8 @@ extern "C" void nanos6_block_current_task(void *)
 	__attribute__((unused)) nosv_task_t currentTask = nosv_self();
 	assert(currentTask != nullptr);
 
-	nosv_pause(NOSV_PAUSE_NONE);
+	if (int err = nosv_pause(NOSV_PAUSE_NONE))
+		ErrorHandler::fail("nosv_pause failed: ", nosv_get_error_string(err));
 }
 
 extern "C" void nanos6_unblock_task(void *blocking_context)
@@ -39,7 +41,8 @@ extern "C" void nanos6_unblock_task(void *blocking_context)
 	nosv_task_t task = static_cast<nosv_task_t>(blocking_context);
 	assert(task != nullptr);
 
-	nosv_submit(task, NOSV_SUBMIT_UNLOCKED);
+	if (int err = nosv_submit(task, NOSV_SUBMIT_UNLOCKED))
+		ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 }
 
 extern "C" uint64_t nanos6_wait_for(uint64_t timeUs)
@@ -49,7 +52,8 @@ extern "C" uint64_t nanos6_wait_for(uint64_t timeUs)
 	}
 
 	uint64_t actualWaitTime;
-	nosv_waitfor(timeUs * 1000, &(actualWaitTime));
+	if (int err = nosv_waitfor(timeUs * 1000, &(actualWaitTime)))
+		ErrorHandler::fail("nosv_waitfor failed: ", nosv_get_error_string(err));
 
 	return actualWaitTime / (uint64_t) 1000;
 }
@@ -99,7 +103,8 @@ extern "C" void nanos6_user_lock(void **handlerPointer, char const *)
 	}
 
 	// Block the task
-	nosv_pause(NOSV_PAUSE_NONE);
+	if (int err = nosv_pause(NOSV_PAUSE_NONE))
+		ErrorHandler::fail("nosv_pause failed: ", nosv_get_error_string(err));
 
 	// This in combination with a release from other threads makes their changes visible to this one
 	std::atomic_thread_fence(std::memory_order_acquire);
@@ -119,6 +124,7 @@ extern "C" void nanos6_user_unlock(void **handlerPointer)
 	if (releasedTask != nullptr) {
 		assert(releasedTask->getTaskHandle() != nullptr);
 
-		nosv_submit(releasedTask->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
+		if (int err = nosv_submit(releasedTask->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
+			ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 	}
 }

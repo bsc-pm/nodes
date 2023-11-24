@@ -15,6 +15,7 @@
 #include "DataAccessRegistration.hpp"
 #include "TaskDataAccesses.hpp"
 #include "TaskiterReductionInfo.hpp"
+#include "common/ErrorHandler.hpp"
 #include "instrument/OVNIInstrumentation.hpp"
 #include "memory/ObjectAllocator.hpp"
 #include "system/TaskFinalization.hpp"
@@ -60,18 +61,20 @@ namespace DataAccessRegistration {
 				TaskMetadata **taskArray = list.getArray();
 
 				for (size_t j = 0; j < size - 1; ++j) {
-					nosv_submit(taskArray[j]->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
+					if (int err = nosv_submit(taskArray[j]->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
+						ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 				}
 
-				int err = nosv_submit(taskArray[size - 1]->getTaskHandle(), NOSV_SUBMIT_IMMEDIATE);
-				assert(err == 0);
+				if (int err = nosv_submit(taskArray[size - 1]->getTaskHandle(), NOSV_SUBMIT_IMMEDIATE))
+					ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 			}
 		}
 
 		hpDependencyData.clearSatisfiedOriginators();
 
 		for (TaskMetadata *originator : hpDependencyData._satisfiedCommutativeOriginators) {
-			nosv_submit(originator->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
+			if (int err = nosv_submit(originator->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
+				ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 		}
 
 		hpDependencyData._satisfiedCommutativeOriginators.clear();

@@ -26,20 +26,21 @@
 
 #include <nosv.h>
 
+#include "TaskiterNode.hpp"
 #include "common/Containers.hpp"
 #include "common/EnvironmentVariable.hpp"
+#include "common/ErrorHandler.hpp"
 #include "dependencies/DataAccessType.hpp"
 #include "dependencies/discrete/CPUDependencyData.hpp"
 #include "dependencies/discrete/DataAccess.hpp"
 #include "dependencies/discrete/ReductionInfo.hpp"
 #include "dependencies/discrete/TaskiterReductionInfo.hpp"
 #include "dependencies/discrete/taskiter/TaskGroupMetadata.hpp"
-#include "system/TaskFinalization.hpp"
 #include "system/SpawnFunction.hpp"
-#include "tasks/TaskMetadata.hpp"
+#include "system/TaskFinalization.hpp"
 #include "tasks/TaskiterChildMetadata.hpp"
 #include "tasks/TaskiterChildLoopMetadata.hpp"
-#include "TaskiterNode.hpp"
+#include "tasks/TaskMetadata.hpp"
 
 // A node of the TaskiterGraph may contain either a Task or a ReductionInfo
 typedef TaskiterNode * TaskiterGraphNode;
@@ -698,16 +699,19 @@ public:
 				t = t->getGroup();
 
 			if (t->decreasePredecessors()) {
-				nosv_submit(t->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
+				if (int err = nosv_submit(t->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
+					ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 			}
 		});
 
-		int first = 1;
 		// And for control tasks
+		int first = 1;
 		for (TaskiterNode *node : _controlTasks) {
 			TaskMetadata *t = node->getTask();
-			if(t->decreasePredecessors(t->getOriginalPrecessorCount() + first))
-				nosv_submit(t->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
+			if (t->decreasePredecessors(t->getOriginalPrecessorCount() + first)) {
+				if (int err = nosv_submit(t->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
+					ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
+			}
 			first = 0;
 		}
 	}
