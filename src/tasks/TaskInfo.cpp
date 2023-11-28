@@ -1,12 +1,13 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
 
 #include "TaskInfo.hpp"
+#include "common/ErrorHandler.hpp"
 
 
 std::vector<nosv_task_type_t> TaskInfo::_taskTypes;
@@ -29,7 +30,7 @@ void TaskInfo::registerTaskInfo(nanos6_task_info_t *taskInfo)
 	if (_initialized) {
 		// Create the task type
 		nosv_task_type_t type;
-		int ret = nosv_type_init(
+		int err = nosv_type_init(
 			&type,                                      /* Out: The pointer to the type */
 			&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
 			&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
@@ -39,7 +40,8 @@ void TaskInfo::registerTaskInfo(nanos6_task_info_t *taskInfo)
 			&(TaskInfo::getCostWrapper),
 			NOSV_TYPE_INIT_NONE
 		);
-		assert(!ret);
+		if (err)
+			ErrorHandler::fail("nosv_type_init failed: ", nosv_get_error_string(err));
 
 		// Save a nOS-V type link in the task info
 		taskInfo->task_type_data = (void *) type;
@@ -56,7 +58,8 @@ void TaskInfo::shutdown()
 {
 	_lock.lock();
 	for (size_t i = 0; i < _taskTypes.size(); ++i) {
-		nosv_type_destroy(_taskTypes[i], NOSV_TYPE_DESTROY_NONE);
+		if (int err = nosv_type_destroy(_taskTypes[i], NOSV_TYPE_DESTROY_NONE))
+			ErrorHandler::fail("nosv_type_destroy failed: ", nosv_get_error_string(err));
 	}
 	_lock.unlock();
 }

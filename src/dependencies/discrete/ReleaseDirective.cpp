@@ -21,6 +21,10 @@ void release_access(void *base_address, __attribute__((unused)) long dim1size, l
 	assert(task != nullptr);
 
 	int cpuId = nosv_get_current_logical_cpu();
+	if (cpuId < 0) {
+		ErrorHandler::fail("nosv_get_current_logical_cpu failed: ", nosv_get_error_string(cpuId));
+	}
+
 	CPUDependencyData *cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 	void *effectiveAddress = static_cast<char *>(base_address) + dim1start;
 

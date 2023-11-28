@@ -10,6 +10,7 @@
 #include <nodes/bootstrap.h>
 #include <nodes/taskwait.h>
 
+#include "common/ErrorHandler.hpp"
 #include "dependencies/discrete/DependencySystem.hpp"
 #include "hardware/HardwareInfo.hpp"
 #include "instrument/OVNIInstrumentation.hpp"
@@ -23,7 +24,8 @@ void nanos6_init(void)
 	Instrument::initializeOvni();
 
 	// Initialize nOS-V backend
-	nosv_init();
+	if (int err = nosv_init())
+		ErrorHandler::fail("nosv_init failed: ", nosv_get_error_string(err));
 
 	// Create a dummy type and task to attach/wrap the "main" process
 	nosv_task_t task;
@@ -33,7 +35,8 @@ void nanos6_init(void)
 	if (defaultAffinity.level)
 		defaultAffinity.type = NOSV_AFFINITY_TYPE_STRICT;
 
-	nosv_attach(&task, &defaultAffinity, "main task", NOSV_ATTACH_NONE);
+	if (int err = nosv_attach(&task, &defaultAffinity, "main task", NOSV_ATTACH_NONE))
+		ErrorHandler::fail("nosv_attach failed: ", nosv_get_error_string(err));
 
 	// Gather hardware info
 	HardwareInfo::initialize();
@@ -59,8 +62,10 @@ void nanos6_shutdown(void)
 	HardwareInfo::shutdown();
 
 	// Detach the wrapped main process
-	nosv_detach(NOSV_DETACH_NONE);
+	if (int err = nosv_detach(NOSV_DETACH_NONE))
+		ErrorHandler::fail("nosv_detach failed: ", nosv_get_error_string(err));
 
 	// Shutdown nOS-V backend
-	nosv_shutdown();
+	if (int err = nosv_shutdown())
+		ErrorHandler::fail("nosv_shutdown failed: ", nosv_get_error_string(err));
 }

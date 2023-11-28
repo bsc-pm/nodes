@@ -17,6 +17,7 @@
 #include <nodes/task-instantiation.h>
 
 #include "common/Chrono.hpp"
+#include "common/ErrorHandler.hpp"
 #include "common/SpinLock.hpp"
 #include "dependencies/SymbolTranslation.hpp"
 #include "dependencies/discrete/DataAccessRegistration.hpp"
@@ -64,6 +65,10 @@ public:
 		if (taskMetadata->hasCode()) {
 			size_t tableSize = 0;
 			int cpuId = nosv_get_current_logical_cpu();
+			if (cpuId < 0) {
+				ErrorHandler::fail("nosv_get_current_logical_cpu failed: ", nosv_get_error_string(cpuId));
+			}
+
 			nanos6_address_translation_entry_t stackTranslationTable[SymbolTranslation::MAX_STACK_SYMBOLS];
 			nanos6_address_translation_entry_t *translationTable = SymbolTranslation::generateTranslationTable(
 				task, cpuId, stackTranslationTable, tableSize
@@ -111,8 +116,14 @@ public:
 
 		if (taskMetadata->isTaskiterChild()) {
 			chrono.stop();
+
+			int cpuId = nosv_get_current_system_cpu();
+			if (cpuId < 0) {
+				ErrorHandler::fail("nosv_get_current_system_cpu failed: ", nosv_get_error_string(cpuId));
+			}
+
 			taskMetadata->setElapsedTime(chrono);
-			taskMetadata->setLastExecutionCore(nosv_get_current_system_cpu());
+			taskMetadata->setLastExecutionCore(cpuId);
 		}
 
 		if (!taskMetadata->isIf0Inlined()) {
@@ -120,7 +131,8 @@ public:
 
 			// If the task is if0, it means the parent task was blocked. In this
 			// case, unblock the parent at the end of the task's execution
-			nosv_submit(taskMetadata->getParent()->getTaskHandle(), NOSV_SUBMIT_UNLOCKED);
+			if (int err = nosv_submit(taskMetadata->getParent()->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
+				ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 		}
 	}
 
@@ -136,7 +148,7 @@ public:
 
 			// Create the task type
 			nosv_task_type_t type;
-			int ret = nosv_type_init(
+			int err = nosv_type_init(
 				&type,                                      /* Out: The pointer to the type */
 				&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
 				&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
@@ -146,7 +158,8 @@ public:
 				&(TaskInfo::getCostWrapper),
 				NOSV_TYPE_INIT_NONE
 			);
-			assert(!ret);
+			if (err)
+				ErrorHandler::fail("nosv_type_init failed: ", nosv_get_error_string(err));
 
 			// Save a nOS-V type link in the task info
 			taskInfo->task_type_data = (void *) type;
