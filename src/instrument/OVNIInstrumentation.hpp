@@ -19,12 +19,19 @@ class Instrument {
 
 private:
 	static inline bool _enabled = false;
+	thread_local static inline bool _init = false;
 
 private:
 #ifdef ENABLE_OVNI_INSTRUMENTATION
 	static inline void emitOvniEvent(const char *mcv)
 	{
 		if (_enabled) {
+			if (!_init) {
+				// Thread stream initialized by nOS-V
+				ovni_thread_require("nodes", "1.0.0");
+				_init = true;
+			}
+
 			struct ovni_ev ev = {};
 
 			ovni_ev_set_clock(&ev, ovni_clock_now());
