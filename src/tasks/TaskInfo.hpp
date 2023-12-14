@@ -54,11 +54,13 @@ public:
 	{
 		assert(task != nullptr);
 
+		nosv_task_t lastTask = TaskMetadata::getLastTask();
+		TaskMetadata::setLastTask(task);
+
 		nanos6_task_info_t *taskInfo = TaskMetadata::getTaskInfo(task);
 		assert(taskInfo != nullptr);
 		assert(taskInfo->implementation_count == 1);
 		assert(taskInfo->implementations != nullptr);
-
 
 		TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 		Chrono chrono;
@@ -137,6 +139,8 @@ public:
 			if (int err = nosv_submit(taskMetadata->getParent()->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
 				ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 		}
+
+		TaskMetadata::setLastTask(lastTask);
 	}
 
 	//! \brief Initialize the TaskInfo manager after the runtime has been initialized

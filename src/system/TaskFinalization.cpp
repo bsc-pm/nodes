@@ -24,6 +24,11 @@
 
 void TaskFinalization::taskEndedCallback(nosv_task_t task)
 {
+	assert(task);
+
+	nosv_task_t lastTask = TaskMetadata::getLastTask();
+	TaskMetadata::setLastTask(task);
+
 	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 
 	// Negative returned values mean the call failed, and the error is codified within
@@ -33,10 +38,17 @@ void TaskFinalization::taskEndedCallback(nosv_task_t task)
 	}
 
 	DataAccessRegistration::combineTaskReductions(taskMetadata, cpuId);
+
+	TaskMetadata::setLastTask(lastTask);
 }
 
 void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 {
+	assert(task);
+
+	nosv_task_t lastTask = TaskMetadata::getLastTask();
+	TaskMetadata::setLastTask(task);
+
 	// Mark that the task has finished user code execution
 	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 	taskMetadata->markAsFinished();
@@ -95,6 +107,8 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 			TaskFinalization::disposeTask(taskMetadata);
 		}
 	}
+
+	TaskMetadata::setLastTask(lastTask);
 }
 
 void TaskFinalization::taskFinished(TaskMetadata *task)

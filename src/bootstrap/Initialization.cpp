@@ -38,6 +38,9 @@ void nanos6_init(void)
 	if (int err = nosv_attach(&task, &defaultAffinity, "main task", NOSV_ATTACH_NONE))
 		ErrorHandler::fail("nosv_attach failed: ", nosv_get_error_string(err));
 
+	// Set the root of the task stack
+	TaskMetadata::setLastTask(nosv_self());
+
 	// Gather hardware info
 	HardwareInfo::initialize();
 
@@ -60,6 +63,9 @@ void nanos6_shutdown(void)
 
 	// Shutdown hardware info
 	HardwareInfo::shutdown();
+
+	// Unset the last task stack
+	TaskMetadata::setLastTask(nullptr);
 
 	// Detach the wrapped main process
 	if (int err = nosv_detach(NOSV_DETACH_NONE))

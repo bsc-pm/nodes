@@ -16,7 +16,6 @@ SpinLock TaskInfo::_lock;
 bool TaskInfo::_initialized;
 size_t TaskInfo::unlabeledTaskInfos = 0;
 
-
 void TaskInfo::registerTaskInfo(nanos6_task_info_t *taskInfo)
 {
 	assert(taskInfo != nullptr);
