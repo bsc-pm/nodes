@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
@@ -29,11 +29,7 @@ void TaskInfo::registerTaskInfo(nanos6_task_info_t *taskInfo)
 	_lock.lock();
 
 	if (_initialized) {
-		// Save a nOS-V type link in the task info
-		nosv_task_type_t type = initNosvType(taskInfo);
-		taskInfo->task_type_data = (void *) type;
-
-		_taskTypes.push_back(type);
+		createTaskType(taskInfo);
 	} else {
 		_taskInfos.push_back(taskInfo);
 	}
