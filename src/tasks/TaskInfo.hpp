@@ -44,6 +44,9 @@ private:
 	//! Whether the manager has been initialized (after the runtime)
 	static bool _initialized;
 
+	// Global number of unlabeled task infos
+	static size_t unlabeledTaskInfos;
+
 public:
 
 	//! \brief Run wrapper for task types
@@ -146,22 +149,7 @@ public:
 		for (size_t i = 0; i < _taskInfos.size(); ++i) {
 			nanos6_task_info_t *taskInfo = _taskInfos[i];
 
-			// Create the task type
-			nosv_task_type_t type;
-			int err = nosv_type_init(
-				&type,                                      /* Out: The pointer to the type */
-				&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
-				&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
-				&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
-				taskInfo->implementations->task_type_label, /* Task type label */
-				(void *) taskInfo,                          /* Metadata: Link to NODES' taskinfo */
-				&(TaskInfo::getCostWrapper),
-				NOSV_TYPE_INIT_NONE
-			);
-			if (err)
-				ErrorHandler::fail("nosv_type_init failed: ", nosv_get_error_string(err));
-
-			// Save a nOS-V type link in the task info
+			nosv_task_type_t type = initNosvType(taskInfo);
 			taskInfo->task_type_data = (void *) type;
 
 			_taskTypes.push_back(type);
@@ -199,6 +187,33 @@ public:
 
 	//! \brief Unregister all the registered taskinfos
 	static void shutdown();
+
+	static nosv_task_type_t initNosvType(nanos6_task_info_t *taskInfo)
+	{
+		std::string task_type_label;
+		if (taskInfo->implementations->task_type_label) {
+			task_type_label = taskInfo->implementations->task_type_label;
+		} else {
+			task_type_label = "Unlabeled" + std::to_string(unlabeledTaskInfos++);
+		}
+
+		// Create the task type
+		nosv_task_type_t type;
+		int err = nosv_type_init(
+			&type,                                      /* Out: The pointer to the type */
+			&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
+			&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
+			&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
+			task_type_label.c_str(),                    /* Task type label */
+			(void *) taskInfo,                          /* Metadata: Link to NODES' taskinfo */
+			&(TaskInfo::getCostWrapper),
+			NOSV_TYPE_INIT_NONE
+		);
+		if (err)
+			ErrorHandler::fail("nosv_type_init failed: ", nosv_get_error_string(err));
+		return type;
+
+	}
 
 };
 
