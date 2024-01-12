@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef TASK_INFO_HPP
@@ -43,6 +43,9 @@ private:
 
 	//! Whether the manager has been initialized (after the runtime)
 	static bool _initialized;
+
+	// Global number of unlabeled task infos
+	static size_t unlabeledTaskInfos;
 
 public:
 
@@ -144,27 +147,7 @@ public:
 		_lock.lock();
 
 		for (size_t i = 0; i < _taskInfos.size(); ++i) {
-			nanos6_task_info_t *taskInfo = _taskInfos[i];
-
-			// Create the task type
-			nosv_task_type_t type;
-			int err = nosv_type_init(
-				&type,                                      /* Out: The pointer to the type */
-				&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
-				&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
-				&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
-				taskInfo->implementations->task_type_label, /* Task type label */
-				(void *) taskInfo,                          /* Metadata: Link to NODES' taskinfo */
-				&(TaskInfo::getCostWrapper),
-				NOSV_TYPE_INIT_NONE
-			);
-			if (err)
-				ErrorHandler::fail("nosv_type_init failed: ", nosv_get_error_string(err));
-
-			// Save a nOS-V type link in the task info
-			taskInfo->task_type_data = (void *) type;
-
-			_taskTypes.push_back(type);
+			createTaskType(_taskInfos[i]);
 		}
 
 		_lock.unlock();
@@ -199,6 +182,42 @@ public:
 
 	//! \brief Unregister all the registered taskinfos
 	static void shutdown();
+
+	//! \brief Create a nOS-V task type from a taskinfo and link them
+	//!
+	//! \param[in] taskInfo A pointer to the taskinfo
+	static inline nosv_task_type_t createTaskType(nanos6_task_info_t *taskInfo)
+	{
+		std::string label;
+		if (taskInfo->implementations->task_type_label) {
+			label = taskInfo->implementations->task_type_label;
+		} else {
+			label = "Unlabeled" + std::to_string(unlabeledTaskInfos++);
+		}
+
+		// Create the task type
+		nosv_task_type_t type;
+		int err = nosv_type_init(
+			&type,                                      /* Out: The pointer to the type */
+			&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
+			&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
+			&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
+			label.c_str(),                              /* Task type label */
+			(void *) taskInfo,                          /* Metadata: Link to NODES' taskinfo */
+			&(TaskInfo::getCostWrapper),
+			NOSV_TYPE_INIT_NONE
+		);
+		if (err)
+			ErrorHandler::fail("nosv_type_init failed: ", nosv_get_error_string(err));
+
+		// Link the taskinfo to the task type
+		taskInfo->task_type_data = (void *) type;
+
+		// Save the task type to destroy during the finalization
+		_taskTypes.push_back(type);
+
+		return type;
+	}
 
 };
 

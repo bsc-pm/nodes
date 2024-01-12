@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
@@ -14,6 +14,7 @@ std::vector<nosv_task_type_t> TaskInfo::_taskTypes;
 std::vector<nanos6_task_info_t *> TaskInfo::_taskInfos;
 SpinLock TaskInfo::_lock;
 bool TaskInfo::_initialized;
+size_t TaskInfo::unlabeledTaskInfos = 0;
 
 
 void TaskInfo::registerTaskInfo(nanos6_task_info_t *taskInfo)
@@ -28,25 +29,7 @@ void TaskInfo::registerTaskInfo(nanos6_task_info_t *taskInfo)
 	_lock.lock();
 
 	if (_initialized) {
-		// Create the task type
-		nosv_task_type_t type;
-		int err = nosv_type_init(
-			&type,                                      /* Out: The pointer to the type */
-			&(TaskInfo::runWrapper),                    /* Run callback wrapper for the tasks */
-			&(TaskFinalization::taskEndedCallback),     /* End callback for when a task completes user code execution */
-			&(TaskFinalization::taskCompletedCallback), /* Completed callback for when a task completely finishes */
-			taskInfo->implementations->task_type_label, /* Task type label */
-			(void *) taskInfo,                          /* Metadata: Link to NODES' taskinfo */
-			&(TaskInfo::getCostWrapper),
-			NOSV_TYPE_INIT_NONE
-		);
-		if (err)
-			ErrorHandler::fail("nosv_type_init failed: ", nosv_get_error_string(err));
-
-		// Save a nOS-V type link in the task info
-		taskInfo->task_type_data = (void *) type;
-
-		_taskTypes.push_back(type);
+		createTaskType(taskInfo);
 	} else {
 		_taskInfos.push_back(taskInfo);
 	}
