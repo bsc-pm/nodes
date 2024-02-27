@@ -163,8 +163,6 @@ public:
 		_dataAccesses(taskAccessInfo),
 		_flags(flags)
 	{
-		// Initialize nOS-V priority if needed
-		computePriority();
 	}
 
 	inline bool hasCode() const

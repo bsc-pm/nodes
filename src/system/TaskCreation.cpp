@@ -274,6 +274,10 @@ void nanos6_submit_task(void *taskHandle)
 	// own space of data dependencies
 	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
 	nosv_task_t parentTask = nosv_self();
+
+	// Initialize nOS-V priority if needed
+	taskMetadata->computePriority();
+
 	if (!taskMetadata->isSpawned() && parentTask != nullptr) {
 		taskMetadata->setParent(parentTask);
 	}
