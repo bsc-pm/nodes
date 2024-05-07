@@ -132,12 +132,10 @@ template void TaskCreation::createTask<TaskGroupMetadata>(
 static inline bool creatingInTaskiter()
 {
 	// Figure out if the parent task is a Taskiter to create the child task as derived from TaskiterNode
-	nosv_task_t parentTask = nosv_self();
+	TaskMetadata *parentTask = TaskMetadata::getCurrentTask();
 
 	if (parentTask) {
-		TaskMetadata *task = TaskMetadata::getTaskMetadata(parentTask);
-		if (task)
-			return task->isTaskiter();
+		return parentTask->isTaskiter();
 	}
 
 	return false;
@@ -273,13 +271,13 @@ void nanos6_submit_task(void *taskHandle)
 	// is not a spawned task, since spawned tasks are independent and have their
 	// own space of data dependencies
 	TaskMetadata *taskMetadata = TaskMetadata::getTaskMetadata(task);
-	nosv_task_t parentTask = nosv_self();
 
 	// Initialize nOS-V priority if needed
 	taskMetadata->computePriority();
 
+	TaskMetadata *parentTask = TaskMetadata::getCurrentTask();
 	if (!taskMetadata->isSpawned() && parentTask != nullptr) {
-		taskMetadata->setParent(parentTask);
+		taskMetadata->setParent(parentTask->getTaskHandle());
 	}
 
 	TaskCreation::submitTask(task);

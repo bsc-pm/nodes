@@ -117,6 +117,9 @@ private:
 	//! Detected communication task
 	bool _isCommunicationTask;
 
+	//! Pointer to the last task in the run stack
+	static thread_local nosv_task_t _lastTask;
+
 protected:
 
 	//! A pointer to the original task that wraps this metadata
@@ -494,7 +497,11 @@ public:
 	static inline TaskMetadata *getCurrentTask()
 	{
 		nosv_task_t task = nosv_self();
-		return TaskMetadata::getTaskMetadata(task);
+
+		if (task && TaskMetadata::isLastTask(task))
+			return TaskMetadata::getTaskMetadata(task);
+		else // External task from other nosv-enabled library
+			return nullptr;
 	}
 
 	static inline nanos6_task_info_t *getTaskInfo(TaskMetadata *task)
@@ -634,6 +641,21 @@ public:
 	inline void setGroup(TaskMetadata *group)
 	{
 		_group = group;
+	}
+
+	static inline void setLastTask(nosv_task_t task)
+	{
+		_lastTask = task;
+	}
+
+	static inline nosv_task_t getLastTask()
+	{
+		return _lastTask;
+	}
+
+	static inline bool isLastTask(nosv_task_t task)
+	{
+		return _lastTask == task;
 	}
 
 	virtual ~TaskMetadata() = default;
