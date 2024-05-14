@@ -25,7 +25,7 @@ The following software is required to build and install NODES:
 
 Additionally, NODES is prepared to use the following optional libraries:
 
-1. [ovni](https://ovni.readthedocs.io/en/master/) to instrument and generate execution traces for offline performance analysis with paraver
+1. [ovni](https://ovni.readthedocs.io/en/master/) to instrument and generate execution traces for offline performance analysis with paraver. Minimum version required 1.5.0
 
 ### Build procedure
 
@@ -67,7 +67,7 @@ The development of NODES requires contributors to follow these few simple guidel
 
 ## Instrumenting with ovni
 
-For ovni to work properly in NODES, the used nOS-V installation must be configured with ovni support as well.
+For ovni to work properly in NODES, the used nOS-V installation must be configured with ovni support as well, with version 1.5.0 minimum.
 Once both nOS-V and NODES are configured with ovni support, nOS-V has to enable its own instrumentation. At the time of writing, this is done as follows:
 
 ```sh

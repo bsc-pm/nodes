@@ -3,11 +3,11 @@
 
 #	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
-#	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
+#	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 
 # NODES Version and Copyright
 
-m4_define([nodes_version], [1.1.0])
+m4_define([nodes_version], [1.2.0])
 m4_define([nodes_license], ["GPL3"])
 m4_define([nodes_copyright], ["2021 Barcelona Supercomputing Center (BSC)"])
 
