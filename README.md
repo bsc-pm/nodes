@@ -1,7 +1,8 @@
-# NODES Library
+<img src="/docs/nodes-logo-full.png" width=35% height=35%>
 
-The NODES Library is developed by the [*System Tools and Advanced Runtimes (STAR)*](https://www.bsc.es/discover-bsc/organisation/scientific-structure/system-tools-and-advanced-runtimes) group
-at the [**Barcelona Supercomputing Center**](http://www.bsc.es/).
+# NODES
+
+NODES is developed by the [*System Tools and Advanced Runtimes (STAR)*](https://www.bsc.es/discover-bsc/organisation/scientific-structure/system-tools-and-advanced-runtimes) group at the [**Barcelona Supercomputing Center**](http://www.bsc.es/). NODES -- short for nOS-V-based Dependency System -- is a runtime library designed to work on top of the nOS-V runtime while providing most of the functionalities from its predecessor, Nanos6. NODES acts as a dependency system for nOS-V by synchronizing the data flow of codes annotated with OmpSs-2 directives and bridges the gap between nOS-V and user applications through these annotations. Simultaneously, nOS-V manages the life cycle of multiple generic tasks from various applications or libraries such as NODES and handles their interaction with the system.
 
 ## Licensing
 
