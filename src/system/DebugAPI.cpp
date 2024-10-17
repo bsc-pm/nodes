@@ -7,6 +7,7 @@
 #include <cstddef>
 
 #include <nosv.h>
+#include <nosv/hwinfo.h>
 
 #include <nodes/debug.h>
 

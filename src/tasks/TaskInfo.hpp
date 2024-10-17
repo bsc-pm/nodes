@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <nosv.h>
+#include <nosv/hwinfo.h>
 
 #include <nodes/task-instantiation.h>
 

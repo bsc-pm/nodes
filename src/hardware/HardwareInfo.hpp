@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <nosv/hwinfo.h>
+
 #include "dependencies/discrete/CPUDependencyData.hpp"
 
 
