@@ -9,6 +9,8 @@
 
 #include <cmath>
 
+#include <nosv/hwinfo.h>
+
 #include <nodes/loop.h>
 
 #include "TaskMetadata.hpp"
