@@ -4,10 +4,10 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = $(ovni_CPPFLAGS) $(BOOST_CPPFLAGS) $(PTHREAD_CFLAGS) $(nosv_CPPFLAGS) $(nodes_CPPFLAGS) -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
-AM_CXXFLAGS = $(ovni_CXXFLAGS) $(PTHREAD_CFLAGS) $(nosv_CPPFLAGS) $(nodes_CXXFLAGS) -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
-AM_CFLAGS   = $(PTHREAD_CFLAGS) $(nodes_CFLAGS) -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
-AM_LDFLAGS  = $(ovni_LIBS) $(BOOST_LDFLAGS) $(PTHREAD_CFLAGS) $(PTHREAD_LIBS) $(nosv_LIBS)
+AM_CPPFLAGS = -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_CXXFLAGS = -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_CFLAGS   = -I$(srcdir)/api -I$(top_srcdir)/src -I$(builddir)/src
+AM_LDFLAGS  = $(PTHREAD_CFLAGS) $(PTHREAD_LIBS) $(nosv_LIBS) $(BOOST_LDFLAGS) $(ovni_LIBS)
 AM_LIBS     = -lrt -lpthread -lnosv
 
 SUBDIRS = . tests
@@ -140,10 +140,11 @@ dependency_flags = -I$(srcdir)/src/dependencies -I$(srcdir)/src/dependencies/dis
 
 lib_LTLIBRARIES = libnodes.la
 
-libnodes_la_CPPFLAGS = $(AM_CPPFLAGS)
+libnodes_la_CPPFLAGS = $(AM_CPPFLAGS) $(PTHREAD_CFLAGS) $(nodes_CPPFLAGS) $(nosv_CPPFLAGS) $(BOOST_CPPFLAGS) $(ovni_CPPFLAGS)
+libnodes_la_CXXFLAGS = $(AM_CXXFLAGS) $(PTHREAD_CFLAGS) $(nodes_CXXFLAGS) $(nosv_CPPFLAGS) $(ovni_CXXFLAGS) $(dependency_flags)
+libnodes_la_CFLAGS   = $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(nodes_CFLAGS)
 libnodes_la_LDFLAGS  = $(AM_LDFLAGS)
 libnodes_la_SOURCES  = $(common_sources)
-libnodes_la_CXXFLAGS = $(AM_CXXFLAGS) $(dependency_flags)
 
 #
 # Taskification of the "main" function
