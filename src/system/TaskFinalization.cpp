@@ -88,7 +88,7 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 			cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 		}
 
-		bool finish = DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *cpuDepData);
+		bool finish = DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *cpuDepData, lastTask != task);
 		// Here taskiter tasks may already be reenqueued
 
 		if (isExternal) {
