@@ -88,7 +88,7 @@ void TaskFinalization::taskCompletedCallback(nosv_task_t task)
 			cpuDepData = HardwareInfo::getCPUDependencyData(cpuId);
 		}
 
-		bool finish = DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *cpuDepData, lastTask != task);
+		bool finish = DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *cpuDepData, lastTask != nullptr);
 		// Here taskiter tasks may already be reenqueued
 
 		if (isExternal) {
@@ -141,7 +141,7 @@ void TaskFinalization::taskFinished(TaskMetadata *task)
 						localHpDependencyData = new CPUDependencyData();
 					}
 
-					bool finish = DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *localHpDependencyData);
+					bool finish = DataAccessRegistration::unregisterTaskDataAccesses(taskMetadata, *localHpDependencyData, true);
 
 					// This is just to emulate a recursive call to TaskFinalization::taskFinished() again
 					// It should not return false because at this point delayed release has happenned which means that
