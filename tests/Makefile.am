@@ -1,11 +1,13 @@
 #	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
-#	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
+#	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 
 .NOTPARALLEL:
 
 AM_CXXFLAGS = -fdo-not-use-ompss-2-runtime -I$(top_srcdir)/tests/common $(PTHREAD_CFLAGS) -I$(top_srcdir)/api -I$(top_builddir) -include nodes.h
-AM_LDFLAGS  = $(nosv_LIBS) -L$(top_builddir)/.libs -rpath $(abs_top_builddir)/.libs
+# Note: Local libs must precede $(nosv_LIBS), since $(nosv_LIBS) may also have a NODES installation.
+#       Moreover, since clang may add paths before ours, we must precede the local paths with "-Wl,-rpath" so they have preference
+AM_LDFLAGS  = -L$(top_builddir)/.libs -Wl,-rpath $(abs_top_builddir)/.libs $(nosv_LIBS)
 LDADD = $(top_builddir)/nodes-main-wrapper.o $(top_builddir)/.libs/libnodes.so -ldl
 
 CXX = $(NODES_CLANGXX)
