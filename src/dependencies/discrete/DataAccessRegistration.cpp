@@ -48,7 +48,7 @@ namespace DataAccessRegistration {
 		CPUDependencyData &hpDependencyData);
 
 	//! Process all the originators that have become ready
-	static inline void processSatisfiedOriginators(CPUDependencyData &hpDependencyData)
+	static inline void processSatisfiedOriginators(CPUDependencyData &hpDependencyData, bool fromBusyThread)
 	{
 		// In NODES the last task is the immediate successor.
 		// This differs from the Nanos6 runtime where we choose the first task with highest priority.
@@ -61,11 +61,13 @@ namespace DataAccessRegistration {
 				TaskMetadata **taskArray = list.getArray();
 
 				for (size_t j = 0; j < size - 1; ++j) {
-					if (int err = nosv_submit(taskArray[j]->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
+					if (int err = nosv_submit(taskArray[j]->getTaskHandle(), NOSV_SUBMIT_NONE))
 						ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 				}
 
-				if (int err = nosv_submit(taskArray[size - 1]->getTaskHandle(), NOSV_SUBMIT_IMMEDIATE))
+				int immediateFlags = fromBusyThread ? NOSV_SUBMIT_NONE : NOSV_SUBMIT_IMMEDIATE;
+
+				if (int err = nosv_submit(taskArray[size - 1]->getTaskHandle(), immediateFlags))
 					ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 			}
 		}
@@ -73,7 +75,7 @@ namespace DataAccessRegistration {
 		hpDependencyData.clearSatisfiedOriginators();
 
 		for (TaskMetadata *originator : hpDependencyData._satisfiedCommutativeOriginators) {
-			if (int err = nosv_submit(originator->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
+			if (int err = nosv_submit(originator->getTaskHandle(), NOSV_SUBMIT_NONE))
 				ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 		}
 
@@ -98,7 +100,7 @@ namespace DataAccessRegistration {
 		hpDependencyData.clearDeletableOriginators();
 	}
 
-	static inline void satisfyTask(TaskMetadata *task, CPUDependencyData &hpDependencyData)
+	static inline void satisfyTask(TaskMetadata *task, CPUDependencyData &hpDependencyData, bool fromBusyThread)
 	{
 		assert(task != nullptr);
 
@@ -111,7 +113,7 @@ namespace DataAccessRegistration {
 			hpDependencyData.addSatisfiedOriginator(task);
 
 			if (hpDependencyData.fullSatisfiedOriginators()) {
-				processSatisfiedOriginators(hpDependencyData);
+				processSatisfiedOriginators(hpDependencyData, fromBusyThread);
 			}
 		}
 	}
@@ -183,7 +185,8 @@ namespace DataAccessRegistration {
 	void propagateMessages(
 		CPUDependencyData &hpDependencyData,
 		mailbox_t &mailBox,
-		ReductionInfo *originalReductionInfo)
+		ReductionInfo *originalReductionInfo,
+		bool fromBusyThread)
 	{
 		DataAccessMessage next;
 
@@ -211,7 +214,7 @@ namespace DataAccessRegistration {
 				TaskDataAccesses &accessStruct = task->getTaskDataAccesses();
 				assert(!accessStruct.hasBeenDeleted());
 
-				satisfyTask(task, hpDependencyData);
+				satisfyTask(task, hpDependencyData, fromBusyThread);
 			}
 
 			if (next.combine) {
@@ -248,7 +251,7 @@ namespace DataAccessRegistration {
 		}
 	}
 
-	void finalizeDataAccess(TaskMetadata *task, DataAccess *access, void *address, CPUDependencyData &hpDependencyData)
+	void finalizeDataAccess(TaskMetadata *task, DataAccess *access, void *address, CPUDependencyData &hpDependencyData, bool fromBusyThread)
 	{
 		DataAccessType originalAccessType = access->getType();
 
@@ -302,7 +305,7 @@ namespace DataAccessRegistration {
 		bool dispose = access->apply(message, mailBox);
 
 		if (!mailBox.empty()) {
-			propagateMessages(hpDependencyData, mailBox, reductionInfo);
+			propagateMessages(hpDependencyData, mailBox, reductionInfo, fromBusyThread);
 			assert(!dispose);
 		} else if (dispose) {
 			decreaseDeletableCountOrDelete(task, hpDependencyData);
@@ -337,7 +340,7 @@ namespace DataAccessRegistration {
 			task->increaseRemovalBlockingCount();
 		}
 
-		processSatisfiedOriginators(hpDependencyData);
+		processSatisfiedOriginators(hpDependencyData, true);
 		processDeletableOriginators(hpDependencyData);
 
 #ifndef NDEBUG
@@ -390,7 +393,7 @@ namespace DataAccessRegistration {
 		}
 	}
 
-	bool unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData)
+	bool unregisterTaskDataAccesses(TaskMetadata *task, CPUDependencyData &hpDependencyData, bool fromBusyThread)
 	{
 		Instrument::enterUnregisterAccesses();
 
@@ -454,13 +457,13 @@ namespace DataAccessRegistration {
 				graph.applySuccessors(task, keepIterating,
 					// Do this for each successor
 					[&](TaskMetadata *successor) {
-						satisfyTask(successor, hpDependencyData);
+						satisfyTask(successor, hpDependencyData, fromBusyThread);
 					},
 					taskiter->isCancellationDelayed()
 				);
 			}
 
-			processSatisfiedOriginators(hpDependencyData);
+			processSatisfiedOriginators(hpDependencyData, fromBusyThread);
 
 #ifndef NDEBUG
 			{
@@ -478,7 +481,7 @@ namespace DataAccessRegistration {
 			accessStruct.forAll([&](void *address, DataAccess *access) -> bool {
 				// Skip if released
 				if (!access->isReleased()) {
-					finalizeDataAccess(task, access, address, hpDependencyData);
+					finalizeDataAccess(task, access, address, hpDependencyData, fromBusyThread);
 				}
 
 				return true;
@@ -502,7 +505,7 @@ namespace DataAccessRegistration {
 			}
 		}
 
-		processSatisfiedOriginators(hpDependencyData);
+		processSatisfiedOriginators(hpDependencyData, fromBusyThread);
 		processDeletableOriginators(hpDependencyData);
 
 #ifndef NDEBUG
@@ -939,7 +942,7 @@ namespace DataAccessRegistration {
 				reductionInfo->releaseSlotsInUse(task, cpuId);
 			}
 
-			finalizeDataAccess(task, access, address, hpDependencyData);
+			finalizeDataAccess(task, access, address, hpDependencyData, true);
 		} else {
 			ErrorHandler::fail("Attempt to release an access that was not originally registered in the task");
 		}
@@ -947,7 +950,7 @@ namespace DataAccessRegistration {
 		// Unfortunately, due to the CommutativeSemaphore implementation, we cannot release the commutative mask.
 		// This is because it can be aliased between accesses, although if a counter was added for the number of
 		// commutative accesses, it would be possible to find out how safe is it to release the mask.
-		processSatisfiedOriginators(hpDependencyData);
+		processSatisfiedOriginators(hpDependencyData, true);
 		processDeletableOriginators(hpDependencyData);
 
 #ifndef NDEBUG
