@@ -38,7 +38,14 @@ LT_INIT([shared disable-static pic-only])
 # Checks for compiler characteristics
 # Prepare compilation flags before AC_PROG_CXX
 AC_PROG_CXX
+AX_CXX_COMPILE_STDCXX_20([noext], [optional])
+AM_CONDITIONAL(HAVE_CXX_20, test x"${ax_cv_cxx_compile_cxx20__std_cpp20}" = x"yes")
+if test x"${ax_cv_cxx_compile_cxx20__std_cpp20}" = x"no"; then
 AX_CXX_COMPILE_STDCXX_17([noext], [mandatory])
+AC_SUBST([coro_CPPFLAGS], [])
+else
+AC_SUBST([coro_CPPFLAGS], [-fcoroutines])
+fi
 AC_CHECK_MAIN_WRAPPER_TYPE
 
 # Check for clang++
@@ -82,5 +89,7 @@ echo ""
 echo "    nOS-V CPPFLAGS...      ${nosv_CPPFLAGS}"
 echo ""
 echo "    Ovni CPPFLAGS...       ${ovni_CPPFLAGS}"
-echo "    Ovni LDFLAGS....       ${ovni_LIBS}"
+echo "    Ovni LDFLAGS...        ${ovni_LIBS}"
+echo ""
+echo "    Coroutines CPPFLAGS... ${coro_CPPFLAGS}"
 

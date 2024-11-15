@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef NODES_TASK_INSTANTIATION_H
@@ -17,7 +17,7 @@
 
 enum nanos6_task_execution_api_t { nanos6_task_execution_api = 1 };
 enum nanos6_task_constraints_api_t { nanos6_task_constraints_api = 1 };
-enum nanos6_task_info_contents_t { nanos6_task_info_contents = 5 };
+enum nanos6_task_info_contents_t { nanos6_task_info_contents = 6 };
 enum nanos6_instantiation_api_t { nanos6_instantiation_api = 6 };
 
 #ifdef __cplusplus
@@ -168,6 +168,9 @@ typedef struct __attribute__((aligned(64)))
 
 	//! \brief list of indexes to map a symbol into arg
 	int *arg_idx_table;
+
+	//! \brief Index to coroutine handle
+	int coro_handle_idx;
 
 } nanos6_task_info_t;
 

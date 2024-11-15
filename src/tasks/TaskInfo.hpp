@@ -15,6 +15,9 @@
 #include <nosv.h>
 #include <nosv/hwinfo.h>
 
+#if __cplusplus >= 202002L
+#include <nodes/coroutines.hpp>
+#endif
 #include <nodes/task-instantiation.h>
 
 #include "common/Chrono.hpp"
@@ -81,6 +84,7 @@ public:
 			);
 
 			const bool isTaskiterChild = taskMetadata->getParent() && taskMetadata->getParent()->isTaskiter();
+			const bool isCoroutine = taskInfo->coro_handle_idx != -1;
 
 			if (taskMetadata->isTaskloop()) {
 				TaskloopMetadata *taskloopMetadata = (TaskloopMetadata *) taskMetadata;
@@ -106,6 +110,38 @@ public:
 						translationTable
 					);
 				}
+			} else if (isCoroutine) {
+				#if __cplusplus >= 202002L
+				int coroOffset = taskInfo->offset_table[taskInfo->coro_handle_idx];
+				oss_coroutine *coro = (oss_coroutine *) (((char *) taskMetadata->getArgsBlock()) + coroOffset);
+				std::coroutine_handle<> handle = coro->handle;
+
+				// Depending on whether the coroutine has already started,
+				// initialize and run it, or resume its execution
+				if (!handle.address()) {
+					taskInfo->implementations->run(
+						taskMetadata->getArgsBlock(),
+						nullptr, /* deviceEnvironment */
+						translationTable
+					);
+
+					// Get initialized handle
+					handle = coro->handle;
+				} else {
+					handle.resume();
+				}
+
+				//  Depending on whether the coroutine is suspended (not done), notify nOS-V that the
+				// task is suspended or destroy the coroutine (and the task will finish)
+				if (handle.done()) {
+					handle.destroy();
+				} else {
+					nosv_suspend();
+				}
+
+				#else
+				ErrorHandler::fail("Coroutine found while NODES was compiled without C++20 support");
+				#endif
 			} else {
 				taskInfo->implementations->run(
 					taskMetadata->getArgsBlock(),

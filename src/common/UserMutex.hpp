@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef USER_MUTEX_HPP
@@ -94,5 +94,7 @@ public:
 		return releasedTask;
 	}
 };
+
+typedef std::atomic<UserMutex *> mutex_t;
 
 #endif // USER_MUTEX_HPP

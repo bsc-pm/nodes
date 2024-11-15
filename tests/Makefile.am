@@ -42,6 +42,15 @@ correctness_tests = \
 	taskloop-nested-dep-multiaxpy.test \
 	taskloop-nonpod.test \
 	taskloop-nqueens.test
+
+if HAVE_CXX_20
+correctness_tests += \
+	critical_awaitable.test \
+	deadline_awaitable.test \
+	fibonacci_coroutine.test \
+	suspend.test
+endif
+
 endif
 
 
@@ -155,6 +164,24 @@ taskloop_nonpod_test_LDFLAGS  = $(AM_LDFLAGS)
 taskloop_nqueens_test_SOURCES  = correctness/taskloop/taskloop-nqueens.cpp
 taskloop_nqueens_test_CXXFLAGS = $(AM_CXXFLAGS)
 taskloop_nqueens_test_LDFLAGS  = $(AM_LDFLAGS)
+
+if HAVE_CXX_20
+critical_awaitable_test_SOURCES  = correctness/coroutine/critical_awaitable.cpp
+critical_awaitable_test_CXXFLAGS = $(AM_CXXFLAGS) -std=c++20 -fcoroutines
+critical_awaitable_test_LDFLAGS  = $(AM_LDFLAGS)
+
+deadline_awaitable_test_SOURCES  = correctness/coroutine/deadline_awaitable.cpp
+deadline_awaitable_test_CXXFLAGS = $(AM_CXXFLAGS) -std=c++20 -fcoroutines
+deadline_awaitable_test_LDFLAGS  = $(AM_LDFLAGS)
+
+fibonacci_coroutine_test_SOURCES  = correctness/coroutine/fibonacci_coroutine.cpp
+fibonacci_coroutine_test_CXXFLAGS = $(AM_CXXFLAGS) -std=c++20 -fcoroutines
+fibonacci_coroutine_test_LDFLAGS  = $(AM_LDFLAGS)
+
+suspend_test_SOURCES  = correctness/coroutine/suspend.cpp
+suspend_test_CXXFLAGS = $(AM_CXXFLAGS) -std=c++20 -fcoroutines
+suspend_test_LDFLAGS  = $(AM_LDFLAGS)
+endif
 
 
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tests/tap-driver.sh

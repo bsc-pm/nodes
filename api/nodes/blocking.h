@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef NODES_BLOCKING_H
@@ -14,7 +14,7 @@
 
 #pragma GCC visibility push(default)
 
-enum nanos6_blocking_api_t { nanos6_blocking_api = 2 };
+enum nanos6_blocking_api_t { nanos6_blocking_api = 3 };
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,6 +70,12 @@ void nanos6_unblock_task(void *blocking_context);
 //!
 //! \returns the actual time spent during the pause
 uint64_t nanos6_wait_for(uint64_t time_us);
+
+//! \brief Yields the current task
+//!
+//! The task is paused and resubmitted again. The runtime may choose to
+//! execute other tasks within the execution scope of this call
+void nanos6_yield(void);
 
 #ifdef __cplusplus
 }

@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cassert>
@@ -115,6 +115,8 @@ void SpawnFunction::spawnFunction(
 			taskInfo->implementations[0].task_type_label = it->first.second.c_str();
 			taskInfo->implementations[0].declaration_source = "Spawned Task";
 			taskInfo->implementations[0].get_constraints = nullptr;
+
+			taskInfo->coro_handle_idx = -1;
 
 			// NOTE: Since NODES doesn't know about "TaskTypes", we create a nOS-V
 			// type regardless of labels and declaration sources. Thus for two

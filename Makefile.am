@@ -1,6 +1,6 @@
 #	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 #
-#	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
+#	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -40,6 +40,10 @@ nodesinclude_HEADERS = \
 	api/nodes/taskwait.h \
 	api/nodes/user-mutex.h \
 	api/nodes/version.h
+
+if HAVE_CXX_20
+nodesinclude_HEADERS += api/nodes/coroutines.hpp
+endif
 
 nodist_nodesinclude_HEADERS = \
 	nodes/multidimensional-dependencies.h \
@@ -136,12 +140,18 @@ common_sources = \
 	src/tasks/TaskloopMetadata.cpp \
 	src/tasks/TaskMetadata.cpp
 
+if HAVE_CXX_20
+common_sources += \
+	src/system/CoAwaitables.cpp \
+	src/system/TaskCoroutine.cpp
+endif
+
 dependency_flags = -I$(srcdir)/src/dependencies -I$(srcdir)/src/dependencies/discrete
 
 lib_LTLIBRARIES = libnodes.la
 
-libnodes_la_CPPFLAGS = $(AM_CPPFLAGS) $(PTHREAD_CFLAGS) $(nodes_CPPFLAGS) $(nosv_CPPFLAGS) $(BOOST_CPPFLAGS) $(ovni_CPPFLAGS)
-libnodes_la_CXXFLAGS = $(AM_CXXFLAGS) $(PTHREAD_CFLAGS) $(nodes_CXXFLAGS) $(nosv_CPPFLAGS) $(ovni_CXXFLAGS) $(dependency_flags)
+libnodes_la_CPPFLAGS = $(AM_CPPFLAGS) $(PTHREAD_CFLAGS) $(nodes_CPPFLAGS) $(nosv_CPPFLAGS) $(BOOST_CPPFLAGS) $(ovni_CPPFLAGS) $(coro_CPPFLAGS)
+libnodes_la_CXXFLAGS = $(AM_CXXFLAGS) $(PTHREAD_CFLAGS) $(nodes_CXXFLAGS) $(nosv_CPPFLAGS) $(ovni_CXXFLAGS) $(coro_CPPFLAGS) $(dependency_flags)
 libnodes_la_CFLAGS   = $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(nodes_CFLAGS)
 libnodes_la_LDFLAGS  = $(AM_LDFLAGS)
 libnodes_la_SOURCES  = $(common_sources)

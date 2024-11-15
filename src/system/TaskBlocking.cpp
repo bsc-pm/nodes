@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #include <atomic>
@@ -60,8 +60,6 @@ extern "C" uint64_t nanos6_wait_for(uint64_t timeUs)
 
 
 /*    USER MUTEX API    */
-
-typedef std::atomic<UserMutex *> mutex_t;
 
 extern "C" void nanos6_user_lock(void **handlerPointer, char const *)
 {
@@ -127,4 +125,13 @@ extern "C" void nanos6_user_unlock(void **handlerPointer)
 		if (int err = nosv_submit(releasedTask->getTaskHandle(), NOSV_SUBMIT_UNLOCKED))
 			ErrorHandler::fail("nosv_submit failed: ", nosv_get_error_string(err));
 	}
+}
+
+extern "C" void nanos6_yield(void)
+{
+	__attribute__((unused)) nosv_task_t currentTask = nosv_self();
+	assert(currentTask != nullptr);
+
+	if (int err = nosv_yield(NOSV_YIELD_NONE))
+		ErrorHandler::fail("nosv_yield failed: ", nosv_get_error_string(err));
 }
