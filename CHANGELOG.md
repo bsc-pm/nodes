@@ -1,6 +1,19 @@
 # NODES Release Notes
 All notable changes to this project will be documented in this file.
 
+
+## Version 1.3.0, Fri 15 Nov, 2024
+The 1.3.0 version of NODES introduces support for Coroutines as well as several bug fixes and improvements related to the build system.
+
+### General
+- Introduce support for Coroutines.
+- Other minor bug fixes and code improvements.
+
+### Bug Fixes
+- Fix immediate successor logic from within busy threads.
+- Fix wrong header include order the build system affecting NODES' installation.
+
+
 ## Version 1.2.0, Wed May 15, 2024
 The 1.2.0 version of NODES introduces several bug fixes and general improvements related to the nOS-V, ALPI, and ovni API integrations.
 
