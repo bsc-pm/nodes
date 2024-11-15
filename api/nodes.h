@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2023 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef NODES_H
@@ -33,5 +33,8 @@
 #include "nodes/user-mutex.h"
 #include "nodes/version.h"
 
+#if __cplusplus >= 202002L
+#include "nodes/coroutines.hpp"
+#endif
 
 #endif /* NODES_H */

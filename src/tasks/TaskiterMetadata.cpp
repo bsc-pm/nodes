@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2022-2023 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2022-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #include <cstdlib>
@@ -121,6 +121,8 @@ TaskMetadata *TaskiterMetadata::generateControlTask()
 	taskInfo->implementations[0].task_type_label = "Taskiter Control";
 	taskInfo->implementations[0].declaration_source = "Taskiter Control";
 	taskInfo->implementations[0].get_constraints = nullptr;
+
+	taskInfo->coro_handle_idx = -1;
 
 	taskInfo->get_priority = NULL;
 

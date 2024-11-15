@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2021-2022 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2021-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #ifndef TASK_METADATA_HPP
@@ -120,6 +120,9 @@ private:
 	//! Pointer to the last task in the run stack
 	static thread_local nosv_task_t _lastTask;
 
+	//! Whether a coroutine is using the frame allocated in the task metadata
+	bool _usingCoroutineFrame;
+
 protected:
 
 	//! A pointer to the original task that wraps this metadata
@@ -162,6 +165,7 @@ public:
 		_delayedAffinity(),
 		_group(nullptr),
 		_isCommunicationTask(false),
+		_usingCoroutineFrame(false),
 		_task(taskPointer),
 		_dataAccesses(taskAccessInfo),
 		_flags(flags)
@@ -187,6 +191,26 @@ public:
 			_delayedPriority = priority;
 			applyDelayedChanges();
 		}
+	}
+
+	inline void *getCoroFrameAddr(size_t coroSize)
+	{
+		if (coroSize == 0) return nullptr;
+
+		_usingCoroutineFrame = true;
+
+		void *coroFrameAddr = (((char *) _argsBlock) + (_argsBlockSize - coroSize));
+		return coroFrameAddr;
+	}
+
+	inline bool hasCoroFrame() const
+	{
+		return _usingCoroutineFrame;
+	}
+
+	inline void freeCoroFrame()
+	{
+		_usingCoroutineFrame = false;
 	}
 
 	inline void *getArgsBlock() const

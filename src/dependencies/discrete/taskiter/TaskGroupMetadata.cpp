@@ -1,7 +1,7 @@
 /*
 	This file is part of NODES and is licensed under the terms contained in the COPYING file.
 
-	Copyright (C) 2023 Barcelona Supercomputing Center (BSC)
+	Copyright (C) 2023-2024 Barcelona Supercomputing Center (BSC)
 */
 
 #include "system/TaskFinalization.hpp"
@@ -33,7 +33,8 @@ static nanos6_task_info_t groupTaskInfo = {
 	.num_args = 0,
 	.sizeof_table = nullptr,
 	.offset_table = nullptr,
-	.arg_idx_table = nullptr
+	.arg_idx_table = nullptr,
+	.coro_handle_idx = -1
 };
 
 nanos6_task_info_t *TaskGroupMetadata::getGroupTaskInfo()
