@@ -7,7 +7,7 @@
 
 # NODES Version and Copyright
 
-m4_define([nodes_version], [1.2.0])
+m4_define([nodes_version], [1.3.0])
 m4_define([nodes_license], ["GPL3"])
 m4_define([nodes_copyright], ["2021 Barcelona Supercomputing Center (BSC)"])
 
