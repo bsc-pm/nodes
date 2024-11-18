@@ -18,7 +18,7 @@ Center, unless otherwise stated.
 
 The following software is required to build and install NODES:
 
-1. automake, autoconf, libtool, pkg-config, make, and a C++11 compiler
+1. automake, autoconf, libtool, pkg-config, make, and a C++17 compiler
 1. [boost](http://boost.org) >= 1.71
 1. [nOS-V](https://github.com/bsc-pm/nos-v)
 
@@ -27,6 +27,7 @@ The following software is required to build and install NODES:
 Additionally, NODES is prepared to use the following optional libraries:
 
 1. [ovni](https://ovni.readthedocs.io/en/master/) to instrument and generate execution traces for offline performance analysis with paraver. Minimum version required 1.5.0
+1. A C++20 compiler to enable further functionalities
 
 ### Build procedure
 
@@ -41,15 +42,17 @@ When the code is distributed through a tarball, it usually does not need that co
 Then execute the following commands:
 
 ```sh
-$ ./configure --prefix=INSTALLATION_PREFIX \
-$   --with-nosv=NOSV_INSTALL_PATH          \
-$   --with-boost=BOOST_INSTALL_PATH        \
-$   ...other options...
-$ make all
-$ make install
+./configure --prefix=$INSTALL_PATH_NODES \
+    --with-nosv=$INSTALL_PATH_NOSV       \
+    --with-boost=$INSTALL_PATH_BOOST     \
+    --with-ovni=$INSTALL_PATH_OVNI       \
+    ...other options...
+
+make all
+make install
 ```
 
-where `INSTALLATION_PREFIX` is the directory into which to install NODES.
+where `$INSTALL_PATH_NODES` is the directory into which to install NODES.
 
 The configure script also accepts the following options:
 
@@ -62,7 +65,7 @@ The configure script also accepts the following options:
 
 The development of NODES requires contributors to follow these few simple guidelines:
 
-1. C++11
+1. C++17
 1. K&R indentation style
 1. Camel case coding style
 
@@ -82,7 +85,19 @@ enable instrumenting executions with ovni, set the `NODES_OVNI` environment vari
 $ export NODES_OVNI=1
 ```
 
-## Features and Known Limitations
+## Coroutine Support
+
+NODES supports the use of Coroutines provided that a compiler with C++20 support is used.
+To compile with Coroutine support, the `-fcoroutines` flag must be passed, as shown in the example below:
+
+```
+clang++ -std=c++20 -fcoroutines -o test-coroutines.bin test-coroutines.cpp
+```
+
+For more detailed examples on the usage of Coroutines, check our correctness tests in the `tests/correctness/coroutine` subdirectory.
+
+
+## Known Limitations
 
 NODES supports most of the features found in the Nanos6 runtime. However, at the moment, it does not support the following:
 1. Linear-region dependency system
