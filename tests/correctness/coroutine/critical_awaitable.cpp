@@ -52,7 +52,6 @@ oss_coroutine sum(long participant)
 		end = ARRAY_SIZE;
 	}
 
-	//#pragma oss critical
 	co_await oss_co_user_lock(&user_mutex);
 
 	concurrent_tasks++;
